@@ -1,0 +1,6 @@
+Placer ici le fichier CSV des tickets Brasil:
+  - PARKA_OCEANE_D13_V07.csv
+  - ou tout autre export JIRA/PARKA des tickets 2025
+
+Puis lancer:
+  python data_pipeline/run_pipeline.py
