@@ -28,13 +28,14 @@ KNOWN_ERROR_CODES = [
 ]
 
 # Colonnes possibles dans le CSV (on détecte automatiquement)
-POSSIBLE_SUMMARY_COLS    = ["summary", "résumé", "objet", "titre", "sujet", "libellé", "description courte"]
-POSSIBLE_DESC_COLS       = ["description", "corps", "commentaire", "détail"]
-POSSIBLE_STATUS_COLS     = ["status", "statut", "état", "etat"]
-POSSIBLE_CREATED_COLS    = ["created", "créé le", "date création", "date de création", "ouverture"]
-POSSIBLE_RESOLVED_COLS   = ["resolved", "résolu le", "date résolution", "fermeture"]
-POSSIBLE_PRIORITY_COLS   = ["priority", "priorité", "urgence"]
-POSSIBLE_COMPONENT_COLS  = ["component", "composant", "application", "système"]
+# Noms PARKA/Genergy en priorité, puis fallbacks génériques
+POSSIBLE_SUMMARY_COLS    = ["inc_resume", "summary", "résumé", "objet", "titre", "sujet", "libellé", "description courte"]
+POSSIBLE_DESC_COLS       = ["user_sig", "inc_commentaire", "inc_solution", "description", "corps", "commentaire", "détail"]
+POSSIBLE_STATUS_COLS     = ["inc_statut", "status", "statut", "état", "etat"]
+POSSIBLE_CREATED_COLS    = ["datetime_debut", "created", "créé le", "date création", "date de création", "ouverture"]
+POSSIBLE_RESOLVED_COLS   = ["datetime_resolution", "resolved", "résolu le", "date résolution", "fermeture"]
+POSSIBLE_PRIORITY_COLS   = ["inc_priorite", "priority", "priorité", "urgence"]
+POSSIBLE_COMPONENT_COLS  = ["application_module", "inc_element", "component", "composant", "application", "système"]
 
 
 def detect_column(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
@@ -57,6 +58,13 @@ def extract_error_codes(text: str) -> List[str]:
     # Codes numériques génériques 4 chiffres
     found = re.findall(r'\b(\d{4})\b', text)
     codes.extend(found)
+    # Codes BRASIL spécifiques: B4002, 42C, ORA-XXXX
+    found_b = re.findall(r'\b(B\d{4})\b', text)
+    codes.extend(found_b)
+    found_42c = re.findall(r'\b(42C)\b', text)
+    codes.extend(found_42c)
+    found_ora = re.findall(r'(ORA-\d+)', text)
+    codes.extend(found_ora)
     return list(set(codes))
 
 
@@ -64,18 +72,26 @@ def categorize_ticket(text: str) -> str:
     """Catégorise un ticket selon son contenu"""
     text_lower = text.lower() if isinstance(text, str) else ""
     categories = {
-        "Suppression_Impossible": ["suppression impossible", "impossible de supprimer", "ne peut pas supprimer"],
-        "Erreur_1300": ["1300", "erreur 1300"],
-        "VLAN_Blocked": ["vlan bloqué", "vlan occupé", "vlan impossible"],
-        "Double_Access": ["double accès", "double access", "double déclaration"],
-        "ND_Unknown": ["nd inconnu", "nd introuvable", "nd absent", "noeud inconnu"],
-        "DSLAM_Error": ["dslam", "recherche de broche", "compteurs dslam"],
-        "Card_Error": ["carte impossible", "suppression carte", "carte manquante"],
-        "Counter_Error": ["compteur", "ressource logique", "vc vp", "vlan occupé à tort"],
-        "IHM_Error": ["ihm bloquée", "script bloqué", "lancement de script"],
-        "Internal_Error": ["internal error", "brasil internal", "b4002", "erreur interne"],
-        "Data_Inconsistency": ["incohérence", "incoherence", "données incorrectes"],
-        "Configuration_Error": ["configuration", "configurer", "erreur de format"],
+        "Suppression_Impossible": ["suppression impossible", "impossible de supprimer", "ne peut pas supprimer",
+                                    "suppression nd", "suppression dslam", "suppression vlan", "suppression bas",
+                                    "suppression routeur", "suppression operateur", "suppression carte"],
+        "Erreur_1300":           ["1300", "erreur 1300", "type 1300"],
+        "VLAN_Blocked":          ["vlan bloqué", "vlan occupé", "vlan impossible", "vlan occupe"],
+        "Double_Access":         ["double accès", "double access", "double déclaration", "double declaration"],
+        "ND_Unknown":            ["nd inconnu", "nd introuvable", "nd absent", "noeud inconnu",
+                                    "nd ftth", "nd adsl", "nd brasil"],
+        "DSLAM_Error":           ["dslam", "recherche de broche", "compteurs dslam", "broche en echec"],
+        "Card_Error":            ["carte impossible", "suppression carte", "carte manquante", "changement de modele"],
+        "Counter_Error":         ["compteur", "ressource logique", "vc vp", "vlan occupé à tort", "occupe a tort"],
+        "IHM_Error":             ["ihm bloquée", "ihm bloquee", "script bloqué", "lancement de script", "ihm lancement"],
+        "Internal_Error":        ["internal error", "brasil internal", "b4002", "erreur interne", "brasil internal error"],
+        "Data_Inconsistency":    ["incohérence", "incoherence", "données incorrectes", "donnees incorrectes",
+                                    "incoherence de donnees", "correction de donnees", "caracteres errones"],
+        "Configuration_Error":   ["configuration", "configurer", "erreur de format", "champ obligatoire",
+                                    "format incorrect", "nifolder"],
+        "Mutation_Lien":         ["mutation", "mouvement bbc", "mouvement umiepc", "transfert"],
+        "Affectation_Error":     ["affectation", "err 42c", "ccl", "vc deja occupe", "affectation thd"],
+        "DLM_Blocked":           ["dlm bloqué", "dlm bloque", "dlm en cours", "reprise dlm"],
     }
     for category, keywords in categories.items():
         if any(kw in text_lower for kw in keywords):
@@ -116,12 +132,16 @@ def analyze_csv(csv_path: Path) -> dict:
 
     print(f"  Colonnes détectées — summary: {summary_col}, status: {status_col}, created: {created_col}")
 
-    # Combiner summary + description pour l'analyse
+    # Combiner toutes les colonnes textuelles pertinentes pour l'analyse
     df["_text"] = ""
     if summary_col:
         df["_text"] += df[summary_col].fillna("").astype(str)
     if desc_col:
         df["_text"] += " " + df[desc_col].fillna("").astype(str)
+    # Colonnes PARKA supplémentaires si présentes
+    for extra_col in ["inc_element", "inc_cause", "inc_element_resolution", "inc_solution", "inc_commentaire"]:
+        if extra_col in df.columns:
+            df["_text"] += " " + df[extra_col].fillna("").astype(str)
 
     # Extraire codes d'erreur
     df["_error_codes"] = df["_text"].apply(extract_error_codes)
@@ -180,7 +200,7 @@ def analyze_csv(csv_path: Path) -> dict:
     # 7. Taux de résolution
     resolved_count = 0
     if status_col:
-        resolved_statuses = ["résolu", "closed", "done", "fermé", "resolved"]
+        resolved_statuses = ["résolu", "closed", "done", "fermé", "resolved", "clos", "clôturé", "cloture"]
         resolved_count = sum(
             count for status, count in status_counts.items()
             if any(rs in str(status).lower() for rs in resolved_statuses)
