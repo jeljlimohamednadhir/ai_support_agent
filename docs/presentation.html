@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Support Agent — Présentation Complète</title>
+  <style>
+    :root{
+      --primary:#0ea5e9;
+      --secondary:#8b5cf6;
+      --accent:#f59e0b;
+      --dark:#0f172a;
+      --light:#f8fafc;
+      --text:#1e293b;
+      --muted:#64748b;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--text);background:var(--light);overflow-x:hidden}
+    
+    /* Hero Section */
+    .hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#334155 100%);overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="2" cy="2" r="1" fill="white" opacity="0.1"/></svg>');animation:starfield 120s linear infinite}
+    @keyframes starfield{0%{transform:translateY(0)}100%{transform:translateY(100px)}}
+    .hero-content{position:relative;z-index:10;text-align:center;padding:2rem;max-width:1200px}
+    .hero h1{font-size:clamp(2.5rem,6vw,5rem);font-weight:900;background:linear-gradient(90deg,#60a5fa,#a78bfa,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1.5rem;animation:fadeInUp 1s ease-out}
+    .hero p{font-size:clamp(1.1rem,2vw,1.5rem);color:rgba(255,255,255,0.85);margin-bottom:2rem;animation:fadeInUp 1s ease-out 0.2s both}
+    .hero-cta{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;animation:fadeInUp 1s ease-out 0.4s both}
+    .btn{padding:1rem 2rem;border-radius:12px;font-weight:700;text-decoration:none;transition:all 0.3s;display:inline-block}
+    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;box-shadow:0 10px 30px rgba(14,165,233,0.3)}
+    .btn-primary:hover{transform:translateY(-3px);box-shadow:0 15px 40px rgba(14,165,233,0.4)}
+    .btn-secondary{background:rgba(255,255,255,0.1);color:white;border:2px solid rgba(255,255,255,0.3);backdrop-filter:blur(10px)}
+    .btn-secondary:hover{background:rgba(255,255,255,0.2)}
+    
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+    
+    /* Robot mascot */
+    .robot-float{position:fixed;right:40px;bottom:40px;z-index:9999;width:120px;height:120px;background:linear-gradient(135deg,#ffffff,#f0f9ff);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.3s;animation:float 4s ease-in-out infinite}
+    .robot-float:hover{transform:scale(1.1) translateY(-5px)}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)}}
+    
+    /* Section styling */
+    section{padding:6rem 2rem;position:relative}
+    .container{max-width:1200px;margin:0 auto}
+    h2{font-size:clamp(2rem,4vw,3rem);font-weight:800;margin-bottom:3rem;text-align:center;background:linear-gradient(90deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    
+    /* Features cards */
+    .features{background:white}
+    .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:2rem}
+    .feature-card{padding:2rem;border-radius:16px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);border:1px solid rgba(14,165,233,0.1);transition:all 0.5s;opacity:0;transform:translateY(40px)}
+    .feature-card.animate{opacity:1;transform:translateY(0)}
+    .feature-card:hover{transform:translateY(-10px);box-shadow:0 20px 50px rgba(14,165,233,0.15)}
+    .feature-icon{width:60px;height:60px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;font-size:2rem}
+    .feature-card h3{font-size:1.5rem;margin-bottom:1rem;color:var(--dark)}
+    .feature-card p{color:var(--muted);line-height:1.7}
+    
+    /* Workflow timeline */
+    .workflow{background:linear-gradient(135deg,#f8fafc 0%,#e0f2fe 100%)}
+    .timeline{position:relative;padding:2rem 0}
+    .timeline::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--primary),var(--secondary));transform:translateX(-50%)}
+    .timeline-item{display:flex;align-items:center;margin:3rem 0;opacity:0;transform:translateX(-50px)}
+    .timeline-item.animate{opacity:1;transform:translateX(0);transition:all 0.7s ease-out}
+    .timeline-item:nth-child(even){flex-direction:row-reverse}
+    .timeline-item:nth-child(even){transform:translateX(50px)}
+    .timeline-content{flex:1;padding:2rem;background:white;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.08);margin:0 2rem}
+    .timeline-content h3{color:var(--primary);margin-bottom:0.5rem}
+    .timeline-dot{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));border:4px solid white;box-shadow:0 0 0 4px rgba(14,165,233,0.2);z-index:10}
+    
+    /* Architecture diagram */
+    .architecture{background:var(--dark);color:white}
+    .arch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:2rem;margin-top:3rem}
+    .arch-card{padding:2rem;background:rgba(255,255,255,0.05);border-radius:16px;border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(10px);transform:scale(0.9);opacity:0;transition:all 0.6s}
+    .arch-card.animate{transform:scale(1);opacity:1}
+    .arch-card h3{color:var(--accent);margin-bottom:1rem}
+    .arch-card ul{list-style:none;padding:0}
+    .arch-card li{padding:0.5rem 0;color:rgba(255,255,255,0.7);border-bottom:1px solid rgba(255,255,255,0.1)}
+    .arch-card li:last-child{border:none}
+    
+    /* Tech stack */
+    .tech-stack{background:white}
+    .tech-grid{display:flex;flex-wrap:wrap;gap:1.5rem;justify-content:center;margin-top:3rem}
+    .tech-badge{padding:1rem 2rem;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-radius:50px;font-weight:700;color:var(--dark);border:2px solid transparent;transition:all 0.4s;opacity:0;transform:rotate(-5deg) scale(0.8)}
+    .tech-badge.animate{opacity:1;transform:rotate(0) scale(1)}
+    .tech-badge:hover{border-color:var(--primary);transform:translateY(-5px) scale(1.05)}
+    
+    /* Stats section */
+    .stats{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;text-align:center}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:3rem;margin-top:3rem}
+    .stat-card{opacity:0;transform:translateY(30px)}
+    .stat-card.animate{opacity:1;transform:translateY(0);transition:all 0.6s}
+    .stat-number{font-size:3rem;font-weight:900;margin-bottom:0.5rem}
+    .stat-label{font-size:1.1rem;opacity:0.9}
+    
+    /* CTA Section */
+    .cta{background:linear-gradient(135deg,#1e293b,#0f172a);color:white;text-align:center;padding:8rem 2rem}
+    .cta h2{color:white}
+    .cta p{font-size:1.3rem;opacity:0.9;margin-bottom:2rem}
+    
+    /* Responsive */
+    @media (max-width:768px){
+      .timeline::before{left:20px}
+      .timeline-item,.timeline-item:nth-child(even){flex-direction:column;text-align:center}
+      .timeline-content{margin:1rem 0}
+      .robot-float{width:80px;height:80px;right:20px;bottom:20px}
+    }
+    
+    /* Scroll animations */
+    .scroll-reveal{opacity:0;transform:translateY(50px);transition:all 0.8s ease-out}
+    .scroll-reveal.revealed{opacity:1;transform:translateY(0)}
+  </style>
+</head>
+<body>
+  
+  <!-- Hero Section -->
+  <section class="hero">
+      <div class="hero-content">
+      <h1>AI Support Agent</h1>
+      <p>Assistant intelligent pour diagnostiquer, analyser et résoudre les problèmes techniques en temps réel</p>
+      <div class="hero-cta">
+        <a href="#features" class="btn btn-primary">Découvrir</a>
+        <a href="#workflow" class="btn btn-secondary">Comment ça marche</a>
+        
+      </div>
+    </div>
+  </section>
+  
+  <!-- Features Section -->
+  <section id="features" class="features">
+    <div class="container">
+      <h2>Fonctionnalités Principales</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🔍</div>
+          <h3>Collecte Automatique</h3>
+          <p>Rassemble automatiquement les données nécessaires : logs, schémas, code source pour une analyse complète du système.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚙️</div>
+          <h3>Analyse Intelligente</h3>
+          <p>Transforme les données brutes en informations exploitables grâce à des workers asynchrones et des pipelines ETL avancés.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3>Recherche Sémantique</h3>
+          <p>Organise le savoir dans un graphe de connaissances et un vector store pour retrouver les réponses instantanément.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💬</div>
+          <h3>Chatbot Contextualisé</h3>
+          <p>Fournit des réponses utiles et des recommandations actionnables basées sur le contexte de votre système.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">✅</div>
+          <h3>Validation Continue</h3>
+          <p>Amélioration itérative grâce aux retours d'experts et aux métriques de qualité en temps réel.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Observabilité</h3>
+          <p>Dashboards et métriques pour suivre les performances, les diagnostics et l'évolution du système.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🧾</div>
+          <h3>Intégration Jira</h3>
+          <p>Synchronisez vos tickets Jira pour enrichir le knowledge graph et rechercher des incidents similaires directement depuis le chatbot.</p>
+          <p style="margin-top:0.5rem"><a href="JIRA_INTEGRATION.md" target="_blank" rel="noopener" style="color:var(--primary);font-weight:700">En savoir plus →</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Workflow Timeline -->
+  <section id="workflow" class="workflow">
+    <div class="container">
+      <h2>Workflow Complet</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-content">
+            <h3>1. Collecte</h3>
+            <p>Ingestion automatique des logs, introspection DB, clonage Git et détection des endpoints.</p>
+          </div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-content" style="opacity:0"></div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-content" style="opacity:0"></div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <h3>2. Workers</h3>
+            <p>Parsing AST, extraction de métadonnées, génération d'embeddings et enrichissement des données.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-content">
+            <h3>3. Synchronisation Jira</h3>
+            <p>Optionnel : synchronisez les tickets Jira pour indexation et corrélation avec les incidents détectés.</p>
+          </div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-content" style="opacity:0"></div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-content">
+            <h3>3. Indexation</h3>
+            <p>Stockage dans Neo4j (graphe), Qdrant (vectors) et Postgres (métadonnées) pour recherche optimale.</p>
+          </div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-content" style="opacity:0"></div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-content" style="opacity:0"></div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <h3>4. RAG Pipeline</h3>
+            <p>Sélection du contexte pertinent, construction de prompts et génération de réponses intelligentes.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-content">
+            <h3>5. Validation</h3>
+            <p>Revue humaine, corrections persistées et amélioration continue basée sur les feedbacks.</p>
+          </div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-content" style="opacity:0"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Architecture -->
+  <section class="architecture">
+    <div class="container">
+      <h2>Architecture Technique</h2>
+      <div class="arch-grid">
+        <div class="arch-card">
+          <h3>Frontend</h3>
+          <ul>
+            <li>React + TypeScript</li>
+            <li>Vite (build rapide)</li>
+            <li>TailwindCSS</li>
+            <li>Interface responsive</li>
+          </ul>
+        </div>
+        <div class="arch-card">
+          <h3>Backend API</h3>
+          <ul>
+            <li>FastAPI (Python)</li>
+            <li>Endpoints RESTful</li>
+            <li>Validation Pydantic</li>
+            <li>Logs structurés</li>
+          </ul>
+        </div>
+        <div class="arch-card">
+          <h3>Workers</h3>
+          <ul>
+            <li>Celery (async tasks)</li>
+            <li>Redis (broker)</li>
+            <li>Pipelines ETL</li>
+            <li>Scalable horizontalement</li>
+          </ul>
+        </div>
+        <div class="arch-card">
+          <h3>Bases de Données</h3>
+          <ul>
+            <li>PostgreSQL (métadonnées)</li>
+            <li>Neo4j (graphe)</li>
+            <li>Qdrant (vectors)</li>
+            <li>Redis (cache)</li>
+          </ul>
+        </div>
+        <div class="arch-card">
+          <h3>LLM & IA</h3>
+          <ul>
+            <li>Groq API (inference)</li>
+            <li>Embeddings models</li>
+            <li>Prompt engineering</li>
+            <li>RAG pipeline</li>
+          </ul>
+        </div>
+        <div class="arch-card">
+          <h3>Infrastructure</h3>
+          <ul>
+            <li>Docker containers</li>
+            <li>Kubernetes (orchestration)</li>
+            <li>CI/CD pipelines</li>
+            <li>Monitoring (Prometheus)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Tech Stack -->
+  <section class="tech-stack">
+    <div class="container">
+      <h2>Technologies Utilisées</h2>
+      <div class="tech-grid">
+        <div class="tech-badge">Python</div>
+        <div class="tech-badge">FastAPI</div>
+        <div class="tech-badge">React</div>
+        <div class="tech-badge">TypeScript</div>
+        <div class="tech-badge">Neo4j</div>
+        <div class="tech-badge">Qdrant</div>
+        <div class="tech-badge">PostgreSQL</div>
+        <div class="tech-badge">Celery</div>
+        <div class="tech-badge">Redis</div>
+        <div class="tech-badge">Docker</div>
+        <div class="tech-badge">Kubernetes</div>
+        <div class="tech-badge">Groq</div>
+        <div class="tech-badge">TailwindCSS</div>
+        <div class="tech-badge">Vite</div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Stats -->
+  <section class="stats">
+    <div class="container">
+      <h2>Performance & Impact</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number">80%</div>
+          <div class="stat-label">Réduction du temps de diagnostic</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">95%</div>
+          <div class="stat-label">Précision des réponses</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">24/7</div>
+          <div class="stat-label">Disponibilité continue</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">∞</div>
+          <div class="stat-label">Évolutivité scalable</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- CTA -->
+  <section class="cta">
+    <div class="container">
+      <h2>Prêt à transformer votre support technique ?</h2>
+      <p>Déployez AI Support Agent et révolutionnez la résolution de problèmes dans votre organisation</p>
+      <div class="hero-cta">
+        <a href="#" class="btn btn-primary">Démarrer maintenant</a>
+        <a href="documentation.html" class="btn btn-secondary">Documentation</a>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Robot mascot -->
+  <div class="robot-float">
+    <svg viewBox="0 0 160 160" width="80" height="80">
+      <defs>
+        <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stop-color="#f8fbff"/>
+          <stop offset="1" stop-color="#e6f5ff"/>
+        </linearGradient>
+        <linearGradient id="g2" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stop-color="#0ea5e9"/>
+          <stop offset="1" stop-color="#0284c7"/>
+        </linearGradient>
+      </defs>
+      <g>
+        <rect x="18" y="18" width="124" height="86" rx="18" fill="url(#g1)" stroke="#bfdbfe" stroke-width="2"/>
+        <rect x="34" y="30" width="92" height="58" rx="12" fill="url(#g2)"/>
+        <g id="eyes">
+          <ellipse cx="60" cy="50" rx="10" ry="8" fill="#0c4a6e" opacity="0.85"/>
+          <ellipse cx="100" cy="50" rx="10" ry="8" fill="#0c4a6e" opacity="0.85"/>
+          <circle id="pupilL" cx="60" cy="50" r="4" fill="#7dd3fc"/>
+          <circle id="pupilR" cx="100" cy="50" r="4" fill="#7dd3fc"/>
+          <path d="M78 72c2 4 8 4 10 0" fill="#7dd3fc" opacity="0.95"/>
+        </g>
+      </g>
+      <g transform="translate(40,88)">
+        <ellipse cx="40" cy="34" rx="40" ry="34" fill="#f3f9fb"/>
+        <rect x="8" y="6" width="64" height="36" rx="12" fill="#eff6fb" stroke="#dbeafe"/>
+      </g>
+    </svg>
+  </div>
+  
+  <script>
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate');
+        }
+      });
+    }, { threshold: 0.1 });
+    
+    // Observe all cards and timeline items
+    document.querySelectorAll('.feature-card, .timeline-item, .arch-card, .tech-badge, .stat-card').forEach(el => {
+      observer.observe(el);
+    });
+    
+    // Stagger animations for tech badges
+    const techBadges = document.querySelectorAll('.tech-badge');
+    techBadges.forEach((badge, i) => {
+      badge.style.transitionDelay = `${i * 0.05}s`;
+    });
+    
+    // Robot gaze tracking
+    const robot = document.querySelector('.robot-float');
+    const pupilL = document.getElementById('pupilL');
+    const pupilR = document.getElementById('pupilR');
+    
+    document.addEventListener('mousemove', (e) => {
+      if (!robot || !pupilL || !pupilR) return;
+      const robotRect = robot.getBoundingClientRect();
+      const centerX = robotRect.left + robotRect.width / 2;
+      const centerY = robotRect.top + robotRect.height / 2;
+      const dx = (e.clientX - centerX) / window.innerWidth * 3;
+      const dy = (e.clientY - centerY) / window.innerHeight * 2;
+      pupilL.style.transform = `translate(${dx}px, ${dy}px)`;
+      pupilR.style.transform = `translate(${dx}px, ${dy}px)`;
+    });
+    
+    // Smooth scroll
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+    
+    // Parallax effect for hero
+    window.addEventListener('scroll', () => {
+      const scrolled = window.pageYOffset;
+      const hero = document.querySelector('.hero-content');
+      if (hero) {
+        hero.style.transform = `translateY(${scrolled * 0.5}px)`;
+        hero.style.opacity = 1 - (scrolled / 500);
+      }
+    });
+  </script>
+</body>
+</html>

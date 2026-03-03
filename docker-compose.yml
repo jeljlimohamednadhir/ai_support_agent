@@ -1,0 +1,145 @@
+version: '3.8'
+
+# ================================================
+# AI Support Agent - Configuration Podman/Docker
+# ================================================
+# RECOMMANDÉ: Utiliser Podman (rootless, plus sécurisé)
+#
+# Lancement avec Podman:
+#   Windows:  .\podman.ps1 up -Detached
+#   Linux:    podman-compose up -d
+#
+# Alternative Docker (si installé):
+#   docker-compose up -d
+# ================================================
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: docker.io/library/postgres:15-alpine
+    container_name: ai-support-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_support_agent}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: docker.io/library/redis:7-alpine
+    container_name: ai-support-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Neo4j (Knowledge Graph)
+  neo4j:
+    image: docker.io/library/neo4j:5-community
+    container_name: ai-support-neo4j
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-password}
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Qdrant (Vector Store)
+  qdrant:
+    image: docker.io/qdrant/qdrant:latest
+    container_name: ai-support-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider http://localhost:6333/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ./infrastructure/docker/backend.Dockerfile
+    container_name: ai-support-backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Celery Worker
+  worker:
+    build:
+      context: ./workers
+      dockerfile: ./infrastructure/docker/worker.Dockerfile
+    container_name: ai-support-worker
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - redis
+      - backend
+    volumes:
+      - ./workers:/app
+
+  # Celery Flower (Monitoring)
+  flower:
+    image: mher/flower:latest
+    container_name: ai-support-flower
+    command: celery --broker=redis://redis:6379/0 flower --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - worker
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ./infrastructure/docker/frontend.Dockerfile
+    container_name: ai-support-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+  neo4j_data:
+  qdrant_data:

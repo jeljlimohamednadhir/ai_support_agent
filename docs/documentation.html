@@ -1,0 +1,1117 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Support Agent — Documentation Complète</title>
+  <style>
+    :root{
+      --primary:#0ea5e9;
+      --secondary:#8b5cf6;
+      --accent:#f59e0b;
+      --dark:#0f172a;
+      --light:#f8fafc;
+      --text:#1e293b;
+      --muted:#64748b;
+      --success:#10b981;
+      --warning:#f59e0b;
+      --danger:#ef4444;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--text);background:var(--light);line-height:1.7}
+    
+    /* Header & Navigation */
+    .header{position:sticky;top:0;z-index:1000;background:white;border-bottom:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+    .nav{max-width:1400px;margin:0 auto;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between}
+    .logo{font-size:1.5rem;font-weight:900;background:linear-gradient(90deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .nav-links{display:flex;gap:2rem;align-items:center}
+    .nav-links a{text-decoration:none;color:var(--text);font-weight:600;transition:color 0.3s}
+    .nav-links a:hover{color:var(--primary)}
+    
+    /* Sidebar */
+    .container{display:flex;max-width:1400px;margin:0 auto}
+    .sidebar{width:280px;padding:2rem;background:white;border-right:1px solid #e2e8f0;position:sticky;top:80px;height:calc(100vh - 80px);overflow-y:auto}
+    .sidebar h3{font-size:0.875rem;text-transform:uppercase;color:var(--muted);margin:2rem 0 1rem 0;letter-spacing:0.05em}
+    .sidebar h3:first-child{margin-top:0}
+    .sidebar ul{list-style:none}
+    .sidebar li{margin:0.5rem 0}
+    .sidebar a{text-decoration:none;color:var(--text);display:block;padding:0.5rem 1rem;border-radius:8px;transition:all 0.3s}
+    .sidebar a:hover,.sidebar a.active{background:linear-gradient(135deg,rgba(14,165,233,0.1),rgba(139,92,246,0.1));color:var(--primary)}
+    
+    /* Main content */
+    .content{flex:1;padding:3rem;max-width:900px}
+    .content h1{font-size:2.5rem;font-weight:900;margin-bottom:1rem;background:linear-gradient(90deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .content h2{font-size:2rem;font-weight:800;margin:3rem 0 1.5rem 0;color:var(--dark);border-bottom:2px solid #e2e8f0;padding-bottom:0.5rem}
+    .content h3{font-size:1.5rem;font-weight:700;margin:2rem 0 1rem 0;color:var(--dark)}
+    .content h4{font-size:1.25rem;font-weight:600;margin:1.5rem 0 0.75rem 0}
+    .content p{margin:1rem 0;color:var(--text)}
+    .content ul,.content ol{margin:1rem 0 1rem 2rem}
+    .content li{margin:0.5rem 0}
+    .content a{color:var(--primary);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 0.3s}
+    .content a:hover{border-bottom-color:var(--primary)}
+    
+    /* Code blocks */
+    pre{background:#1e293b;color:#e2e8f0;padding:1.5rem;border-radius:12px;overflow-x:auto;margin:1.5rem 0;font-family:'Fira Code',monospace;font-size:0.9rem;box-shadow:0 4px 6px rgba(0,0,0,0.1)}
+    code{background:#f1f5f9;color:#be123c;padding:0.2rem 0.5rem;border-radius:4px;font-family:'Fira Code',monospace;font-size:0.9em}
+    pre code{background:transparent;color:inherit;padding:0}
+    
+    /* Cards & Alerts */
+    .alert{padding:1.5rem;border-radius:12px;margin:1.5rem 0;border-left:4px solid}
+    .alert-info{background:#eff6ff;border-color:var(--primary);color:#1e40af}
+    .alert-success{background:#f0fdf4;border-color:var(--success);color:#166534}
+    .alert-warning{background:#fffbeb;border-color:var(--warning);color:#92400e}
+    .alert-danger{background:#fef2f2;border-color:var(--danger);color:#991b1b}
+    .alert-title{font-weight:700;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem}
+    
+    /* Tables */
+    table{width:100%;border-collapse:collapse;margin:1.5rem 0;background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+    thead{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white}
+    th,td{padding:1rem;text-align:left;border-bottom:1px solid #e2e8f0}
+    th{font-weight:700}
+    tbody tr:hover{background:#f8fafc}
+    
+    /* Badges */
+    .badge{display:inline-block;padding:0.25rem 0.75rem;border-radius:12px;font-size:0.875rem;font-weight:600}
+    .badge-primary{background:var(--primary);color:white}
+    .badge-success{background:var(--success);color:white}
+    .badge-warning{background:var(--warning);color:white}
+    
+    /* Command boxes */
+    .command{background:#0f172a;color:#10b981;padding:1rem 1.5rem;border-radius:8px;font-family:'Fira Code',monospace;margin:1rem 0;display:flex;align-items:center;gap:0.5rem}
+    .command::before{content:'$';color:#64748b}
+    
+    /* API endpoint boxes */
+    .endpoint{background:white;border:2px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin:1.5rem 0}
+    .endpoint-header{display:flex;align-items:center;gap:1rem;margin-bottom:1rem}
+    .method{padding:0.5rem 1rem;border-radius:8px;font-weight:700;font-size:0.875rem}
+    .method-get{background:#ecfdf5;color:#059669}
+    .method-post{background:#eff6ff;color:#0284c7}
+    .method-put{background:#fef3c7;color:#d97706}
+    .method-delete{background:#fee2e2;color:#dc2626}
+    .endpoint-path{font-family:'Fira Code',monospace;font-size:1.1rem;color:var(--dark)}
+    
+    /* Section navigation */
+    .section-nav{background:linear-gradient(135deg,#f8fafc,#f1f5f9);padding:1.5rem;border-radius:12px;margin:2rem 0}
+    .section-nav h4{margin:0 0 1rem 0}
+    .section-nav ul{list-style:none;margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.5rem}
+    .section-nav a{display:block;padding:0.75rem 1rem;background:white;border-radius:8px;transition:all 0.3s}
+    .section-nav a:hover{transform:translateX(5px);box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+    
+    /* Responsive */
+    @media (max-width:1024px){
+      .sidebar{position:relative;width:100%;height:auto;border-right:none;border-bottom:1px solid #e2e8f0}
+      .container{flex-direction:column}
+    }
+    
+    /* Search bar */
+    .search{position:relative;width:300px}
+    .search input{width:100%;padding:0.75rem 1rem;border:2px solid #e2e8f0;border-radius:12px;font-size:0.95rem;transition:border-color 0.3s}
+    .search input:focus{outline:none;border-color:var(--primary)}
+    
+    /* Back to top */
+    .back-top{position:fixed;bottom:2rem;right:2rem;width:50px;height:50px;background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:999}
+    .back-top.visible{opacity:1}
+    .back-top:hover{transform:translateY(-5px)}
+  </style>
+</head>
+<body>
+  
+  <!-- Header -->
+  <header class="header">
+    <nav class="nav">
+      <div class="logo">AI Support Agent</div>
+      <div class="nav-links">
+        <div class="search">
+          <input type="text" placeholder="Rechercher..." id="searchInput">
+        </div>
+        <a href="presentation.html">Présentation</a>
+        <a href="#quick-start">Démarrage rapide</a>
+        <a href="https://github.com" target="_blank">GitHub</a>
+      </div>
+    </nav>
+  </header>
+  
+  <div class="container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h3>Introduction</h3>
+      <ul>
+        <li><a href="#overview" class="active">Vue d'ensemble</a></li>
+        <li><a href="#quick-start">Démarrage rapide</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+      </ul>
+      
+      <h3>Installation</h3>
+      <ul>
+        <li><a href="#prerequisites">Prérequis</a></li>
+        <li><a href="#installation">Installation</a></li>
+        <li><a href="#configuration">Configuration</a></li>
+        <li><a href="#docker">Docker & Kubernetes</a></li>
+      </ul>
+      
+      <h3>Guide Utilisateur</h3>
+      <ul>
+        <li><a href="#collector">Module Collector</a></li>
+        <li><a href="#workers">Workers</a></li>
+        <li><a href="JIRA_INTEGRATION.md">Jira Integration</a></li>
+        <li><a href="#knowledge">Knowledge Graph</a></li>
+        <li><a href="#chatbot">Chatbot</a></li>
+        <li><a href="#validation">Validation</a></li>
+      </ul>
+
+      <!-- interface section removed as requested -->
+      
+      <h3>API Reference</h3>
+      <ul>
+        <li><a href="#api-auth">Authentification</a></li>
+        <li><a href="#api-collector">Collector API</a></li>
+        <li><a href="#api-chat">Chat API</a></li>
+        <li><a href="#api-knowledge">Knowledge API</a></li>
+      </ul>
+      
+      <h3>Développement</h3>
+      <ul>
+        <li><a href="#dev-setup">Setup développeur</a></li>
+        <li><a href="#tests">Tests</a></li>
+        <li><a href="#contrib">Contribuer</a></li>
+      </ul>
+      
+      <h3>Déploiement</h3>
+      <ul>
+        <li><a href="#production">Production</a></li>
+        <li><a href="#monitoring">Monitoring</a></li>
+        <li><a href="#security">Sécurité</a></li>
+      </ul>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="content">
+      
+      <!-- Overview -->
+      <section id="overview">
+        <h1>Documentation AI Support Agent</h1>
+        <p>Bienvenue dans la documentation complète d'AI Support Agent, l'assistant intelligent pour diagnostiquer, analyser et résoudre les problèmes techniques en temps réel.</p>
+        
+        <div class="alert alert-info">
+          <div class="alert-title">📚 Version actuelle</div>
+          Cette documentation correspond à la version <strong>1.0.0</strong> d'AI Support Agent.
+        </div>
+        
+        <h2>Qu'est-ce qu'AI Support Agent ?</h2>
+        <p>AI Support Agent est une plateforme complète qui combine l'intelligence artificielle, le traitement du langage naturel et l'analyse de code pour automatiser le support technique.</p>
+        
+        <h3>Fonctionnalités principales</h3>
+        <ul>
+          <li><strong>Collecte automatique</strong> : Ingestion de logs, introspection DB, clonage Git</li>
+          <li><strong>Analyse intelligente</strong> : Workers asynchrones pour parser et enrichir les données</li>
+          <li><strong>Knowledge Graph</strong> : Stockage structuré dans Neo4j et Qdrant</li>
+          <li><strong>RAG Pipeline</strong> : Recherche sémantique et génération de réponses contextualisées</li>
+          <li><strong>Validation continue</strong> : Feedback loop avec experts humains</li>
+          <li><strong>Observabilité</strong> : Dashboards et métriques en temps réel</li>
+        </ul>
+        
+        <h3>Cas d'usage</h3>
+        <ul>
+          <li>Support technique niveau 1 et 2</li>
+          <li>Diagnostic automatique d'erreurs</li>
+          <li>Documentation automatique de code legacy</li>
+          <li>Onboarding de nouveaux développeurs</li>
+          <li>Analyse d'incidents et post-mortems</li>
+        </ul>
+      </section>
+      
+      <!-- Quick Start -->
+      <section id="quick-start">
+        <h2>⚡ Démarrage Rapide</h2>
+        <p>Lancez AI Support Agent en moins de 5 minutes avec Docker Compose.</p>
+        
+        <h3>1. Cloner le repository</h3>
+        <pre><code>git clone https://github.com/votre-org/ai-support-agent.git
+cd ai-support-agent</code></pre>
+        
+        <h3>2. Configurer les variables d'environnement</h3>
+        <pre><code>cp .env.example .env
+# Éditer .env avec vos clés API</code></pre>
+        
+        <h3>3. Lancer avec Docker Compose</h3>
+        <pre><code>docker-compose up -d</code></pre>
+        
+        <div class="alert alert-success">
+          <div class="alert-title">✅ C'est prêt !</div>
+          L'application est accessible sur <a href="http://localhost:3000">http://localhost:3000</a>
+        </div>
+        
+        <h3>4. Initialiser les données</h3>
+        <pre><code>docker-compose exec backend python inject_sample_data.py</code></pre>
+        
+        <div class="section-nav">
+          <h4>Prochaines étapes</h4>
+          <ul>
+            <li><a href="#configuration">→ Configuration détaillée</a></li>
+            <li><a href="#collector">→ Utiliser le Collector</a></li>
+            <li><a href="#chatbot">→ Utiliser le Chatbot</a></li>
+          </ul>
+        </div>
+      </section>
+      
+      <!-- Architecture -->
+      <section id="architecture">
+        <h2>🏗️ Architecture</h2>
+        <p>AI Support Agent suit une architecture microservices moderne et scalable.</p>
+        
+        <h3>Composants principaux</h3>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Composant</th>
+              <th>Technologie</th>
+              <th>Rôle</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Frontend</strong></td>
+              <td>React + TypeScript + Vite</td>
+              <td>Interface utilisateur responsive</td>
+            </tr>
+            <tr>
+              <td><strong>Backend API</strong></td>
+              <td>FastAPI (Python)</td>
+              <td>API REST avec validation Pydantic</td>
+            </tr>
+            <tr>
+              <td><strong>Workers</strong></td>
+              <td>Celery + Redis</td>
+              <td>Tâches asynchrones (parsing, ETL)</td>
+            </tr>
+            <tr>
+              <td><strong>PostgreSQL</strong></td>
+              <td>Postgres 15</td>
+              <td>Métadonnées et données relationnelles</td>
+            </tr>
+            <tr>
+              <td><strong>Neo4j</strong></td>
+              <td>Neo4j 5</td>
+              <td>Knowledge Graph (relations)</td>
+            </tr>
+            <tr>
+              <td><strong>Qdrant</strong></td>
+              <td>Qdrant</td>
+              <td>Vector Store (embeddings)</td>
+            </tr>
+            <tr>
+              <td><strong>Redis</strong></td>
+              <td>Redis 7</td>
+              <td>Cache + Message Broker</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <h3>Flux de données</h3>
+        <ol>
+          <li><strong>Ingestion</strong> : Le Collector récupère les données (Git, logs, DB)</li>
+          <li><strong>Traitement</strong> : Les Workers analysent et enrichissent les données</li>
+          <li><strong>Indexation</strong> : Stockage dans Neo4j (graphe) et Qdrant (vectors)</li>
+          <li><strong>Requête</strong> : Le Chatbot utilise RAG pour générer des réponses</li>
+          <li><strong>Validation</strong> : Les experts valident et corrigent les réponses</li>
+        </ol>
+      </section>
+      
+      <!-- Prerequisites -->
+      <section id="prerequisites">
+        <h2>📋 Prérequis</h2>
+        
+        <h3>Logiciels requis</h3>
+        <ul>
+          <li><strong>Docker</strong> ≥ 24.0 et Docker Compose ≥ 2.20</li>
+          <li><strong>Python</strong> ≥ 3.11 (pour développement local)</li>
+          <li><strong>Node.js</strong> ≥ 18 (pour frontend)</li>
+          <li><strong>Git</strong> ≥ 2.40</li>
+        </ul>
+        
+        <h3>Ressources système minimales</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Ressource</th>
+              <th>Développement</th>
+              <th>Production</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>CPU</td>
+              <td>4 cores</td>
+              <td>8+ cores</td>
+            </tr>
+            <tr>
+              <td>RAM</td>
+              <td>8 GB</td>
+              <td>32+ GB</td>
+            </tr>
+            <tr>
+              <td>Stockage</td>
+              <td>20 GB</td>
+              <td>200+ GB (SSD)</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <h3>Clés API nécessaires</h3>
+        <ul>
+          <li><span class="badge badge-primary">Groq API</span> pour l'inférence LLM</li>
+          <li><span class="badge badge-warning">Optionnel</span> OpenAI API pour embeddings (alternative gratuite disponible)</li>
+        </ul>
+      </section>
+      
+      <!-- Installation -->
+      <section id="installation">
+        <h2>💿 Installation</h2>
+        
+        <h3>Installation via Docker (recommandée)</h3>
+        <pre><code># 1. Cloner le repository
+git clone https://github.com/votre-org/ai-support-agent.git
+cd ai-support-agent
+
+# 2. Copier et configurer .env
+cp .env.example .env
+nano .env  # Éditer avec vos clés
+
+# 3. Build des images
+docker-compose build
+
+# 4. Lancement des services
+docker-compose up -d
+
+# 5. Vérifier les logs
+docker-compose logs -f</code></pre>
+        
+        <h3>Installation locale (développement)</h3>
+        
+        <h4>Backend</h4>
+        <pre><code>cd backend
+python -m venv .venv
+source .venv/bin/activate  # ou .venv\Scripts\activate sur Windows
+pip install -r requirements.txt
+uvicorn app.main:app --reload</code></pre>
+        
+        <h4>Frontend</h4>
+        <pre><code>cd frontend
+npm install
+npm run dev</code></pre>
+        
+        <h4>Workers</h4>
+        <pre><code>cd workers
+celery -A celery_app worker --loglevel=info</code></pre>
+        
+        <div class="alert alert-warning">
+          <div class="alert-title">⚠️ Base de données</div>
+          N'oubliez pas de lancer PostgreSQL, Neo4j, Qdrant et Redis localement ou via Docker.
+        </div>
+      </section>
+      
+      <!-- Configuration -->
+      <section id="configuration">
+        <h2>⚙️ Configuration</h2>
+        
+        <h3>Variables d'environnement</h3>
+        <p>Créez un fichier <code>.env</code> à la racine du projet :</p>
+        
+        <pre><code># API Keys
+GROQ_API_KEY=gsk_xxx
+OPENAI_API_KEY=sk-xxx  # Optionnel
+
+# Database
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=secret
+POSTGRES_DB=ai_support_agent
+DATABASE_URL=postgresql://postgres:secret@localhost:5432/ai_support_agent
+
+# Neo4j
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=password
+
+# Qdrant
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+QDRANT_COLLECTION=support_vectors
+
+# Redis
+REDIS_URL=redis://localhost:6379/0
+
+# Backend
+BACKEND_PORT=8000
+SECRET_KEY=your-secret-key-change-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Frontend
+VITE_API_URL=http://localhost:8000</code></pre>
+        
+        <h3>Configuration avancée</h3>
+        <p>Modifiez <code>backend/app/core/config.py</code> pour personnaliser :</p>
+        <ul>
+          <li>Modèles LLM utilisés</li>
+          <li>Paramètres de chunking</li>
+          <li>Stratégies d'embedding</li>
+          <li>Seuils de similarité</li>
+          <li>Rate limiting</li>
+        </ul>
+      </section>
+      
+      <!-- Docker -->
+      <section id="docker">
+        <h2>🐳 Docker & Kubernetes</h2>
+        
+        <h3>Docker Compose</h3>
+        <p>Le fichier <code>docker-compose.yml</code> inclut tous les services nécessaires :</p>
+        
+        <pre><code>services:
+  frontend:
+    build: ./infrastructure/docker/frontend.Dockerfile
+    ports: ["3000:80"]
+  
+  backend:
+    build: ./infrastructure/docker/backend.Dockerfile
+    ports: ["8000:8000"]
+    depends_on: [postgres, redis, neo4j, qdrant]
+  
+  worker:
+    build: ./infrastructure/docker/worker.Dockerfile
+    depends_on: [backend, redis]
+  
+  postgres:
+    image: postgres:15
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+  
+  neo4j:
+    image: neo4j:5
+    ports: ["7474:7474", "7687:7687"]
+  
+  qdrant:
+    image: qdrant/qdrant
+    ports: ["6333:6333"]
+  
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]</code></pre>
+        
+        <h3>Kubernetes</h3>
+        <p>Les manifests Kubernetes sont disponibles dans <code>infrastructure/k8s/</code></p>
+        
+        <pre><code># Déployer sur un cluster K8s
+kubectl apply -f infrastructure/k8s/
+
+# Vérifier les pods
+kubectl get pods
+
+# Port-forward pour accès local
+kubectl port-forward svc/backend 8000:8000</code></pre>
+      </section>
+      
+      <!-- Collector -->
+      <section id="collector">
+        <h2>📦 Module Collector</h2>
+        <p>Le Collector est responsable de l'ingestion des données depuis différentes sources.</p>
+        
+        <h3>Sources supportées</h3>
+        <ul>
+          <li><strong>Git</strong> : Clone et analyse des repositories</li>
+          <li><strong>Logs</strong> : Parsing de fichiers logs (text, JSON, structured)</li>
+          <li><strong>Base de données</strong> : Introspection de schémas SQL</li>
+          <li><strong>API</strong> : Découverte d'endpoints REST/GraphQL</li>
+        </ul>
+        
+        <h3>Utilisation via UI</h3>
+        <ol>
+          <li>Accéder à l'onglet "Collecte"</li>
+          <li>Sélectionner le type de source</li>
+          <li>Fournir les credentials/URL</li>
+          <li>Lancer la collecte</li>
+          <li>Suivre la progression en temps réel</li>
+        </ol>
+        
+        <!-- UI collect reference removed as requested -->
+        
+        <h3>Utilisation via API</h3>
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/collector/git</span>
+          </div>
+          <p>Clone et analyse un repository Git</p>
+          <h4>Body</h4>
+          <pre><code>{
+  "repo_url": "https://github.com/user/repo",
+  "branch": "main",
+  "credentials": {
+    "username": "user",
+    "token": "ghp_xxx"
+  }
+}</code></pre>
+          <h4>Réponse</h4>
+          <pre><code>{
+  "task_id": "abc-123",
+  "status": "pending",
+  "message": "Collection started"
+}</code></pre>
+        </div>
+      </section>
+      
+      <!-- Workers -->
+      <section id="workers">
+        <h2>⚙️ Workers</h2>
+        <p>Les workers Celery traitent les tâches asynchrones en arrière-plan.</p>
+        
+        <h3>Types de workers</h3>
+        <ul>
+          <li><strong>code_analyzer</strong> : Parsing AST, extraction de métadonnées</li>
+          <li><strong>log_analyzer</strong> : Parsing et enrichissement de logs</li>
+          <li><strong>db_analyzer</strong> : Analyse de schémas et relations</li>
+          <li><strong>doc_analyzer</strong> : Extraction de documentation</li>
+        </ul>
+        
+        <h3>Monitoring des workers</h3>
+        <pre><code># Vérifier les workers actifs
+celery -A celery_app inspect active
+
+# Statistiques
+celery -A celery_app inspect stats
+
+# Flower (UI web)
+celery -A celery_app flower</code></pre>
+        
+        <div class="alert alert-info">
+          <div class="alert-title">💡 Scalabilité</div>
+          Vous pouvez lancer plusieurs instances de workers pour augmenter le débit :
+          <code>celery -A celery_app worker --concurrency=8</code>
+        </div>
+      </section>
+      
+      <!-- Knowledge Graph -->
+      <section id="knowledge">
+        <h2>🧠 Knowledge Graph</h2>
+        <p>Le Knowledge Graph stocke les relations entre entités dans Neo4j.</p>
+        
+        <h3>Types de nœuds</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Propriétés</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>File</code></td>
+              <td>Fichier source</td>
+              <td>path, language, size</td>
+            </tr>
+            <tr>
+              <td><code>Function</code></td>
+              <td>Fonction ou méthode</td>
+              <td>name, signature, docstring</td>
+            </tr>
+            <tr>
+              <td><code>Class</code></td>
+              <td>Classe ou interface</td>
+              <td>name, type, members</td>
+            </tr>
+            <tr>
+              <td><code>Endpoint</code></td>
+              <td>Route API</td>
+              <td>method, path, params</td>
+            </tr>
+            <tr>
+              <td><code>Table</code></td>
+              <td>Table DB</td>
+              <td>name, columns, indexes</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <h3>Types de relations</h3>
+        <ul>
+          <li><code>CONTAINS</code> : File → Function/Class</li>
+          <li><code>CALLS</code> : Function → Function</li>
+          <li><code>INHERITS</code> : Class → Class</li>
+          <li><code>USES</code> : Endpoint → Table</li>
+          <li><code>REFERENCES</code> : Function → Table</li>
+        </ul>
+        
+        <h3>Requêtes Cypher</h3>
+        <pre><code>// Trouver toutes les fonctions appelées par une fonction
+MATCH (f:Function {name: "process_data"})-[:CALLS]->(called)
+RETURN called.name
+
+// Trouver les tables utilisées par un endpoint
+MATCH (e:Endpoint {path: "/api/users"})-[:USES]->(t:Table)
+RETURN t.name</code></pre>
+      </section>
+      
+      <!-- Chatbot -->
+      <section id="chatbot">
+        <h2>💬 Chatbot</h2>
+        <p>Le chatbot utilise un pipeline RAG pour fournir des réponses contextualisées.</p>
+        
+        <h3>Pipeline RAG</h3>
+        <ol>
+          <li><strong>Embedding</strong> : La question est convertie en vecteur</li>
+          <li><strong>Recherche sémantique</strong> : Top-K documents pertinents via Qdrant</li>
+          <li><strong>Re-ranking</strong> : Score de pertinence affiné</li>
+          <li><strong>Construction du prompt</strong> : Template avec contexte injecté</li>
+          <li><strong>Génération</strong> : LLM génère la réponse</li>
+          <li><strong>Post-processing</strong> : Formatage et extraction d'actions</li>
+        </ol>
+        
+        <h3>API Chatbot</h3>
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/chat/query</span>
+          </div>
+          <p>Envoie une question au chatbot</p>
+          <h4>Body</h4>
+          <pre><code>{
+  "query": "Comment résoudre l'erreur 'connection timeout' ?",
+  "context": {
+    "project_id": "proj-123",
+    "user_id": "user-456"
+  },
+  "options": {
+    "top_k": 5,
+    "temperature": 0.7
+  }
+}</code></pre>
+          <h4>Réponse</h4>
+          <pre><code>{
+  "response": "L'erreur 'connection timeout' peut être causée par...",
+  "sources": [
+    {"id": "doc-1", "title": "Guide de troubleshooting", "score": 0.92},
+    {"id": "doc-2", "title": "Configuration réseau", "score": 0.87}
+  ],
+  "suggested_actions": [
+    "Vérifier la configuration du firewall",
+    "Augmenter le timeout dans app.config"
+  ]
+}</code></pre>
+        </div>
+        
+        <h3>Personnalisation</h3>
+        <p>Modifiez <code>backend/app/services/chatbot/chatbot_service.py</code> pour :</p>
+        <ul>
+          <li>Changer le modèle LLM</li>
+          <li>Ajuster les prompts système</li>
+          <li>Modifier la stratégie de re-ranking</li>
+          <li>Ajouter des post-processors custom</li>
+        </ul>
+      </section>
+      
+      <!-- Validation -->
+      <section id="validation">
+        <h2>✅ Validation</h2>
+        <p>Le module de validation permet aux experts de reviewer et corriger les réponses du chatbot.</p>
+        
+        <h3>Workflow de validation</h3>
+        <ol>
+          <li>Le chatbot génère une réponse</li>
+          <li>La réponse est marquée "En attente de validation"</li>
+          <li>Un expert review la réponse</li>
+          <li>L'expert peut : Valider / Corriger / Rejeter</li>
+          <li>Les corrections sont persistées et utilisées pour fine-tuning</li>
+        </ol>
+        
+        <h3>Métriques de qualité</h3>
+        <ul>
+          <li><strong>Taux de validation</strong> : % de réponses validées sans correction</li>
+          <li><strong>Score BLEU</strong> : Similarité avec réponses de référence</li>
+          <li><strong>Temps de réponse</strong> : Latence moyenne P50/P95/P99</li>
+          <li><strong>Satisfaction utilisateur</strong> : 👍 / 👎</li>
+        </ul>
+      </section>
+      
+      <!-- API Auth -->
+      <section id="api-auth">
+        <h2>🔐 Authentification API</h2>
+        <p>Toutes les routes API (sauf <code>/health</code>) nécessitent une authentification JWT.</p>
+        
+        <h3>Obtenir un token</h3>
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/auth/login</span>
+          </div>
+          <pre><code>{
+  "username": "admin",
+  "password": "password"
+}</code></pre>
+          <h4>Réponse</h4>
+          <pre><code>{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer",
+  "expires_in": 1800
+}</code></pre>
+        </div>
+        
+        <h3>Utiliser le token</h3>
+        <p>Incluez le token dans le header <code>Authorization</code> de toutes vos requêtes :</p>
+        <pre><code>Authorization: Bearer eyJhbGciOiJIUzI1NiIs...</code></pre>
+      </section>
+      
+      <!-- API Collector -->
+      <section id="api-collector">
+        <h2>📦 Collector API</h2>
+        
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/v1/collector/status/:task_id</span>
+          </div>
+          <p>Récupère le statut d'une tâche de collection</p>
+        </div>
+        
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/collector/logs</span>
+          </div>
+          <p>Ingère des fichiers logs</p>
+        </div>
+        
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/collector/database</span>
+          </div>
+          <p>Introspection d'une base de données</p>
+        </div>
+      </section>
+      
+      <!-- API Chat -->
+      <section id="api-chat">
+        <h2>💬 Chat API</h2>
+        
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/chat/query</span>
+          </div>
+          <p>Envoie une question au chatbot (voir section Chatbot)</p>
+        </div>
+        
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/v1/chat/history</span>
+          </div>
+          <p>Récupère l'historique des conversations</p>
+        </div>
+        
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/chat/feedback</span>
+          </div>
+          <p>Envoie un feedback (👍/👎) sur une réponse</p>
+        </div>
+      </section>
+      
+      <!-- API Knowledge -->
+      <section id="api-knowledge">
+        <h2>🧠 Knowledge API</h2>
+        
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/v1/knowledge/search</span>
+          </div>
+          <p>Recherche sémantique dans le knowledge graph</p>
+          <h4>Query params</h4>
+          <ul>
+            <li><code>q</code> : Requête de recherche</li>
+            <li><code>top_k</code> : Nombre de résultats (défaut: 10)</li>
+            <li><code>threshold</code> : Seuil de similarité (défaut: 0.7)</li>
+          </ul>
+        </div>
+        
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/v1/knowledge/graph/:node_id</span>
+          </div>
+          <p>Récupère un nœud et ses relations</p>
+        </div>
+      </section>
+      
+      <!-- Dev Setup -->
+      <section id="dev-setup">
+        <h2>👨‍💻 Setup Développeur</h2>
+        
+        <h3>Prérequis</h3>
+        <ul>
+          <li>Python 3.11+</li>
+          <li>Node.js 18+</li>
+          <li>Docker Desktop</li>
+          <li>Git</li>
+        </ul>
+        
+        <h3>Installation</h3>
+        <pre><code># 1. Fork et clone
+git clone https://github.com/votre-username/ai-support-agent.git
+cd ai-support-agent
+
+# 2. Backend
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -r requirements-dev.txt  # Outils de dev
+
+# 3. Frontend
+cd ../frontend
+npm install
+
+# 4. Lancer les services (DB, Redis, etc.)
+docker-compose up -d postgres redis neo4j qdrant
+
+# 5. Migrations
+cd ../backend
+alembic upgrade head
+
+# 6. Lancer backend
+uvicorn app.main:app --reload
+
+# 7. Lancer frontend (nouveau terminal)
+cd ../frontend
+npm run dev</code></pre>
+        
+        <h3>Structure du code</h3>
+        <pre><code>backend/
+  app/
+    api/         # Routes FastAPI
+    core/        # Config, security, logging
+    db/          # Sessions et models SQLAlchemy
+    models/      # Models Pydantic
+    schemas/     # Validation schemas
+    services/    # Logique métier
+    utils/       # Helpers
+  tests/         # Tests unitaires et intégration
+  
+frontend/
+  src/
+    components/  # Composants React
+    pages/       # Pages principales
+    services/    # API clients
+    utils/       # Helpers</code></pre>
+      </section>
+      
+      <!-- Tests -->
+      <section id="tests">
+        <h2>🧪 Tests</h2>
+        
+        <h3>Backend</h3>
+        <pre><code># Tests unitaires
+pytest
+
+# Avec coverage
+pytest --cov=app --cov-report=html
+
+# Tests d'intégration
+pytest -m integration
+
+# Tests E2E
+pytest -m e2e</code></pre>
+        
+        <h3>Frontend</h3>
+        <pre><code># Tests unitaires
+npm test
+
+# Tests E2E avec Playwright
+npm run test:e2e</code></pre>
+        
+        <h3>Qualité du code</h3>
+        <pre><code># Linting backend
+black .
+ruff check .
+
+# Linting frontend
+npm run lint</code></pre>
+      </section>
+      
+      <!-- Contrib -->
+      <section id="contrib">
+        <h2>🤝 Contribuer</h2>
+        
+        <h3>Workflow de contribution</h3>
+        <ol>
+          <li>Fork le repository</li>
+          <li>Créer une branche feature : <code>git checkout -b feature/ma-feature</code></li>
+          <li>Commit vos changements : <code>git commit -m "Add: ma feature"</code></li>
+          <li>Push : <code>git push origin feature/ma-feature</code></li>
+          <li>Créer une Pull Request</li>
+        </ol>
+        
+        <h3>Conventions</h3>
+        <ul>
+          <li><strong>Commits</strong> : Utilisez <a href="https://www.conventionalcommits.org/">Conventional Commits</a></li>
+          <li><strong>Code style</strong> : Suivez PEP8 (Python) et ESLint (TypeScript)</li>
+          <li><strong>Tests</strong> : Ajoutez des tests pour toute nouvelle fonctionnalité</li>
+          <li><strong>Documentation</strong> : Mettez à jour la doc si nécessaire</li>
+        </ul>
+      </section>
+      
+      <!-- Production -->
+      <section id="production">
+        <h2>🚀 Déploiement Production</h2>
+        
+        <h3>Checklist pré-déploiement</h3>
+        <ul>
+          <li>✅ Variables d'environnement configurées</li>
+          <li>✅ Secrets stockés dans un vault (HashiCorp Vault, AWS Secrets Manager)</li>
+          <li>✅ Base de données migrée</li>
+          <li>✅ SSL/TLS configuré</li>
+          <li>✅ CORS configuré correctement</li>
+          <li>✅ Rate limiting activé</li>
+          <li>✅ Logs centralisés (ELK, Datadog)</li>
+          <li>✅ Monitoring configuré (Prometheus, Grafana)</li>
+        </ul>
+        
+        <h3>Docker Compose Production</h3>
+        <pre><code>docker-compose -f docker-compose.prod.yml up -d</code></pre>
+        
+        <h3>Kubernetes</h3>
+        <pre><code># Déployer
+kubectl apply -f infrastructure/k8s/production/
+
+# Vérifier
+kubectl get pods -n ai-support-agent
+kubectl logs -f deployment/backend -n ai-support-agent</code></pre>
+      </section>
+      
+      <!-- Monitoring -->
+      <section id="monitoring">
+        <h2>📊 Monitoring</h2>
+        
+        <h3>Métriques clés</h3>
+        <ul>
+          <li><strong>API</strong> : Latence P50/P95/P99, taux d'erreur, throughput</li>
+          <li><strong>Workers</strong> : Queue depth, tâches/sec, erreurs</li>
+          <li><strong>Base de données</strong> : Connexions actives, query time, cache hit rate</li>
+          <li><strong>LLM</strong> : Tokens/sec, coût, latence</li>
+        </ul>
+        
+        <h3>Stack Prometheus + Grafana</h3>
+        <pre><code># Lancer Prometheus + Grafana
+docker-compose -f docker-compose.monitoring.yml up -d
+
+# Accéder à Grafana
+open http://localhost:3001</code></pre>
+        
+        <h3>Alertes</h3>
+        <p>Configurez des alertes dans <code>infrastructure/prometheus/alerts.yml</code> :</p>
+        <ul>
+          <li>Latence API > 2s</li>
+          <li>Taux d'erreur > 5%</li>
+          <li>Worker queue depth > 1000</li>
+          <li>Espace disque < 10%</li>
+        </ul>
+      </section>
+      
+      <!-- Security -->
+      <section id="security">
+        <h2>🔒 Sécurité</h2>
+        
+        <h3>Best practices implémentées</h3>
+        <ul>
+          <li>✅ Authentification JWT avec refresh tokens</li>
+          <li>✅ HTTPS obligatoire en production</li>
+          <li>✅ Rate limiting (100 req/min par IP)</li>
+          <li>✅ Validation stricte des inputs (Pydantic)</li>
+          <li>✅ Sanitization des requêtes SQL (parameterized queries)</li>
+          <li>✅ CORS configuré par whitelist</li>
+          <li>✅ Headers de sécurité (CSP, X-Frame-Options, etc.)</li>
+          <li>✅ Secrets stockés dans des vaults</li>
+        </ul>
+        
+        <h3>Audit de sécurité</h3>
+        <pre><code># Scanner les dépendances Python
+pip-audit
+
+# Scanner les dépendances NPM
+npm audit
+
+# Scan de l'image Docker
+trivy image ai-support-agent:latest</code></pre>
+        
+        <div class="alert alert-danger">
+          <div class="alert-title">⚠️ Important</div>
+          Ne commitez JAMAIS de secrets dans le repository. Utilisez <code>.env</code> et ajoutez-le à <code>.gitignore</code>.
+        </div>
+      </section>
+      
+    </main>
+  </div>
+  
+  <!-- Back to top button -->
+  <div class="back-top" id="backTop">↑</div>
+  
+  <script>
+    // Sidebar active link
+    const links = document.querySelectorAll('.sidebar a');
+    const sections = document.querySelectorAll('section[id]');
+    
+    function setActiveLink() {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        if (pageYOffset >= sectionTop - 100) {
+          current = section.getAttribute('id');
+        }
+      });
+      
+      links.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    }
+    
+    window.addEventListener('scroll', setActiveLink);
+    
+    // Back to top
+    const backTop = document.getElementById('backTop');
+    window.addEventListener('scroll', () => {
+      if (window.pageYOffset > 300) {
+        backTop.classList.add('visible');
+      } else {
+        backTop.classList.remove('visible');
+      }
+    });
+    
+    backTop.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    
+    // Search (simple client-side)
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      if (query.length < 2) return;
+      
+      sections.forEach(section => {
+        const text = section.textContent.toLowerCase();
+        if (text.includes(query)) {
+          section.style.background = 'rgba(14, 165, 233, 0.05)';
+        } else {
+          section.style.background = '';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

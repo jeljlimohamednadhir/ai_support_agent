@@ -1,0 +1,24 @@
+Sprint,Titre,Description,Fichier/module/API,Type,Livrable attendu,Dépendances
+Sprint 1,Auth model Jira,Implémenter modèle hybride (service account + per-user),backend/app/services/jira/auth_service.py,Backend,auth_service.py,-
+Sprint 1,Endpoint connect Jira,Endpoint API pour connecter un compte Jira utilisateur,backend/app/api/v1/endpoints/jira.py,Backend/API,/api/v1/jira/connect,Auth model
+Sprint 1,Chiffrement secrets,Stockage chiffré des tokens Jira (Fernet, Vault, etc.),backend/app/core/security.py,Backend/Sécu,security.py,Auth model
+Sprint 1,Admin: revoke tokens,Endpoint admin pour révoquer/voir tokens Jira,backend/app/api/v1/endpoints/jira.py,Backend/API,/api/v1/jira/admin/tokens,Auth model
+Sprint 1,UI: page connexion Jira,Page frontend pour connecter/déconnecter Jira,frontend/src/pages/SettingsPage.tsx,Frontend,SettingsPage.tsx,Endpoint connect
+Sprint 1,Tests unitaires auth,Tests unitaires sur auth_service, endpoints, chiffrement,backend/tests/test_jira_auth.py,Tests,test_jira_auth.py,Auth model
+Sprint 1,Doc: guide connexion Jira,Documentation utilisateur pour connecter Jira,docs/JIRA_CONNECT.md,Doc,JIRA_CONNECT.md,Endpoint/UI
+Sprint 2,Worker sync Jira,Script/worker pour synchroniser tickets Jira (scheduler + webhook),workers/jira_sync/tasks.py,Backend/Worker,tasks.py,Auth, Qdrant, Neo4j
+Sprint 2,Endpoint webhook Jira,Endpoint pour recevoir events Jira (création, update),backend/app/api/v1/endpoints/jira.py,Backend/API,/api/v1/jira/webhook,Auth, Worker
+Sprint 2,Script reconciliation,Script pour vérifier cohérence Qdrant/Neo4j/Jira,scripts/reconcile_jira.py,Script,reconcile_jira.py,Worker, DBs
+Sprint 2,Tests intégration sync,Tests d’intégration sur la synchronisation complète,backend/tests/test_jira_sync.py,Tests,test_jira_sync.py,Worker, Endpoints
+Sprint 2,Doc: automatisation Jira,Documentation sur la synchro et automatisation,docs/JIRA_SYNC.md,Doc,JIRA_SYNC.md,Worker, Endpoints
+Sprint 3,UI: admin connecteurs,Page admin pour gérer connexions Jira, voir statut sync,frontend/src/pages/SettingsPage.tsx,Frontend,SettingsPage.tsx,Endpoints
+Sprint 3,UI: Knowledge Graph,Page de visualisation du graphe de connaissances,frontend/src/pages/KnowledgePage.tsx,Frontend,KnowledgePage.tsx,API graph
+Sprint 3,UI: Chat amélioré,Améliorer page Chat pour afficher sources, liens, tickets,frontend/src/pages/ChatPage.tsx,Frontend,ChatPage.tsx,API chatbot
+Sprint 3,Endpoint graph data,Endpoint pour exposer graphe (nodes, relations),backend/app/api/v1/endpoints/graph.py,Backend/API,/api/v1/graph/data,Neo4j, Auth
+Sprint 3,Tests e2e UI,Tests end-to-end sur les pages UI,frontend/src/__tests__/e2e/,Tests,e2e tests,UI, Endpoints
+Sprint 3,Doc: guide utilisateur,Documentation utilisateur sur l’UI,docs/USER_GUIDE.md,Doc,USER_GUIDE.md,UI
+Sprint 4,Pipeline CI/CD,Workflow GitHub Actions pour tests, build, déploiement,.github/workflows/ci.yml,Infra,ci.yml,Tests, Dockerfiles
+Sprint 4,Dockerfiles prod,Dockerfiles optimisés pour backend, frontend, workers,infrastructure/docker/,Infra,backend.Dockerfile, ...,CI/CD
+Sprint 4,Monitoring/alerting,Ajout healthchecks, Prometheus, alertes basiques,backend/app/core/monitoring.py, infra/,Backend/Infra,monitoring.py, config,CI/CD, Prod
+Sprint 4,Tests couverture,Ajout de la couverture de tests (pytest-cov, etc.),backend/tests/, frontend/src/__tests__/,Tests,rapport coverage,Tests
+Sprint 4,Doc: déploiement,Documentation déploiement, monitoring, CI/CD,docs/DEPLOY.md, docs/MONITORING.md,Doc,DEPLOY.md, MONITORING.md,CI/CD, Monitoring

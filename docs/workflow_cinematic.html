@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Workflow Cinématique — AI Support Agent</title>
+  <style>
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#f6f9fc 0%, #eef6fb 100%);color:#0b1320;font-family:Inter,Segoe UI,Roboto,Arial}
+    .stage-scene{position:relative;height:100vh;overflow:hidden}
+    .pan-wrap{position:absolute;left:0;top:0;width:1600px;min-width:1600px;height:100%;pointer-events:auto;transform-origin:0 0}
+    .stage-canvas{position:absolute;inset:0;opacity:0.28;filter:contrast(0.9)}
+    .hud{position:absolute;left:32px;top:32px;z-index:60}
+    .hud h1{margin:0;font-size:28px;letter-spacing:0.4px;color:#0b1220}
+    .hud p{margin:6px 0 0 0;color:#475569}
+    /* panels */
+    .panel{position:absolute;width:420px;max-width:46vw;min-height:160px;background:#ffffff;border-radius:14px;padding:18px;box-shadow:0 12px 40px rgba(11,19,32,0.06);border:1px solid rgba(11,19,32,0.04)}
+    .panel h2{margin:0 0 8px 0;font-size:18px;color:#07102a}
+    .panel p{margin:0;color:#334155}
+    .panel .detail{display:none;margin-top:10px;color:#475569}
+    .panel .summary{display:block;margin-top:8px;color:#334155}
+    #p1{left:64px;top:110px}
+    #p2{left:604px;top:80px}
+    #p3{left:1144px;top:110px}
+    #p4{left:364px;top:420px}
+    #p5{left:904px;top:420px}
+    /* cinematic vignette soft */
+    .vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center, rgba(255,255,255,0) 50%, rgba(11,19,32,0.02) 100%)}
+    .controls{position:absolute;right:32px;top:32px;z-index:60}
+    .btn{background:linear-gradient(90deg,#06b6d4,#4f46e5);color:#fff;padding:10px 14px;border-radius:10px;font-weight:700;text-decoration:none}
+    @media (max-width:1100px){ .panel{width:360px;position:relative;left:auto;top:auto} #p3{left:720px} }
+    @media (max-width:800px){ .panel{position:relative;left:0;top:0;width:auto;margin:12px} .stage-scene{height:auto;padding-bottom:40px} }
+  </style>
+  <script>
+    // Dynamic loader for GSAP + ScrollTrigger from CDN with graceful fallback
+    (function loadGSAP(cb){
+      if(window.gsap) { cb && cb(); return; }
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';
+      s.crossOrigin = 'anonymous';
+      s.referrerPolicy = 'no-referrer';
+      s.onload = function(){
+        var s2 = document.createElement('script');
+        s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js';
+        s2.crossOrigin = 'anonymous';
+        s2.referrerPolicy = 'no-referrer';
+        s2.onload = cb;
+        s2.onerror = function(){ console.warn('Failed to load GSAP ScrollTrigger from CDN'); cb && cb(); };
+        document.head.appendChild(s2);
+      };
+      s.onerror = function(){ console.warn('Failed to load GSAP from CDN'); cb && cb(); };
+      document.head.appendChild(s);
+    })(function(){ /* GSAP loaded (or failed) */ });
+  </script>
+</head>
+<body>
+  <div class="stage-scene">
+    <canvas id="bgCanvas" class="stage-canvas"></canvas>
+    <div class="hud">
+      <h1>Workflow Cinématique</h1>
+      <p>Une narration visuelle — chaque étape s'enchaîne avec camera move et micro-interactions</p>
+    </div>
+
+    <div id="panWrap" class="pan-wrap">
+      <div id="p1" class="panel" data-index="0">
+        <h2>1 — Collecte</h2>
+        <div class="summary">Clonage Git, ingestion logs, introspection DB.</div>
+        <div class="detail">Détails : scanning du repo, découverte d'endpoints, extraction des schémas, indexation pour recherche sémantique et annotations.</div>
+      </div>
+
+      <div id="p2" class="panel" data-index="1">
+        <h2>2 — Workers</h2>
+        <div class="summary">Parsing AST, extraction, génération embeddings.</div>
+        <div class="detail">Détails : tâches asynchrones Celery qui analysent code/logs/DB, normalisent et publient résultats au graphe et vector store.</div>
+      </div>
+
+      <div id="p3" class="panel" data-index="2">
+        <h2>3 — Indexation</h2>
+        <div class="summary">Neo4j pour le graphe, Qdrant pour vecteurs.</div>
+        <div class="detail">Détails : création de noeuds/relations, stockage des extraits de code, embeddings, et mapping vers métadonnées Postgres.</div>
+      </div>
+
+      <div id="p4" class="panel" data-index="3">
+        <h2>4 — Chatbot</h2>
+        <div class="summary">Recherche sémantique + prompt engineering.</div>
+        <div class="detail">Détails : RAG pipeline, sélection de contexte, prompt templates, et génération d'actions / recommandations.</div>
+      </div>
+
+      <div id="p5" class="panel" data-index="4">
+        <h2>5 — Validation</h2>
+        <div class="summary">Experts valident et fournissent du feedback.</div>
+        <div class="detail">Détails : UI de validation, corrections persistées, métriques de qualité et boucle d'amélioration.</div>
+      </div>
+    </div>
+    <div class="controls"><a id="play" class="btn">Play Cinematic</a></div>
+    <div class="ctrl" role="region" aria-label="Cinematic controls">
+      <button id="prev">⟨ Prev</button>
+      <button id="playbtn" class="play">Play</button>
+      <button id="pause">Pause</button>
+      <button id="next">Next ⟩</button>
+      <input id="seek" type="range" min="0" max="100" value="0" aria-label="Timeline seek"/>
+    </div>
+    <div class="vignette"></div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
+    addEventListener('resize', resize); resize();
+
+    // animated subtle particles (reduced intensity)
+    const particles = [];
+    for(let i=0;i<80;i++){ particles.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,z:Math.random()*1.6+0.1,r:Math.random()*1.2+0.2,dx:(Math.random()-0.5)*0.12})}
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // light gradient background
+      const g = ctx.createLinearGradient(0,0,0,canvas.height); g.addColorStop(0,'#f5f9fc'); g.addColorStop(1,'#eef6fb'); ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
+      particles.forEach(p=>{ p.x += p.dx; p.y += Math.sin((Date.now()/3000)+p.x*0.0008); if(p.x<0) p.x=canvas.width; if(p.x>canvas.width) p.x=0; ctx.beginPath(); ctx.fillStyle = 'rgba(11,19,32,'+ (0.02 + p.z*0.045) +')'; ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); })
+      requestAnimationFrame(draw);
+    }
+    draw();
+
+    // global helper: compute pan coordinates to center element
+    function getPanCoordsForEl(el){
+      const pan = document.getElementById('panWrap');
+      const elRect = el.getBoundingClientRect();
+      // center of element in viewport coordinates
+      const centerX = elRect.left + elRect.width/2;
+      const centerY = elRect.top + elRect.height/2;
+      const targetX = centerX - window.innerWidth/2;
+      const targetY = centerY - window.innerHeight/2;
+      return { x: -targetX, y: -targetY };
+    }
+
+    // Cinematic timeline using GSAP
+    function cinematic(){
+      gsap.registerPlugin(ScrollTrigger);
+      const tl = gsap.timeline({paused:true, defaults:{duration:1, ease:'power3.inOut'}});
+
+      // camera pan/zoom using element bounding boxes so camera centers precisely
+      const pan = document.getElementById('panWrap');
+
+      console.log('Starting GSAP cinematic timeline (bounding-box centering)');
+      tl.addLabel('start')
+        .from('#p1',{immediateRender:false,y:40, scale:0.96, opacity:0, rotation:-0.6})
+        .add(()=> activatePanel('#p1'))
+        .to(pan, {duration:1.8, x: ()=> getPanCoordsForEl(document.querySelector('#p1')).x, y: ()=> getPanCoordsForEl(document.querySelector('#p1')).y, ease:'power2.inOut'})
+
+        .to('#p1',{scale:0.96, duration:1.2},'>0.4')
+        .from('#p2',{immediateRender:false,x:-20, opacity:0, scale:0.98},'-=0.6')
+        .add(()=> activatePanel('#p2'))
+        .to(pan, {duration:1.8, x: ()=> getPanCoordsForEl(document.querySelector('#p2')).x, y: ()=> getPanCoordsForEl(document.querySelector('#p2')).y, ease:'power2.inOut'})
+
+        .to('#p2',{scale:0.96, duration:1.2},'>0.4')
+        .from('#p3',{immediateRender:false,x:20, opacity:0, scale:0.98},'-=0.6')
+        .add(()=> activatePanel('#p3'))
+        .to(pan, {duration:1.8, x: ()=> getPanCoordsForEl(document.querySelector('#p3')).x, y: ()=> getPanCoordsForEl(document.querySelector('#p3')).y, ease:'power2.inOut'})
+
+        .to('#p3',{scale:0.96, duration:1.2},'>0.4')
+        .from('#p4',{immediateRender:false,y:20, opacity:0, scale:0.98},'-=0.6')
+        .add(()=> activatePanel('#p4'))
+        .to(pan, {duration:1.8, x: ()=> getPanCoordsForEl(document.querySelector('#p4')).x, y: ()=> getPanCoordsForEl(document.querySelector('#p4')).y, ease:'power2.inOut'})
+
+        .from('#p5',{immediateRender:false,y:20, opacity:0, scale:0.98},'-=0.6')
+        .add(()=> activatePanel('#p5'))
+        .to(pan, {duration:1.8, x: ()=> getPanCoordsForEl(document.querySelector('#p5')).x, y: ()=> getPanCoordsForEl(document.querySelector('#p5')).y, ease:'power2.inOut'});
+
+      // expose controls
+      window._cin = tl;
+      // wire UI
+      document.getElementById('playbtn').addEventListener('click', ()=>{ tl.play(); document.getElementById('playbtn').textContent='Playing'; });
+      document.getElementById('pause').addEventListener('click', ()=>{ tl.pause(); document.getElementById('playbtn').textContent='Play'; });
+      document.getElementById('next').addEventListener('click', ()=>{ nextLayer(); });
+      document.getElementById('prev').addEventListener('click', ()=>{ const idx = Math.max(0, currentLayer-1); showLayer(idx); });
+      const seek = document.getElementById('seek');
+      seek.addEventListener('input', ()=> tl.progress(seek.value/100));
+      tl.eventCallback('onUpdate', ()=> seek.value = Math.round(tl.progress()*100));
+      // start playing immediately so user sees the animation after clicking "Play Cinematic"
+      try{ tl.play(); document.getElementById('playbtn').textContent='Playing'; }catch(e){ console.warn('Unable to auto-play GSAP timeline:', e); }
+    }
+
+    function activatePanel(sel){ document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); const el=document.querySelector(sel); el.classList.add('active'); el.setAttribute('data-glow','true'); setTimeout(()=>el.removeAttribute('data-glow'),900); }
+
+    // Layered detail view: show detail of a layer, dissolve and show next
+    let currentLayer = 0;
+    function showLayer(i){
+      const panels = document.querySelectorAll('.panel');
+      if(i<0||i>=panels.length) return;
+      currentLayer = i;
+      const el = panels[i];
+      // show detail and highlight
+      panels.forEach(p=>{ p.querySelector('.summary') && (p.querySelector('.summary').style.display='block'); p.querySelector('.detail') && (p.querySelector('.detail').style.display='none'); });
+      el.querySelector('.summary') && (el.querySelector('.summary').style.display='none');
+      el.querySelector('.detail') && (el.querySelector('.detail').style.display='block');
+      // center on the element
+      const coords = getPanCoordsForEl(el);
+      if(window.gsap){
+        gsap.to(pan, {duration:1.6, x: coords.x, y: coords.y, ease:'power2.inOut'});
+        gsap.fromTo(el, {opacity:0, y:20}, {opacity:1, y:0, duration:1.0});
+      } else {
+        pan.style.transition='transform 1.6s cubic-bezier(.22,.9,.32,1)'; pan.style.transform = `translate(${coords.x}px, ${coords.y}px) scale(1)`;
+      }
+    }
+
+    function nextLayer(){
+      const panels = document.querySelectorAll('.panel');
+      const i = currentLayer;
+      if(i<panels.length-1){
+        const el = panels[i];
+        // animate el forward and fade out
+        if(window.gsap){
+          gsap.to(el, {duration:1.2, x: el.getBoundingClientRect().width, opacity:0, scale:0.9, ease:'power2.inOut', onComplete: ()=>{ showLayer(i+1); el.style.opacity=''; el.style.transform=''; } });
+        } else {
+          el.style.transition='transform 1.2s, opacity 1.2s'; el.style.transform='translateX(80px) scale(0.9)'; el.style.opacity=0; setTimeout(()=>{ showLayer(i+1); el.style.opacity=''; el.style.transform=''; }, 1300);
+        }
+      }
+    }
+
+    // Robust play handler: try GSAP cinematic, otherwise fallback to JS-driven animation
+    document.getElementById('play').addEventListener('click', ()=>{
+      try{
+        if(window.gsap && typeof cinematic === 'function'){
+          cinematic();
+        } else {
+          console.warn('GSAP non présent — utilisation du fallback JS.');
+          fallbackCinematic();
+        }
+      } catch(e){
+        console.error('Erreur cinematic GSAP:', e);
+        fallbackCinematic();
+      }
+    });
+
+    // Fallback cinematic for browsers where GSAP fails (e.g., Firefox issues)
+    function fallbackCinematic(){
+      console.log('Using fallback cinematic (no GSAP)');
+      const pan = document.getElementById('panWrap');
+      const panels = ['#p1','#p2','#p3','#p4','#p5'].map(s=>document.querySelector(s));
+      let idx = 0;
+      const btnPlay = document.getElementById('playbtn');
+      const btnPause = document.getElementById('pause');
+      const btnNext = document.getElementById('next');
+      const btnPrev = document.getElementById('prev');
+      const seek = document.getElementById('seek');
+      let timer = null;
+      function centerPanel(el){
+        const r = el.getBoundingClientRect();
+        const centerX = r.left + r.width/2;
+        const centerY = r.top + r.height/2;
+        const targetX = centerX - window.innerWidth/2;
+        const targetY = centerY - window.innerHeight/2;
+        pan.style.transition = 'transform 1.6s cubic-bezier(.22,.9,.32,1)';
+        pan.style.transform = `translate(${-targetX}px, ${-targetY}px) scale(1)`;
+      }
+      function activate(i){
+        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+        const el = panels[i]; if(!el) return;
+        el.classList.add('active'); el.setAttribute('data-glow','true'); setTimeout(()=>el.removeAttribute('data-glow'),900);
+        centerPanel(el);
+        seek.value = Math.round((i/(panels.length-1))*100);
+      }
+      function playAuto(){ timer = setInterval(()=>{ idx = Math.min(panels.length-1, idx+1); activate(idx); if(idx===panels.length-1) { clearInterval(timer); btnPlay.textContent='Play'; } }, 3000); }
+      // wire fallback controls
+      btnPlay.addEventListener('click', ()=>{ clearInterval(timer); playAuto(); btnPlay.textContent='Playing'; });
+      btnPause.addEventListener('click', ()=>{ clearInterval(timer); btnPlay.textContent='Play'; });
+      btnNext.addEventListener('click', ()=>{ clearInterval(timer); idx = Math.min(panels.length-1, idx+1); activate(idx); });
+      btnPrev.addEventListener('click', ()=>{ clearInterval(timer); idx = Math.max(0, idx-1); activate(idx); });
+      seek.addEventListener('input', ()=>{ clearInterval(timer); const v = Number(seek.value); idx = Math.round((v/100)*(panels.length-1)); activate(idx); });
+      // start at first panel
+      idx = 0; activate(0);
+    }
+  </script>
+</body>
+</html>

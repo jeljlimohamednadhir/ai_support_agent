@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Space Robots — Présentation Cinématique</title>
+  <style>
+    :root{--bg:#071028;--card:#ffffff;--muted:#98a6b8;--accent:#7dd3fc}
+    html,body{height:100%;margin:0;background:var(--bg);font-family:Inter,Segoe UI,Roboto,Arial;color:#e6eef6;overflow:hidden}
+    .scene{position:relative;width:100%;height:100vh;overflow:hidden}
+    canvas#stars{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+    /* robots corner */
+    .robots{position:absolute;right:28px;bottom:28px;z-index:80;display:flex;gap:10px;align-items:flex-end}
+    .robot{width:116px;height:116px;background:linear-gradient(180deg,#ffffff,#eef9ff);border-radius:16px;box-shadow:0 16px 40px rgba(2,6,23,0.36);display:flex;align-items:center;justify-content:center;transform-origin:center;cursor:pointer;transition:transform 0.9s cubic-bezier(.22,.9,.32,1)}
+    .robot img{width:100px;height:100px;display:block;border-radius:12px}
+    .robot.bob{animation:bob 4.2s ease-in-out infinite}
+    .robot.play{animation:playAnim 3.2s ease-in-out infinite}
+    @keyframes bob{0%{transform:translateY(0)}50%{transform:translateY(-8px)}100%{transform:translateY(0)}}
+    @keyframes playAnim{0%{transform:rotate(0deg)}25%{transform:rotate(6deg)}50%{transform:rotate(0deg)}75%{transform:rotate(-6deg)}100%{transform:rotate(0deg)}}
+
+    /* cards scene */
+    .pan{position:absolute;left:0;top:0;transform-origin:0 0;transition:transform 1.6s cubic-bezier(.22,.9,.32,1);width:1600px;min-width:100%;height:100vh}
+    .card{position:absolute;left:50%;top:120px;width:720px;padding:28px;border-radius:16px;background:var(--card);color:#071028;box-shadow:0 18px 60px rgba(2,6,23,0.26);border:1px solid rgba(2,6,23,0.06);opacity:0;transform:translateX(-50%) scale(0.94);transition:opacity 1.2s, transform 1.2s;transform-origin:center top}
+    .card h3{margin:0 0 10px 0;font-size:20px}
+    .card p{margin:0;color:var(--muted)}
+    .card .meta{margin-top:8px;color:#557083;font-size:13px}
+    .card ul{margin:12px 0 0 18px;color:#385266}
+    .card .mini{margin-top:10px;color:#2f4f63;font-size:15px;list-style:disc;padding-left:20px}
+
+    /* positions */
+    /* cards are centered and stacked; positions will be handled by z-index and transforms */
+
+    /* active & detail styles */
+    .card.active{opacity:1;transform:translateX(-50%) scale(1) translateY(0)}
+    .card.detailVisible .summary{display:none}
+    .card.detailVisible .detail{display:block;opacity:1}
+    .card .detail{display:none;margin-top:12px;color:#27405a;opacity:0;transition:opacity 0.9s}
+    .card:focus{outline:3px solid rgba(125,211,252,0.25);box-shadow:0 8px 30px rgba(34,197,94,0.06)}
+    .card .detail{display:none;margin-top:12px;color:#27405a}
+    .card .summary{display:block;margin-top:8px}
+
+    /* UI */
+    .ui{position:absolute;left:28px;top:28px;z-index:60}
+    .ui button{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);color:#e6eef6;padding:10px 12px;border-radius:10px;margin-right:8px}
+    .ui .title{font-weight:700;margin-bottom:6px}
+
+    /* subtle vignette */
+    .vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center, rgba(255,255,255,0.02) 30%, rgba(2,6,23,0.35) 100%)}
+
+    @media (max-width:900px){ .card{width:420px} .pan{width:100%} }
+    @media (max-width:640px){ body{overflow:auto} .pan{position:relative;width:auto;height:auto} .card{position:relative;margin:18px;width:auto} .robots{right:12px;bottom:12px} }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <canvas id="stars"></canvas>
+
+    <div class="ui">
+      <div class="title">Space Robots — Présentation</div>
+      <div><button id="prev">⟨ Prev</button><button id="play">Play</button><button id="next">Next ⟩</button></div>
+    </div>
+
+    <div id="pan" class="pan">
+      <div id="c1" class="card" data-index="0" tabindex="0" role="article" aria-label="Étape 1 collecte">
+        <h3>1 — Collecte</h3>
+        <div class="meta">Durée estimée : 2-4 jours • Responsable : Collector</div>
+          <div class="summary">Rassembler les données nécessaires pour comprendre le système.</div>
+          <ul class="mini">
+            <li>Collecte rapide des sources</li>
+            <li>Regroupement des logs essentiels</li>
+            <li>Préparation pour analyse</li>
+          </ul>
+        <div class="detail">
+          <p>Actions principales :</p>
+          <ul>
+            <li>Scanner le dépôt et détecter endpoints et jobs</li>
+            <li>Extraire schémas, logs et fixtures</li>
+            <li>Nettoyage et normalisation des données</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="c2" class="card" data-index="1" tabindex="0" role="article" aria-label="Étape 2 workers">
+        <h3>2 — Workers</h3>
+        <div class="meta">Durée estimée : 3-6 jours • Responsable : Workers</div>
+        <div class="summary">Transformer les données en informations exploitables.</div>
+        <ul class="mini">
+          <li>Nettoyage et structuration</li>
+          <li>Enrichissement et normalisation</li>
+          <li>Indexation pour recherche</li>
+        </ul>
+        <div class="detail">
+          <ul>
+            <li>Extraction AST et parsing des fichiers</li>
+            <li>Nettoyage, transformation et stockage intermédiaire</li>
+            <li>Génération d'embeddings et push vers vector store</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="c3" class="card" data-index="2" tabindex="0" role="article" aria-label="Étape 3 indexation">
+        <h3>3 — Indexation</h3>
+        <div class="meta">Durée estimée : 1-3 jours • Responsable : Indexer</div>
+        <div class="summary">Organiser le savoir pour retrouver les réponses rapidement.</div>
+        <ul class="mini">
+          <li>Relier concepts et entités</li>
+          <li>Indexer extraits pertinents</li>
+          <li>Rendre la recherche plus précise</li>
+        </ul>
+        <div class="detail">
+          <ul>
+            <li>Création de noeuds / relations dans Neo4j</li>
+            <li>Stockage d'extraits et embeddings dans Qdrant</li>
+            <li>Mapping vers Postgres pour métadonnées</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="c4" class="card" data-index="3" tabindex="0" role="article" aria-label="Étape 4 chatbot">
+        <h3>4 — Chatbot</h3>
+        <div class="meta">Durée estimée : 2-5 jours • Responsable : Chat</div>
+        <div class="summary">Fournir des réponses utiles et contextualisées aux utilisateurs.</div>
+        <ul class="mini">
+          <li>Assembler le contexte pertinent</li>
+          <li>Générer des réponses claires</li>
+          <li>Proposer actions ou recommandations</li>
+        </ul>
+        <div class="detail">
+          <ul>
+            <li>Sélection du contexte via recherche sémantique</li>
+            <li>Construction de prompts et templates dynamiques</li>
+            <li>Génération de réponses et suggestions d'actions</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="c5" class="card" data-index="4" tabindex="0" role="article" aria-label="Étape 5 validation">
+        <h3>5 — Validation</h3>
+        <div class="meta">Durée estimée : Continu • Responsable : Validation</div>
+        <div class="summary">Valider et améliorer continuellement la qualité.</div>
+        <ul class="mini">
+          <li>Révision par experts</li>
+          <li>Appliquer corrections et retours</li>
+          <li>Suivre progrès et impact</li>
+        </ul>
+        <div class="detail">
+          <ul>
+            <li>UI de revue et validation humaine</li>
+            <li>Persist des corrections et annotations</li>
+            <li>Métriques de qualité et boucle d'amélioration continue</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="robots" aria-hidden="false">
+      <div id="robot" class="robot bob" role="button" tabindex="0" aria-label="Robot mignon, cliquer pour qu'il regarde la carte active">
+        <!-- Inline robot SVG inspired by the provided image (keeps everything self-contained) -->
+        <svg viewBox="0 0 160 160" width="100" height="100" aria-hidden="true">
+          <defs>
+            <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#f8fbff"/>
+              <stop offset="1" stop-color="#e6f5ff"/>
+            </linearGradient>
+            <linearGradient id="g2" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#0b2b3a"/>
+              <stop offset="1" stop-color="#072226"/>
+            </linearGradient>
+            <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.25"/>
+            </filter>
+          </defs>
+          <!-- head -->
+          <g filter="url(#shadow)">
+            <rect x="18" y="18" width="124" height="86" rx="18" fill="url(#g1)" stroke="#dbeffc" stroke-width="2"/>
+            <!-- screen -->
+            <rect x="34" y="30" width="92" height="58" rx="12" fill="url(#g2)"/>
+            <!-- eyes/mouth group with separate pupils for gaze -->
+            <g id="eyes" transform="translate(0,0)">
+              <ellipse cx="60" cy="50" rx="10" ry="8" fill="#072b34" opacity="0.85"/>
+              <ellipse cx="100" cy="50" rx="10" ry="8" fill="#072b34" opacity="0.85"/>
+              <circle id="pupilL" cx="60" cy="50" r="4" fill="#6de3ff"/>
+              <circle id="pupilR" cx="100" cy="50" r="4" fill="#6de3ff"/>
+              <path d="M78 72c2 4 8 4 10 0" fill="#6de3ff" opacity="0.95"/>
+            </g>
+          </g>
+          <!-- body -->
+          <g transform="translate(40,88)">
+            <ellipse cx="40" cy="34" rx="40" ry="34" fill="#f3f7fb"/>
+            <rect x="8" y="6" width="64" height="36" rx="12" fill="#eef7fb" stroke="#d8ecfb"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <!-- Accessible announcer -->
+    <div id="announcer" aria-live="polite" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;"> </div>
+
+    <div class="vignette"></div>
+  </div>
+
+  <script>
+    // --- starfield background with parallax depth layers
+    console.log('space_robots_cinematic: script start');
+    const canvas = document.getElementById('stars');
+    const ctx = canvas.getContext('2d');
+    // create a small debug overlay
+    const dbg = document.createElement('div'); dbg.id = 'dbg'; dbg.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:99999;background:rgba(0,0,0,0.6);color:#fff;padding:8px 10px;border-radius:8px;font-family:monospace;font-size:13px'; dbg.textContent='init'; document.body.appendChild(dbg);
+    function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+    addEventListener('resize', resize); resize();
+
+    const layers = [[],[],[]];
+    const counts = [120, 60, 28];
+    for(let l=0;l<layers.length;l++){
+      for(let i=0;i<counts[l];i++){
+        layers[l].push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*(l+0.6)+0.3,dx:(Math.random()-0.5)*(0.2*(l+1)),alpha:0.12 + (l*0.08)})
+      }
+    }
+
+    let t0 = performance.now();
+    function drawStars(now){
+      const dt = (now - t0)/1000; t0 = now;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // background gradient
+      const g = ctx.createLinearGradient(0,0,0,canvas.height); g.addColorStop(0,'#071028'); g.addColorStop(1,'#031025'); ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
+      layers.forEach((layer,li)=>{
+        layer.forEach(p=>{
+          p.x += p.dx * (0.6 + li*0.9);
+          p.y += Math.sin((now/2000) + p.x*0.0009) * 0.2;
+          if(p.x < -20) p.x = canvas.width + 20; if(p.x > canvas.width+20) p.x = -20;
+          ctx.beginPath(); ctx.fillStyle = 'rgba(255,255,255,'+ (p.alpha) +')'; ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+        })
+      })
+      requestAnimationFrame(drawStars);
+    }
+    requestAnimationFrame(drawStars);
+
+    // --- presentation logic (depth zoom, dissolve)
+    const pan = document.getElementById('pan');
+    const cards = Array.from(document.querySelectorAll('.card'));
+    let idx = 0;
+
+    function centerOn(el, duration=2200){
+      const panRect = pan.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      // compute element center relative to pan's top-left
+      const cx = (r.left - panRect.left) + r.width/2;
+      const cy = (r.top - panRect.top) + r.height/2;
+      const tx = cx - window.innerWidth/2;
+      const ty = cy - window.innerHeight/2;
+      // compute adaptive scale so the card fits within viewport with margins
+      const marginW = Math.max(80, window.innerWidth * 0.08);
+      const marginH = Math.max(80, window.innerHeight * 0.12);
+      const maxScale = 1.18;
+      const scaleW = (window.innerWidth - marginW) / r.width;
+      const scaleH = (window.innerHeight - marginH) / r.height;
+      let desiredScale = Math.min(scaleW, scaleH, maxScale);
+      if(desiredScale < 0.9) desiredScale = 0.9;
+      pan.style.transition = `transform ${duration/1000}s cubic-bezier(.22,.9,.32,1)`;
+      pan.style.transform = `translate(${-tx}px, ${-ty}px) scale(${desiredScale})`;
+    }
+
+    function layoutStack(activeIndex){
+      try{ console.log('layoutStack called for', activeIndex); dbg.textContent = `cards:${cards.length} idx:${activeIndex}`; } catch(e){}
+      // active card in front, others stacked behind with small Y offsets and scale
+      cards.forEach((c,idx)=>{
+        const depth = idx - activeIndex; // negative -> behind
+        const baseZ = 100 - Math.abs(depth);
+        c.style.zIndex = String(baseZ);
+        c.classList.remove('active'); c.classList.remove('detailVisible');
+        if(idx < activeIndex){
+          // already passed cards: shifted forward slightly and faded
+          c.style.opacity = '0.08';
+          c.style.transform = `translateX(-50%) translateY(-40px) scale(0.86)`;
+        } else if(idx === activeIndex){
+            c.style.opacity = '1';
+            c.style.transform = `translateX(-50%) translateY(0) scale(1)`;
+            c.classList.add('active');
+            // show full details immediately for the active card
+            c.classList.add('detailVisible');
+            const det = c.querySelector('.detail'); if(det){ det.style.display='block'; det.style.opacity='1'; }
+            // announce active card for screen readers
+            const announcer = document.getElementById('announcer');
+            announcer.textContent = `Étape ${idx+1}: ${c.querySelector('h3').textContent}. ${c.querySelector('.summary').textContent}`;
+        } else {
+          // upcoming cards behind the active card
+          const behindIndex = idx - activeIndex;
+          const ty = 18 + (behindIndex * 18);
+          const sc = 0.98 - (behindIndex * 0.02);
+          c.style.opacity = '0.9';
+          c.style.transform = `translateX(-50%) translateY(${ty}px) scale(${sc})`;
+        }
+      });
+      // center camera on active card
+      const el = cards[activeIndex];
+      setTimeout(()=> centerOn(el, 1400), 10);
+      // also direct the robot gaze to the active card shortly after centering
+      setTimeout(()=> setGazeTarget(el), 240);
+      try{ dbg.textContent = `cards:${cards.length} idx:${activeIndex} pan:${pan.style.transform || 'none'}`; }catch(e){}
+    }
+
+    function zoomAndDissolve(i){
+      const el = cards[i];
+      if(!el) return;
+      // quick cinematic zoom before dissolving
+      centerOn(el, 900);
+      // ensure active card is on top so details remain visible during the small zoom
+      el.style.zIndex = 1200;
+      setTimeout(()=>{
+        // dissolve immediately after a short pause
+        el.style.transition = 'transform 1.2s ease-in, opacity 1.2s ease-in';
+        el.style.transform = 'translateX(48%) translateY(-40px) scale(1.08)';
+        el.style.opacity = '0';
+        setTimeout(()=>{
+          // hide detail on the dissolved card
+          el.classList.remove('detailVisible'); const d = el.querySelector('.detail'); if(d){ d.style.opacity='0'; d.style.display='none'; }
+          // advance to next
+          idx = i+1;
+          if(idx < cards.length) layoutStack(idx);
+          // reset transformed card styles for later reuse
+          el.style.opacity=''; el.style.transform=''; el.style.zIndex='';
+        }, 1250);
+      }, 650);
+    }
+
+    // initial layout: wait a frame so layout metrics are stable, then stack
+    try{ requestAnimationFrame(()=> layoutStack(0)); }catch(e){ console.error('layoutStack initial error', e); }
+
+    // UI controls
+    document.getElementById('next').addEventListener('click', ()=>{ zoomAndDissolve(idx); });
+    document.getElementById('prev').addEventListener('click', ()=>{ const prev = Math.max(0, idx-1); layoutStack(prev); idx = prev; });
+    document.getElementById('play').addEventListener('click', ()=>{ // autoplay sequence
+      let i = idx;
+      function step(){ if(i>=cards.length) return; zoomAndDissolve(i); i++; if(i<cards.length) setTimeout(step, 2600); }
+      step();
+    });
+
+    // keyboard accessibility: left/right/space
+    addEventListener('keydown', (ev)=>{
+      if(ev.key === 'ArrowRight') { ev.preventDefault(); zoomAndDissolve(idx); }
+      if(ev.key === 'ArrowLeft') { ev.preventDefault(); const prev = Math.max(0, idx-1); layoutStack(prev); idx = prev; }
+      if(ev.key === ' ') { ev.preventDefault(); document.getElementById('play').click(); }
+    });
+
+    // robot interaction: click to look at active card (guarded)
+    const robot = document.getElementById('robot');
+    if(robot){
+      robot.addEventListener('click', ()=>{
+        const active = cards[idx]; if(!active) return;
+        robot.style.transition = 'transform 0.95s cubic-bezier(.22,.9,.32,1)';
+        robot.style.transform = 'scale(1.05) translateY(-6px)';
+        setTimeout(()=>{
+          // add small head-tilt toward card by applying a subtle rotate based on card position
+          const r = active.getBoundingClientRect(); const cx = r.left + r.width/2; const rx = (cx - window.innerWidth/2)/window.innerWidth * 20; robot.style.transform = `rotate(${rx}deg) scale(1.04)`;
+        }, 250);
+        setTimeout(()=> robot.style.transform = '', 1300);
+      });
+      robot.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); robot.click(); } });
+    }
+
+    // Gaze helpers: move pupils toward target element
+    function setGazeTarget(el){
+      const pL = document.getElementById('pupilL');
+      const pR = document.getElementById('pupilR');
+      if(!pL||!pR) return;
+      if(!el){ // reset
+        pL.style.transform = pR.style.transform = 'translate(0,0)';
+        return;
+      }
+      const r = el.getBoundingClientRect();
+      const targetX = r.left + r.width/2;
+      const targetY = r.top + r.height/2;
+      const robotRect = robot.getBoundingClientRect();
+      const centerX = robotRect.left + robotRect.width/2;
+      const centerY = robotRect.top + robotRect.height/2;
+      const dx = (targetX - centerX) / robotRect.width * 1.2; // subtle movement
+      const dy = (targetY - centerY) / robotRect.height * 0.9;
+      pL.style.transition = pR.style.transition = 'transform 0.28s ease-out';
+      pL.style.transform = `translate(${dx}px, ${dy}px)`;
+      pR.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+
+    // wire hover/focus on cards to gaze
+    cards.forEach(c=>{
+      c.addEventListener('mouseenter', ()=> setGazeTarget(c));
+      c.addEventListener('focus', ()=> setGazeTarget(c));
+      c.addEventListener('mouseleave', ()=> setGazeTarget(null));
+      c.addEventListener('blur', ()=> setGazeTarget(null));
+    });
+
+    // (gaze is handled inside the main layoutStack implementation)
+
+    // make sure pan resets on resize for mobile fallback
+    addEventListener('resize', ()=>{ pan.style.transform = ''; pan.style.transition=''; layoutStack(idx); });
+  </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+# Kubernetes Deployment - Frontend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: ai-support-agent
+    component: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-support-agent
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: ai-support-agent
+        component: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: ai-support-agent/frontend:latest
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: ai-support-agent
+    component: frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: LoadBalancer

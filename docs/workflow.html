@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Workflow animé — AI Support Agent</title>
+  <style>
+    :root{--bg:#f5f7fb;--card:#ffffff;--accent1:#4f46e5;--accent2:#06b6d4;--text:#0b1320}
+    body{margin:0;background:linear-gradient(180deg,#f8fafc 0%, #f5f7fb 100%);color:var(--text);font-family:Inter,Segoe UI,Roboto,Arial}
+    .wrap{max-width:1200px;margin:36px auto;padding:28px;border-radius:12px}
+    h1{margin:0 0 8px 0;font-size:28px}
+    p.lead{color:#475569;margin-top:0}
+    .stage-row{display:flex;gap:20px;justify-content:space-between;margin-top:36px;flex-wrap:wrap}
+    .stage{background:var(--card);border-radius:14px;padding:18px;flex:1;min-width:260px;position:relative;box-shadow:0 6px 28px rgba(15,23,42,0.08);overflow:visible;border:1px solid rgba(11,19,32,0.04)}
+    .num{position:absolute;right:16px;top:16px;background:linear-gradient(90deg,var(--accent1),var(--accent2));width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;box-shadow:0 6px 18px rgba(79,70,229,0.16)}
+    .stage:hover{transform:translateY(-6px);box-shadow:0 24px 60px rgba(15,23,42,0.12);border-color:rgba(79,70,229,0.08)}
+    .stage:focus-within{outline:2px solid rgba(99,102,241,0.12)}
+    .stage::after{content:'';position:absolute;inset:0;border-radius:14px;box-shadow:0 0 40px rgba(99,102,241,0);transition:box-shadow .36s ease}
+    .stage:hover::after{box-shadow:0 0 48px rgba(99,102,241,0.14)}
+    .stage h3{margin:0 0 8px 0}
+    .stage p{margin:0;color:#64748b;font-size:13px;line-height:1.5}
+    .arrow{height:36px;margin:18px 0;display:flex;align-items:center;justify-content:center}
+    .cta{display:inline-block;margin-top:22px;padding:10px 16px;border-radius:10px;background:linear-gradient(90deg,var(--accent2),var(--accent1));color:#fff;font-weight:700;text-decoration:none}
+    /* decorative animated blobs - softer */
+    .blob{position:absolute;border-radius:40%;filter:blur(30px);opacity:.12;mix-blend-mode:screen}
+    #blob1{width:220px;height:120px;right:8px;top:-20px;background:linear-gradient(90deg,var(--accent1),var(--accent2));}
+    #blob2{width:180px;height:100px;left:-40px;bottom:0;background:linear-gradient(90deg,#f59e0b,#10b981);}
+    footer{margin-top:40px;color:#475569;font-size:13px}
+    @media (max-width:900px){ .stage{min-width:100%;} .num{right:12px;top:12px} }
+  </style>
+  <script>
+    // Dynamic loader for GSAP + ScrollTrigger from CDN with graceful fallback
+    (function loadGSAP(cb){
+      if(window.gsap) { cb && cb(); return; }
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';
+      s.crossOrigin = 'anonymous';
+      s.referrerPolicy = 'no-referrer';
+      s.onload = function(){
+        var s2 = document.createElement('script');
+        s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js';
+        s2.crossOrigin = 'anonymous';
+        s2.referrerPolicy = 'no-referrer';
+        s2.onload = cb;
+        s2.onerror = function(){ console.warn('Failed to load GSAP ScrollTrigger from CDN'); cb && cb(); };
+        document.head.appendChild(s2);
+      };
+      s.onerror = function(){ console.warn('Failed to load GSAP from CDN'); cb && cb(); };
+      document.head.appendChild(s);
+    })(function(){ /* GSAP loaded (or failed) */ });
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Workflow animé — AI Support Agent</h1>
+    <p class="lead">Suivez l'histoire : chaque étape s'anime pour montrer le flux des données de la collecte jusqu'à la validation.</p>
+
+    <div style="position:relative">
+      <div id="blob1" class="blob"></div>
+      <div id="blob2" class="blob"></div>
+      <div class="stage-row" id="row1">
+        <div class="stage" id="s1">
+          <div class="num">1</div>
+          <h3>Collecte</h3>
+          <p>Clonage de dépôts, ingestion de logs, introspection des bases et indexation des documents.</p>
+        </div>
+
+        <div class="stage" id="s2">
+          <div class="num">2</div>
+          <h3>Analyse asynchrone</h3>
+          <p>Workers analysent le code, extraient fonctions/endpoints, normalisent logs et génèrent embeddings.</p>
+        </div>
+
+        <div class="stage" id="s3">
+          <div class="num">3</div>
+          <h3>Indexation</h3>
+          <p>Construction du graphe (Neo4j), stockage sémantique (Qdrant) et métadonnées (Postgres).</p>
+        </div>
+      </div>
+
+      <div class="arrow" id="arrowRow">
+        <svg width="100%" height="60" viewBox="0 0 1000 60" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="g" x1="0" x2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient>
+          </defs>
+          <path id="flowPath" d="M60 10 C 300 60, 700 -10, 940 40" stroke="url(#g)" stroke-width="6" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <div class="stage-row" style="margin-top:8px" id="row2">
+        <div class="stage" id="s4">
+          <div class="num">4</div>
+          <h3>Chatbot (RAG)</h3>
+          <p>Recherche sémantique + traversée du graphe pour composer un prompt contextualisé envoyé au LLM.</p>
+        </div>
+
+        <div class="stage" id="s5">
+          <div class="num">5</div>
+          <h3>Validation Humaine</h3>
+          <p>Experts vérifient, corrigent et fournissent du feedback pour améliorer les règles et modèles.</p>
+        </div>
+      </div>
+    </div>
+
+    <a class="cta" id="startBtn">Démarrer l'animation</a>
+
+    <footer>
+      <p>Animation réalisée avec GSAP (ou fallback JS) — page interactive pour présenter le parcours fonctionnel.</p>
+    </footer>
+  </div>
+
+  <script>
+    // Try to use GSAP if available, otherwise fallback to CSS/JS animations
+    function animateWithGSAP() {
+      const tl = gsap.timeline();
+      tl.from('#s1', {duration:0.8, y:40, opacity:0, scale:0.96, ease:'power3.out'})
+        .from('#s2', {duration:0.8, y:40, opacity:0, scale:0.96, ease:'power3.out'}, '-=0.4')
+        .from('#s3', {duration:0.8, y:40, opacity:0, scale:0.96, ease:'power3.out'}, '-=0.4')
+        .to('#flowPath', {duration:1.2, strokeDashoffset:0, ease:'power2.inOut'})
+        .from('#s4', {duration:0.8, y:40, opacity:0, scale:0.96, ease:'power3.out'}, '-=0.6')
+        .from('#s5', {duration:0.8, y:40, opacity:0, scale:0.96, ease:'power3.out'}, '-=0.4')
+        .to('#blob1', {duration:6, x:-80, y:20, repeat:-1, yoyo:true, ease:'sine.inOut'}, 0)
+        .to('#blob2', {duration:5, x:120, y:-30, repeat:-1, yoyo:true, ease:'sine.inOut'}, 0);
+    }
+
+    function fallbackAnimate() {
+      // simple fade-in sequence
+      const seq = ['#s1','#s2','#s3','#s4','#s5'];
+      seq.forEach((id,i)=>{
+        const el = document.querySelector(id);
+        el.style.opacity = 0; el.style.transform = 'translateY(30px)';
+        setTimeout(()=>{ el.style.transition='all 650ms cubic-bezier(.22,.9,.32,1)'; el.style.opacity=1; el.style.transform='translateY(0)'; }, 200*i);
+      });
+    }
+
+    document.getElementById('startBtn').addEventListener('click', ()=>{
+      if(window.gsap) animateWithGSAP(); else fallbackAnimate();
+    });
+
+    // prepare stroke dash for flow path
+    const path = document.getElementById('flowPath');
+    const len = path.getTotalLength();
+    path.style.strokeDasharray = len;
+    path.style.strokeDashoffset = len;
+  </script>
+</body>
+</html>
