@@ -1,0 +1,34 @@
+{
+  "id": "BRASIL",
+  "display_name": "Application Brasil",
+  "description": "Système de gestion des accès réseau ADSL/FTTH Orange. Gestion des ND, DSLAM, VLAN, cartes, ports.",
+  "mode": "FR_WEAK",
+  "has_canonical_procedures": true,
+  "has_ticket_history": true,
+  "has_logs": false,
+  "has_stack_traces": false,
+  "has_codebase": false,
+  "log_parser_strategy": "custom",
+  "trust_threshold_strong": 70,
+  "trust_threshold_medium": 40,
+  "min_cluster_frequency": 5,
+  "max_canonical_procedures": 50,
+  "qdrant_collection_prefix": "brasil_",
+  "extra_config": {
+    "jira_project_key": "BRASIL",
+    "primary_language": "fr",
+    "domain": "telecom_access_network",
+    "known_error_codes": ["1300", "9903", "1002", "42C", "B4002", "4002"],
+    "top_categories": [
+      "Data_Inconsistency",
+      "VLAN_Blocked",
+      "Double_Access",
+      "ND_Unknown",
+      "DSLAM_Deletion_Error",
+      "Card_Deletion_Error",
+      "Operator_Deletion_Error",
+      "Counter_Error",
+      "Internal_Error"
+    ]
+  }
+}

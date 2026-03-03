@@ -16,7 +16,8 @@ from app.api.v1.endpoints import (
     dashboard,
     jira,
     config,
-    classification_ml
+    classification_ml,
+    apps,
 )
 
 api_router = APIRouter()
@@ -35,3 +36,4 @@ api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboar
 api_router.include_router(jira.router, prefix="/jira", tags=["jira"])
 api_router.include_router(config.router, prefix="/config", tags=["config"])
 api_router.include_router(classification_ml.router, prefix="/classification-ml", tags=["classification-ml"])
+api_router.include_router(apps.router, prefix="/apps", tags=["apps"])

@@ -1,6 +1,6 @@
 """
 Chatbot Service
-Handles conversational AI logic with RAG (Retrieval-Augmented Generation)
+Handles conversational AI logic — delègue l'intelligence à l'IntelligenceOrchestrator
 """
 from typing import Optional, List, Dict
 import uuid
@@ -8,9 +8,157 @@ from datetime import datetime
 from app.schemas.chatbot import ChatMessage, ChatResponse
 from app.core.llm_client import llm_client
 from app.core.logging import get_logger
-from app.services.knowledge.manager import get_vector_service, get_graph_service
+from app.services.orchestrator import intelligence_orchestrator
 
 logger = get_logger(__name__)
+
+
+class ChatbotService:
+    """
+    Service chatbot context-aware multi-tenant.
+    Délègue la recherche de connaissance à l'IntelligenceOrchestrator
+    qui route vers le bon pipeline selon le profil de l'application.
+    """
+
+    def __init__(self):
+        self.llm = llm_client
+        self.orchestrator = intelligence_orchestrator
+        logger.info("[OK] ChatbotService initialisé avec IntelligenceOrchestrator")
+
+    async def process_message(self, message: ChatMessage, db=None) -> ChatResponse:
+        """
+        Traite un message utilisateur via le pipeline adapté à l'application.
+
+        Flux :
+        1. Orchestrateur résout le profil app → pipeline adapté
+        2. Pipeline recherche et score le contexte
+        3. LLM génère la réponse avec le contexte structuré
+        4. Réponse enrichie avec métadonnées trust
+        """
+        try:
+            logger.info(f"[Chatbot] app={message.app_id}, message='{message.content[:60]}...'")
+
+            conversation_id = message.conversation_id or str(uuid.uuid4())
+
+            # 1. Déléguer à l'orchestrateur
+            orch_result = await self.orchestrator.process(
+                app_id=message.app_id,
+                query=message.content,
+                db=db,
+                logs=message.logs,
+                stack_trace=message.stack_trace,
+                ticket_description=message.content,
+                top_k=5,
+            )
+
+            # 2. Construire le contexte texte pour le LLM
+            context_text = self.orchestrator.build_prompt_context(orch_result)
+
+            # 3. Récupérer les garde-fous de réponse
+            guard = self.orchestrator.get_response_guard(orch_result)
+            llm_instructions = orch_result.get("llm_instructions", "")
+            app_ctx = orch_result.get("app_context", {})
+
+            # 4. Construire le prompt enrichi
+            if context_text:
+                system_prompt = (
+                    f"Tu es un assistant expert de l'application {app_ctx.get('display_name', message.app_id)} "
+                    f"(Orange). Tu aides les techniciens N3 à diagnostiquer et résoudre les incidents. "
+                    f"Tu utilises exclusivement les informations de la base de connaissance fournie. "
+                    f"Tu respectes scrupuleusement les niveaux de confiance indiqués."
+                )
+                full_prompt = f"""{context_text}
+
+Question : {message.content}
+
+{llm_instructions}"""
+            else:
+                # Aucun contexte disponible
+                system_prompt = (
+                    f"Tu es un assistant support pour l'application {app_ctx.get('display_name', message.app_id)}. "
+                    f"Tu n'as pas de base de connaissance disponible pour cette requête."
+                )
+                full_prompt = (
+                    f"{message.content}\n\n"
+                    f"⚠️ Aucune connaissance structurée disponible. "
+                    f"Réponds de façon générique en recommandant une investigation manuelle."
+                )
+
+            # 5. Appel LLM
+            response_text = await self.llm.generate(
+                prompt=full_prompt,
+                system_prompt=system_prompt,
+            )
+
+            # 6. Extraire trust
+            trust_score_obj = orch_result.get("trust_score")
+            trust_score = trust_score_obj.score if trust_score_obj else 0
+            trust_label = trust_score_obj.label.value if trust_score_obj else "insufficient"
+
+            # 7. Construire les sources
+            sources = orch_result.get("sources", [])
+
+            # 8. Suggestions selon le mode
+            suggestions = self._build_suggestions(orch_result.get("mode", ""), guard)
+
+            logger.info(
+                f"[Chatbot] Réponse générée — mode={orch_result.get('mode')}, "
+                f"trust={trust_score}/100, sources={len(sources)}"
+            )
+
+            return ChatResponse(
+                message=response_text,
+                sources=sources,
+                suggestions=suggestions,
+                confidence=trust_score / 100,
+                conversation_id=conversation_id,
+                app_id=message.app_id,
+                pipeline_mode=orch_result.get("mode"),
+                trust_score=trust_score,
+                trust_label=trust_label,
+                diagnostic_available=guard.get("can_diagnose", False),
+            )
+
+        except Exception as e:
+            logger.error(f"[Chatbot] Erreur dans process_message: {e}")
+            raise
+
+    def _build_suggestions(self, mode: str, guard: Dict) -> List[str]:
+        """Suggestions contextuelles selon le mode et le trust"""
+        if not guard.get("can_diagnose"):
+            return [
+                "Fournir les logs détaillés pour affiner l'analyse",
+                "Préciser le code d'erreur exact",
+                "Décrire les étapes qui ont précédé l'incident",
+            ]
+        if mode == "FR_RICH":
+            return [
+                "Afficher la procédure complète de résolution",
+                "Quels sont les risques de cette intervention ?",
+                "Existe-t-il des cas similaires résolus ?",
+            ]
+        if mode == "FR_WEAK":
+            return [
+                "Valider cette procédure avec l'équipe N3",
+                "Consulter les tickets similaires",
+                "Quelles vérifications préalables effectuer ?",
+            ]
+        # LOG_BASED
+        return [
+            "Analyser les logs détaillés",
+            "Vérifier les dépendances du module",
+            "Consulter l'historique des incidents similaires",
+        ]
+
+    async def get_conversation_history(self, conversation_id: str):
+        """Retrieve conversation history"""
+        # TODO: Implement avec DB
+        pass
+
+    async def save_feedback(self, conversation_id: str, message_id: str, feedback: dict):
+        """Save user feedback for improvement"""
+        # TODO: Implement — feedback alimente le TrustEngine
+        passlogger = get_logger(__name__)
 
 
 class ChatbotService:

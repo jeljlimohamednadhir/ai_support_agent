@@ -12,7 +12,14 @@ class ChatMessage(BaseModel):
     conversation_id: Optional[str] = None
     user_id: str = "anonymous"
     context: Optional[dict] = None
-    
+
+    # Multi-tenant : identifiant de l'application cible
+    app_id: str = Field(default="BRASIL", description="Identifiant de l'application (ex: BRASIL)")
+
+    # Mode 3 enrichi : logs et stack traces optionnels
+    logs: Optional[str] = Field(default=None, description="Logs bruts (Mode 3)")
+    stack_trace: Optional[str] = Field(default=None, description="Stack trace brute (Mode 3)")
+
     # Accepter aussi 'message' comme alias de 'content'
     @field_validator('content', mode='before')
     @classmethod
@@ -31,6 +38,13 @@ class ChatResponse(BaseModel):
     confidence: float
     conversation_id: str
     timestamp: Optional[str] = None
+
+    # Métadonnées multi-tenant
+    app_id: Optional[str] = None
+    pipeline_mode: Optional[str] = None      # FR_RICH | FR_WEAK | LOG_BASED
+    trust_score: Optional[int] = None        # 0-100
+    trust_label: Optional[str] = None        # strong | moderate | weak | insufficient
+    diagnostic_available: Optional[bool] = None
 
 
 class ConversationHistory(BaseModel):
