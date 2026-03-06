@@ -29,10 +29,15 @@ class JiraCollector:
     
     def __init__(self, jira_url: str = None, email: str = None, api_token: str = None, auto_connect: bool = False):
         """Initialize Jira collector"""
-        self.jira_url = jira_url or settings.JIRA_URL
+        raw_url = jira_url or settings.JIRA_URL or ""
+        # Strip /projects/... suffix — we need the server root only
+        import re as _re
+        self.jira_url = _re.sub(r'/projects/.*$', '', raw_url.rstrip('/'))
         # Traiter les chaînes vides comme None
         self.email = email if email and email.strip() else (settings.JIRA_EMAIL if settings.JIRA_EMAIL and settings.JIRA_EMAIL.strip() else None)
-        self.api_token = api_token or settings.JIRA_API_TOKEN
+        # Always strip whitespace from token
+        raw_token = api_token or settings.JIRA_API_TOKEN or ""
+        self.api_token = raw_token.strip() or None
         self.jira_client: Optional[JIRA] = None
         
         # Connexion automatique seulement si demandée explicitement

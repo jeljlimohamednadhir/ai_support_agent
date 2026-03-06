@@ -9,7 +9,7 @@ from functools import lru_cache
 
 from sqlalchemy.orm import Session
 
-from app.models.app_context import ApplicationContext, AppMode
+from app.models.app_context import ApplicationContext, AppMode, LogParserStrategy
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -47,6 +47,7 @@ class ApplicationContextResolver:
                 ApplicationContext.is_active == True
             ).first()
             if ctx:
+                db.expunge(ctx)          # détacher de la session avant de mettre en cache
                 self._cache[app_id] = ctx
                 logger.info(f"[ContextResolver] App '{app_id}' chargée depuis DB (mode={ctx.mode})")
                 return ctx
@@ -101,7 +102,11 @@ class ApplicationContextResolver:
             ctx.min_cluster_frequency = data.get("min_cluster_frequency", 5)
             ctx.max_canonical_procedures = data.get("max_canonical_procedures", 50)
             ctx.qdrant_collection_prefix = data.get("qdrant_collection_prefix", f"{app_id.lower()}_")
-            ctx.log_parser_strategy = data.get("log_parser_strategy", "custom")
+            raw_strategy = data.get("log_parser_strategy", "custom")
+            try:
+                ctx.log_parser_strategy = LogParserStrategy(raw_strategy)
+            except ValueError:
+                ctx.log_parser_strategy = LogParserStrategy.CUSTOM
             ctx.extra_config = data.get("extra_config")
             ctx.is_active = True
             return ctx

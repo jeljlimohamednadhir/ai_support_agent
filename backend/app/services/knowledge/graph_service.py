@@ -43,48 +43,61 @@ class GraphService:
         return cls._instance
     
     def __init__(self, uri: str = "bolt://localhost:7687", auth: tuple = ("neo4j", "password")):
-        """Initialiser le service de graphe avec Neo4j"""
-        # Éviter la réinitialisation si déjà fait
+        """Initialiser le service de graphe avec Neo4j — connexion LAZY (pas de blocage au démarrage)"""
         if GraphService._initialized:
             return
-        
         self.uri = uri
         self.auth = auth
         self._available = False
-        
-        # Initialiser le driver Neo4j avec gestion d'erreur
-        if GraphService._driver is None:
-            try:
-                GraphService._driver = GraphDatabase.driver(uri, auth=auth)
-                
-                # Tester la connexion avec un timeout court
-                GraphService._driver.verify_connectivity()
-                
-                # Créer les indexes pour performance
-                with GraphService._driver.session() as session:
-                    # Index sur les IDs de nœuds
-                    session.run("CREATE INDEX node_id_index IF NOT EXISTS FOR (n:CodeNode) ON (n.id)")
-                    # Index sur les types de nœuds
-                    session.run("CREATE INDEX node_type_index IF NOT EXISTS FOR (n:CodeNode) ON (n.type)")
-                    # Index sur les noms
-                    session.run("CREATE INDEX node_name_index IF NOT EXISTS FOR (n:CodeNode) ON (n.name)")
-                
-                self._available = True
-                logger.info(f"[OK] GraphService initialisé avec Neo4j ({uri})")
-            except Exception as e:
-                logger.warning(f"[WARN] Neo4j non disponible ({uri}): {e}")
-                logger.warning("[WARN] GraphService fonctionnera en mode dégradé (sans graphe de connaissances)")
-                self._available = False
-        
         GraphService._initialized = True
-    
+        logger.info(f"[INFO] GraphService configuré — connexion Neo4j lazy sur {uri}")
+
+    def _connect(self) -> bool:
+        """
+        Tente la connexion Neo4j avec un pré-test TCP (<2s) pour éviter
+        que le handshake Bolt ne bloque plusieurs minutes.
+        Appelé à la demande par is_available() et driver.
+        """
+        if GraphService._driver is not None:
+            return self._available
+        import socket as _sock
+        try:
+            host = self.uri.replace("bolt://", "").replace("bolt+s://", "").split(":")[0]
+            raw = self.uri.split("//")[-1]
+            port = int(raw.split(":")[-1]) if ":" in raw else 7687
+            _sock.create_connection((host, port), timeout=2).close()
+        except OSError:
+            logger.warning(f"[WARN] Neo4j TCP injoignable ({self.uri}) — mode dégradé")
+            return False
+        try:
+            GraphService._driver = GraphDatabase.driver(
+                self.uri, auth=self.auth, connection_timeout=3
+            )
+            with GraphService._driver.session() as s:
+                s.run("RETURN 1").consume()
+            with GraphService._driver.session() as session:
+                session.run("CREATE INDEX node_id_index IF NOT EXISTS FOR (n:CodeNode) ON (n.id)")
+                session.run("CREATE INDEX node_type_index IF NOT EXISTS FOR (n:CodeNode) ON (n.type)")
+                session.run("CREATE INDEX node_name_index IF NOT EXISTS FOR (n:CodeNode) ON (n.name)")
+            self._available = True
+            logger.info(f"[OK] GraphService connecté à Neo4j ({self.uri})")
+        except Exception as e:
+            logger.warning(f"[WARN] Neo4j non disponible ({self.uri}): {e}")
+            GraphService._driver = None
+            self._available = False
+        return self._available
+
     def is_available(self) -> bool:
-        """Vérifier si le service Neo4j est disponible"""
+        """Vérifier si Neo4j est disponible — déclenche la connexion lazy si pas encore faite."""
+        if not self._available and GraphService._driver is None:
+            self._connect()
         return getattr(self, '_available', False)
-    
+
     @property
     def driver(self):
-        """Accès au driver Neo4j"""
+        """Accès au driver Neo4j — déclenche la connexion lazy si pas encore faite."""
+        if GraphService._driver is None:
+            self._connect()
         return GraphService._driver
     
     

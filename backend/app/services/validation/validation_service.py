@@ -395,3 +395,292 @@ class ValidationService:
             return "high"
         
         return "low"
+
+    # ──────────────────────────────────────────────────────────────────
+    # CHATBOT N3 VALIDATION — auto-create tasks + N3 actions
+    # ──────────────────────────────────────────────────────────────────
+
+    # Trust thresholds for auto-task creation
+    AUTO_THRESHOLD  = 0.80   # above → no validation needed
+    MEDIUM_THRESHOLD = 0.60  # 0.60–0.79 → priority 4
+    LOW_THRESHOLD   = 0.40   # 0.40–0.59 → priority 7
+                              # < 0.40    → priority 9
+
+    CRITICAL_INCIDENT_TYPES = {
+        "backend_error.api_error",
+        "system_integration_problem.interface_failure",
+        "network_equipment_issue.dslam_error",
+    }
+
+    def create_chatbot_task(
+        self,
+        user_question: str,
+        bot_response: str,
+        trust_score: float,
+        incident_type: str = "unknown",
+        application: str   = "BRASIL",
+        conversation_id: str = "",
+    ) -> Optional[int]:
+        """
+        Appelé automatiquement après chaque réponse chatbot.
+        Crée une ValidationTask si trust_score < seuil.
+        Retourne l'id de la tâche créée, ou None si pas nécessaire.
+        """
+        if trust_score >= self.AUTO_THRESHOLD:
+            return None
+
+        # Compute numeric priority (1-10 scale existing model)
+        if incident_type in self.CRITICAL_INCIDENT_TYPES and trust_score < 0.70:
+            priority = 9
+        elif trust_score < self.LOW_THRESHOLD:
+            priority = 9
+        elif trust_score < self.MEDIUM_THRESHOLD:
+            priority = 7
+        else:
+            priority = 4
+
+        task = ValidationTask(
+            task_type="chatbot_response_validation",
+            status="pending",
+            priority=priority,
+            original_data={
+                "user_question":   user_question,
+                "bot_response":    bot_response,
+                "trust_score":     trust_score,
+                "incident_type":   incident_type,
+                "application":     application,
+                "conversation_id": conversation_id,
+            },
+            ai_suggestion={
+                "trust_score":   trust_score,
+                "incident_type": incident_type,
+                "application":   application,
+            },
+        )
+        try:
+            self.db.add(task)
+            self.db.commit()
+            self.db.refresh(task)
+            return task.id
+        except Exception as e:
+            self.db.rollback()
+            import logging
+            logging.getLogger(__name__).warning(f"[VALIDATION] create_chatbot_task error: {e}")
+            return None
+
+    def approve_chatbot_response(
+        self, task_id: int, validator_id: str, comment: str = ""
+    ) -> Dict[str, Any]:
+        """N3 approuve la réponse → trust +0.15, tâche validée."""
+        task = self.db.query(ValidationTask).filter(ValidationTask.id == task_id).first()
+        if not task:
+            return {"error": f"Tâche {task_id} introuvable"}
+
+        task.status        = "validated"
+        task.validator_id  = validator_id
+        task.validated_at  = datetime.utcnow()
+        task.validation_comment = comment
+        task.validated_data = {
+            **(task.original_data or {}),
+            "action":       "approved",
+            "trust_boost":  +0.15,
+            "validated_by": validator_id,
+            "validated_at": datetime.utcnow().isoformat(),
+        }
+        try:
+            self.db.commit()
+            return {"status": "approved", "task_id": task_id, "trust_boost": +0.15}
+        except Exception as e:
+            self.db.rollback()
+            return {"error": str(e)}
+
+    def correct_chatbot_response(
+        self,
+        task_id: int,
+        validator_id: str,
+        corrected_response: str,
+        correction_reason: str,
+    ) -> Dict[str, Any]:
+        """N3 corrige la réponse → sauvegardée dans corrections pour réapprentissage."""
+        task = self.db.query(ValidationTask).filter(ValidationTask.id == task_id).first()
+        if not task:
+            return {"error": f"Tâche {task_id} introuvable"}
+
+        original = task.original_data or {}
+
+        # Save in corrections table for retraining pipeline
+        corr = Correction(
+            correction_type="chatbot_n3",
+            entity_type="chatbot_response",
+            entity_id=str(task_id),
+            original_value={
+                "user_question": original.get("user_question", ""),
+                "bot_response":  original.get("bot_response", ""),
+                "trust_score":   original.get("trust_score", 0),
+                "incident_type": original.get("incident_type", ""),
+                "application":   original.get("application", "BRASIL"),
+            },
+            corrected_value={
+                "corrected_response": corrected_response,
+                "correction_reason":  correction_reason,
+                "incident_type":      original.get("incident_type", ""),
+                "application":        original.get("application", "BRASIL"),
+                "user_question":      original.get("user_question", ""),
+            },
+            corrector_id=validator_id,
+            reason=correction_reason,
+            applied=False,
+        )
+        task.status        = "validated"
+        task.validator_id  = validator_id
+        task.validated_at  = datetime.utcnow()
+        task.validated_data = {
+            "action":             "corrected",
+            "corrected_response": corrected_response,
+            "correction_reason":  correction_reason,
+            "corrected_by":       validator_id,
+        }
+        try:
+            self.db.add(corr)
+            self.db.commit()
+            return {
+                "status":      "corrected",
+                "task_id":     task_id,
+                "message":     "Correction sauvegardée pour le réapprentissage KB.",
+            }
+        except Exception as e:
+            self.db.rollback()
+            return {"error": str(e)}
+
+    def reject_chatbot_response(
+        self, task_id: int, validator_id: str, reason: str
+    ) -> Dict[str, Any]:
+        """N3 rejette la réponse → trust -0.20."""
+        task = self.db.query(ValidationTask).filter(ValidationTask.id == task_id).first()
+        if not task:
+            return {"error": f"Tâche {task_id} introuvable"}
+
+        task.status        = "rejected"
+        task.validator_id  = validator_id
+        task.validated_at  = datetime.utcnow()
+        task.validation_comment = reason
+        task.validated_data = {
+            **(task.original_data or {}),
+            "action":        "rejected",
+            "trust_penalty": -0.20,
+            "rejected_by":   validator_id,
+            "reject_reason": reason,
+        }
+        try:
+            self.db.commit()
+            return {"status": "rejected", "task_id": task_id, "trust_penalty": -0.20}
+        except Exception as e:
+            self.db.rollback()
+            return {"error": str(e)}
+
+    def escalate_chatbot_response(
+        self, task_id: int, escalated_by: str, escalation_note: str
+    ) -> Dict[str, Any]:
+        """Escalade vers expert N3 senior — priorité max."""
+        task = self.db.query(ValidationTask).filter(ValidationTask.id == task_id).first()
+        if not task:
+            return {"error": f"Tâche {task_id} introuvable"}
+
+        task.priority      = 10
+        task.validator_id  = escalated_by
+        task.validation_comment = f"[ESCALADE] {escalation_note}"
+        task.validated_data = {
+            **(task.original_data or {}),
+            "action":          "escalated",
+            "escalated_by":    escalated_by,
+            "escalation_note": escalation_note,
+            "escalated_at":    datetime.utcnow().isoformat(),
+        }
+        try:
+            self.db.commit()
+            return {"status": "escalated", "task_id": task_id, "priority": 10}
+        except Exception as e:
+            self.db.rollback()
+            return {"error": str(e)}
+
+    def get_chatbot_tasks(
+        self,
+        priority_min: int = None,
+        application: str  = None,
+        limit: int        = 50,
+        offset: int       = 0,
+    ) -> Dict[str, Any]:
+        """Dashboard N3 — tâches chatbot en attente, triées par priorité."""
+        query = self.db.query(ValidationTask).filter(
+            ValidationTask.task_type == "chatbot_response_validation",
+            ValidationTask.status    == "pending",
+        )
+        if priority_min is not None:
+            query = query.filter(ValidationTask.priority >= priority_min)
+
+        total = query.count()
+        tasks = (
+            query
+            .order_by(desc(ValidationTask.priority), ValidationTask.created_at)
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+        def _priority_label(p: int) -> str:
+            if p >= 9: return "high"
+            if p >= 6: return "medium"
+            return "low"
+
+        result = []
+        for t in tasks:
+            od = t.original_data or {}
+            result.append({
+                "task_id":       t.id,
+                "status":        t.status,
+                "priority":      t.priority,
+                "priority_label": _priority_label(t.priority),
+                "created_at":    t.created_at.isoformat() if t.created_at else None,
+                "user_question": od.get("user_question", ""),
+                "bot_response":  od.get("bot_response", "")[:300],
+                "trust_score":   od.get("trust_score", 0.0),
+                "incident_type": od.get("incident_type", ""),
+                "application":   od.get("application", ""),
+            })
+
+        return {"total": total, "offset": offset, "limit": limit, "tasks": result}
+
+    def get_chatbot_stats(self) -> Dict[str, Any]:
+        """Stats chatbot N3 pour le dashboard."""
+        base = self.db.query(ValidationTask).filter(
+            ValidationTask.task_type == "chatbot_response_validation"
+        )
+        total     = base.count()
+        pending   = base.filter(ValidationTask.status == "pending").count()
+        validated = base.filter(ValidationTask.status == "validated").count()
+        rejected  = base.filter(ValidationTask.status == "rejected").count()
+        high_prio = base.filter(
+            ValidationTask.status   == "pending",
+            ValidationTask.priority >= 9,
+        ).count()
+
+        corrections_pending = self.db.query(Correction).filter(
+            Correction.correction_type == "chatbot_n3",
+            Correction.applied == False,  # noqa: E712
+        ).count()
+
+        return {
+            "total":                  total,
+            "pending":                pending,
+            "validated":              validated,
+            "rejected":               rejected,
+            "high_priority_pending":  high_prio,
+            "corrections_pending":    corrections_pending,
+            "validation_rate":        round((validated + rejected) / max(total, 1) * 100, 1),
+        }
+
+    def trigger_retraining(self) -> Dict[str, Any]:
+        """Lance le pipeline de réapprentissage KB depuis les corrections N3."""
+        from app.services.validation.retraining_pipeline import RetrainingPipeline
+        pipeline = RetrainingPipeline(self.db)
+        return pipeline.run()

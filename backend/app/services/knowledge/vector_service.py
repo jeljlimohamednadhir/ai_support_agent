@@ -3,11 +3,16 @@ Service de gestion du stockage vectoriel avec Qdrant
 """
 import os
 import ssl
+
+# Forcer le mode offline AVANT tout import HuggingFace/transformers
+os.environ.setdefault('HF_HUB_OFFLINE', '1')
+os.environ.setdefault('TRANSFORMERS_OFFLINE', '1')
 import logging
 from typing import List, Dict, Any, Optional
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
-from sentence_transformers import SentenceTransformer
+# NOTE: SentenceTransformer is imported LAZILY inside the `embedding_model` property
+# to avoid loading torch/transformers (~120s on OneDrive) at startup.
 import uuid
 
 # Configuration SSL depuis variables d'environnement
@@ -95,33 +100,49 @@ class VectorService:
         """Chargement lazy du modèle d'embeddings avec fallback"""
         if VectorService._embedding_model is None:
             try:
+                from sentence_transformers import SentenceTransformer
                 logger.info("Chargement du modèle d'embeddings (première utilisation)...")
-                
-                # Tentative 1: Modèle HuggingFace avec SSL désactivé
+                import glob as _glob, os.path as osp
+
+                # Tentative 1: Chemin snapshot HuggingFace Hub (format actuel)
                 try:
-                    VectorService._embedding_model = SentenceTransformer(
-                        'paraphrase-multilingual-MiniLM-L12-v2',
-                        cache_folder=EMBEDDING_CACHE_DIR  # Cache local configurable
+                    hf_hub_base = osp.expanduser(
+                        '~/.cache/huggingface/hub/models--sentence-transformers--paraphrase-multilingual-MiniLM-L12-v2'
                     )
-                    logger.info("[OK] Modèle d'embeddings chargé depuis HuggingFace")
-                    return VectorService._embedding_model
-                    
+                    snapshots = _glob.glob(osp.join(hf_hub_base, 'snapshots', '*'))
+                    if snapshots:
+                        model_path = snapshots[0]
+                        VectorService._embedding_model = SentenceTransformer(model_path, device='cpu')
+                        logger.info(f"[OK] Modèle chargé depuis HuggingFace Hub snapshot: {model_path}")
+                        return VectorService._embedding_model
+                    else:
+                        raise FileNotFoundError(f"Aucun snapshot trouvé dans {hf_hub_base}")
                 except Exception as e:
-                    logger.warning(f"[WARN] Échec chargement HuggingFace: {e}")
-                    logger.warning("[WARN] Tentative fallback modèle local/offline...")
-                    
-                    # Tentative 2: Fallback modèle local si déjà téléchargé
-                    try:
-                        import os.path as osp
-                        model_path = osp.expanduser('~/.cache/torch/sentence_transformers/sentence-transformers_paraphrase-multilingual-MiniLM-L12-v2')
-                        if osp.exists(model_path):
-                            VectorService._embedding_model = SentenceTransformer(model_path, device='cpu')
-                            logger.info(f"[OK] Modèle d'embeddings chargé depuis cache local: {model_path}")
-                            return VectorService._embedding_model
-                    except Exception as e2:
-                        logger.warning(f"[WARN] Fallback cache local échoué: {e2}")
-                    
-                    # Tentative 3: Modèle simple TF-IDF comme dernier recours
+                    logger.warning(f"[WARN] Snapshot HuggingFace Hub introuvable: {e}")
+
+                # Tentative 2: Nom court avec offline forcé
+                try:
+                    os.environ['HF_HUB_OFFLINE'] = '1'
+                    os.environ['TRANSFORMERS_OFFLINE'] = '1'
+                    VectorService._embedding_model = SentenceTransformer(
+                        'paraphrase-multilingual-MiniLM-L12-v2', device='cpu'
+                    )
+                    logger.info("[OK] Modèle chargé via SentenceTransformer offline")
+                    return VectorService._embedding_model
+                except Exception as e2:
+                    logger.warning(f"[WARN] SentenceTransformer offline échoué: {e2}")
+
+                # Tentative 3: Ancien format cache torch
+                try:
+                    model_path = osp.expanduser('~/.cache/torch/sentence_transformers/sentence-transformers_paraphrase-multilingual-MiniLM-L12-v2')
+                    if osp.exists(model_path):
+                        VectorService._embedding_model = SentenceTransformer(model_path, device='cpu')
+                        logger.info(f"[OK] Modèle chargé depuis cache torch: {model_path}")
+                        return VectorService._embedding_model
+                except Exception as e3:
+                    logger.warning(f"[WARN] Fallback cache torch échoué: {e3}")
+
+                    # Dernier recours: TF-IDF
                     logger.warning("[WARN] Mode dégradé: utilisation TF-IDF au lieu de embeddings neuronaux")
                     from sklearn.feature_extraction.text import TfidfVectorizer
                     

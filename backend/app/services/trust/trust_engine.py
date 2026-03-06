@@ -229,5 +229,81 @@ class TrustEngine:
         )
 
 
+    def score_knowledge_document(
+        self,
+        source_type: str,
+        quality_score: float = 0.0,
+        is_human_validated: bool = False,
+        has_symptoms: bool = False,
+        has_root_cause: bool = False,
+        has_steps: bool = False,
+        cluster_size: int = 0,
+        age_months: float = 0.0,
+    ) -> TrustScore:
+        """
+        Full trust scoring formula for knowledge pipeline documents.
+
+        Formula:
+          T = w1*S_source + w2*S_completeness + w3*S_validation + w4*S_recency
+          w1=0.40, w2=0.25, w3=0.25, w4=0.10
+
+        Source types and their base scores:
+          human_validated_fr  → 1.00
+          fr_unvalidated      → 0.75
+          jira_resolved       → 0.70
+          jira_open           → 0.50
+          cluster_large (≥20) → 0.65
+          cluster_medium(5-19)→ 0.50
+          single_ticket       → 0.30
+          llm_generated       → 0.20
+        """
+        import math
+        breakdown: Dict[str, int] = {}
+
+        # S_source (0.0–1.0)
+        source_scores = {
+            "human_validated_fr": 1.00,
+            "fr_unvalidated":     0.75,
+            "jira_resolved":      0.70,
+            "jira_open":          0.50,
+            "cluster_large":      0.65,
+            "cluster_medium":     0.50,
+            "single_ticket":      0.30,
+            "llm_generated":      0.20,
+        }
+        # Auto-map cluster size
+        if source_type == "cluster":
+            source_type = "cluster_large" if cluster_size >= 20 else "cluster_medium"
+        s_source = source_scores.get(source_type, 0.30)
+
+        # S_completeness (0.0–1.0)
+        completeness = sum([has_symptoms, has_root_cause, has_steps]) / 3.0
+        if quality_score > 0:
+            completeness = max(completeness, quality_score / 100.0)
+
+        # S_validation (0.0–1.0)
+        s_validation = 1.0 if is_human_validated else 0.0
+
+        # S_recency: exponential decay, lambda=0.05 per month
+        lambda_decay = 0.05
+        s_recency = math.exp(-lambda_decay * age_months)
+
+        # Weighted sum → 0.0–1.0 → scale to 0–100
+        trust_float = (
+            0.40 * s_source
+            + 0.25 * completeness
+            + 0.25 * s_validation
+            + 0.10 * s_recency
+        )
+        total = int(trust_float * 100)
+
+        breakdown["source_score"] = int(0.40 * s_source * 100)
+        breakdown["completeness"] = int(0.25 * completeness * 100)
+        breakdown["validation"] = int(0.25 * s_validation * 100)
+        breakdown["recency"] = int(0.10 * s_recency * 100)
+
+        return self._build_result(total, breakdown, source_type)
+
+
 # Singleton global
 trust_engine = TrustEngine()
