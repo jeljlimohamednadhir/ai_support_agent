@@ -7,7 +7,7 @@ import json
 import uuid
 from pathlib import Path
 from typing import Optional, List, Dict
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 import pandas as pd
 import numpy as np
@@ -16,12 +16,14 @@ from app.models.classification_ml import (
     UploadResponse, TrainRequest, TrainResponse, PredictRequest, PredictResponse,
     PredictionResult, CorrectionRequest, CorrectionResponse, KeywordsConfig,
     ParetoResponse, ParetoItem, TimeseriesResponse, TimeseriesPoint,
-    TopValuesResponse, TopValue, ExecSummary, PDFExportRequest, ModelInfo,
+    TopValuesResponse, TopValue, ExecSummary, CriticalityScore, TemporalAnomaly,
+    PDFExportRequest, ModelInfo,
     DataPreparationRequest, DataPreparationResponse
 )
 from app.services.ml_classifier import MLClassifier
 from app.services.data_processor import DataProcessor
 from app.services.keywords_manager import KeywordsManager
+from app.services.ml_ai_analyst import ml_ai_analyst
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -475,82 +477,171 @@ async def get_top_values(column: str, topn: int = 10):
 
 
 @router.get("/exec-summary", response_model=ExecSummary)
-async def get_exec_summary():
+async def get_exec_summary(ai: bool = Query(default=True, description="Enable AI-generated insights")):
     """
-    Get executive summary with KPIs and highlights
+    Executive summary with KPIs + IA narrative + recommandations contextualisées
+    + scores de criticité + anomalies temporelles.
     """
     global _uploaded_data
-    
+
     if _uploaded_data is None:
         raise HTTPException(status_code=400, detail="No data uploaded")
-    
+
     try:
         df = _uploaded_data
-        
-        # Volume
+
+        # ── KPIs de base ──────────────────────────────────────────────────
         volume = len(df)
-        
-        # MTTR
+
         mttr_med = None
         if "mttr_days" in df.columns:
             try:
                 mttr_med = float(pd.to_numeric(df["mttr_days"], errors="coerce").median())
-            except:
+                if pd.isna(mttr_med):
+                    mttr_med = None
+            except Exception:
                 pass
-        
+
+        # Date range
+        date_range = None
+        for dc in ["datetime_debut", "date"]:
+            if dc in df.columns:
+                try:
+                    s = pd.to_datetime(df[dc], errors="coerce").dropna()
+                    if not s.empty:
+                        date_range = {
+                            "start": str(s.min().date()),
+                            "end": str(s.max().date()),
+                        }
+                    break
+                except Exception:
+                    pass
+
         # Top causes
         top_causes = []
         if "cause_canonique" in df.columns:
-            vc = df["cause_canonique"].value_counts().head(10)
+            vc = df["cause_canonique"].replace("", pd.NA).dropna().value_counts().head(10)
             top_causes = [
-                {"cause": str(k), "volume": int(v), "pct": round(v/volume*100, 1)}
+                {"cause": str(k), "volume": int(v), "pct": round(v / volume * 100, 1)}
                 for k, v in vc.items()
             ]
-        
+
         # Top categories
         top_categories = []
         if "categorie_intelligente" in df.columns:
-            vc = df["categorie_intelligente"].value_counts().head(10)
+            vc = df["categorie_intelligente"].replace("", pd.NA).dropna().value_counts().head(10)
             top_categories = [
-                {"category": str(k), "volume": int(v), "pct": round(v/volume*100, 1)}
+                {"category": str(k), "volume": int(v), "pct": round(v / volume * 100, 1)}
                 for k, v in vc.items()
             ]
-        
+
         # Top error codes
         top_codes = []
         if "codes_erreur" in df.columns:
-            all_codes = []
+            all_codes: list = []
             for lst in df["codes_erreur"]:
                 if isinstance(lst, list):
                     all_codes.extend(lst)
             if all_codes:
                 vc = pd.Series(all_codes).value_counts().head(10)
                 top_codes = [{"code": str(k), "volume": int(v)} for k, v in vc.items()]
-        
-        # Highlights
-        highlights = [
-            f"Volume analysé: {volume} tickets" + (f"; MTTR médian: {mttr_med:.1f} jours" if mttr_med else "")
+
+        # Highlights basiques
+        highlights: List[str] = [
+            f"Volume analysé : {volume} tickets"
+            + (f" — MTTR médian : {mttr_med:.1f} jours" if mttr_med else "")
         ]
-        
         if top_categories:
             top_cat = top_categories[0]
             highlights.append(
-                f"Catégorie dominante: {top_cat['category']} (~{top_cat['pct']}% ; {top_cat['volume']} tickets)"
+                f"Catégorie dominante : {top_cat['category']} (~{top_cat['pct']}% — {top_cat['volume']} tickets)"
             )
-        
         if top_codes:
-            codes_str = ", ".join([c["code"] for c in top_codes[:3]])
-            highlights.append(f"Codes d'erreur saillants: {codes_str}")
-        
-        # Recommendations
-        recommendations = [
+            codes_str = ", ".join(c["code"] for c in top_codes[:3])
+            highlights.append(f"Codes d'erreur saillants : {codes_str}")
+        if date_range:
+            highlights.append(f"Période couverte : {date_range['start']} → {date_range['end']}")
+
+        # ── IA insights (idées 1 + 2 + 3) ────────────────────────────────
+        ai_narrative: Optional[str] = None
+        ai_recommendations: Optional[List[AIRecommendation]] = None
+        criticality_scores_out: Optional[List[CriticalityScore]] = None
+        temporal_anomalies_out: Optional[List[TemporalAnomaly]] = None
+        ai_generated = False
+
+        if ai and (top_causes or top_categories):
+            try:
+                insights = await ml_ai_analyst.generate_executive_insights(
+                    volume=volume,
+                    mttr_med=mttr_med,
+                    top_causes=top_causes,
+                    top_categories=top_categories,
+                    top_codes=top_codes,
+                    date_range=date_range,
+                )
+
+                ai_narrative = insights.get("narrative")
+
+                raw_recs = insights.get("recommendations", [])
+                ai_recommendations = [
+                    AIRecommendation(
+                        priority=r.get("priority", i + 1),
+                        action=r.get("action", ""),
+                        impact=r.get("impact", "medium").lower(),
+                        category=r.get("category", ""),
+                    )
+                    for i, r in enumerate(raw_recs)
+                    if r.get("action")
+                ]
+
+                raw_cs = insights.get("criticality_scores", [])
+                criticality_scores_out = []
+                for cs in raw_cs:
+                    cat_name = cs.get("category", "?")
+                    vol_for_cat = next(
+                        (c["volume"] for c in top_categories if c["category"] == cat_name), 0
+                    )
+                    mttr_for_cat = mttr_med
+                    score_val = float(cs.get("score", 50))
+                    badge = "high" if score_val >= 70 else ("medium" if score_val >= 40 else "low")
+                    criticality_scores_out.append(CriticalityScore(
+                        category=cat_name,
+                        score=score_val,
+                        volume=vol_for_cat,
+                        mttr=mttr_for_cat,
+                        badge=badge,
+                        rationale=cs.get("rationale", ""),
+                    ))
+
+                # Idée 4 : anomalies temporelles
+                timeseries_data = _build_timeseries_for_anomaly(df)
+                if timeseries_data:
+                    raw_anomalies = await ml_ai_analyst.detect_temporal_anomalies(timeseries_data)
+                    temporal_anomalies_out = [
+                        TemporalAnomaly(
+                            period=a["period"],
+                            volume=a["volume"],
+                            delta_pct=a["delta_pct"],
+                            direction=a["direction"],
+                            hypothesis=a.get("hypothesis", ""),
+                        )
+                        for a in raw_anomalies
+                    ]
+
+                ai_generated = True
+
+            except Exception as e:
+                logger.warning(f"[exec-summary] AI insights failed (non-blocking): {e}")
+
+        # Recommandations legacy (toujours présentes comme fallback)
+        legacy_recommendations = [
             "Gouvernance inter-SI hebdomadaire (SCA/SEBA/BRASIL/IPON/Artemis)",
             "Checklists prérequis OPERATION/TP + contrôles FARID/VLAN/CCL",
             "Scripts de rattrapage standardisés",
             "Campagne Habilitations/Procédures (100% pratique)",
-            "Pilotage: volumétrie rejets, délais de purge"
+            "Pilotage : volumétrie rejets, délais de purge",
         ]
-        
+
         return ExecSummary(
             volume=volume,
             mttr_med=mttr_med,
@@ -558,59 +649,354 @@ async def get_exec_summary():
             top_categories=top_categories,
             top_codes=top_codes,
             highlights=highlights,
-            recommendations=recommendations
+            recommendations=legacy_recommendations,
+            ai_narrative=ai_narrative,
+            ai_recommendations=ai_recommendations,
+            criticality_scores=criticality_scores_out,
+            temporal_anomalies=temporal_anomalies_out,
+            date_range=date_range,
+            ai_generated=ai_generated,
         )
-    
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Exec summary failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def _build_timeseries_for_anomaly(df: pd.DataFrame) -> List[Dict]:
+    """Helper : construit une timeseries agrégée par semaine pour la détection d'anomalies."""
+    for dc in ["datetime_debut", "date"]:
+        if dc in df.columns:
+            try:
+                tmp = df.copy()
+                tmp["_date"] = pd.to_datetime(tmp[dc], errors="coerce")
+                tmp = tmp.dropna(subset=["_date"])
+                if tmp.empty:
+                    continue
+                tmp["_week"] = tmp["_date"].dt.to_period("W").dt.start_time
+                agg = tmp.groupby("_week").size().reset_index(name="volume")
+                return [
+                    {"date": str(row["_week"].date()), "volume": int(row["volume"])}
+                    for _, row in agg.iterrows()
+                ]
+            except Exception:
+                continue
+    return []
+
+
 @router.post("/export-pdf")
 async def export_pdf(request: PDFExportRequest):
     """
-    Export PDF report
+    Export PDF enrichi : page de garde, narratif IA, Pareto causes,
+    scores criticité, anomalies temporelles, recommandations IA priorisées.
     """
     try:
         from reportlab.lib.pagesizes import A4
-        from reportlab.pdfgen import canvas
+        from reportlab.lib import colors
         from reportlab.lib.units import cm
-        
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import (
+            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+            HRFlowable, PageBreak,
+        )
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+
         buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=A4)
-        width, height = A4
-        
-        # Title
-        c.setFont("Helvetica-Bold", 16)
-        c.drawString(2*cm, height - 2*cm, request.title)
-        
-        # Date
-        c.setFont("Helvetica", 10)
-        c.drawString(2*cm, height - 3*cm, f"Généré le: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}")
-        
-        # Content
-        y = height - 4*cm
-        c.setFont("Helvetica", 12)
-        
-        if request.rca_text:
-            c.drawString(2*cm, y, "Analyse:")
-            y -= 0.5*cm
-            c.setFont("Helvetica", 10)
-            for line in request.rca_text.split("\n")[:20]:
-                c.drawString(2.5*cm, y, line[:80])
-                y -= 0.4*cm
-        
-        c.save()
+        doc = SimpleDocTemplate(buffer, pagesize=A4,
+                                leftMargin=2*cm, rightMargin=2*cm,
+                                topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+
+        # Styles custom
+        title_style   = ParagraphStyle("Title",   parent=styles["Title"],   fontSize=20, spaceAfter=6, alignment=TA_CENTER)
+        h1_style      = ParagraphStyle("H1",       parent=styles["Heading1"], fontSize=14, spaceBefore=14, spaceAfter=4, textColor=colors.HexColor("#1d4ed8"))
+        h2_style      = ParagraphStyle("H2",       parent=styles["Heading2"], fontSize=11, spaceBefore=8, spaceAfter=3, textColor=colors.HexColor("#374151"))
+        body_style    = ParagraphStyle("Body",     parent=styles["Normal"],  fontSize=9,  leading=13, spaceAfter=4, alignment=TA_JUSTIFY)
+        meta_style    = ParagraphStyle("Meta",     parent=styles["Normal"],  fontSize=8,  textColor=colors.grey, alignment=TA_CENTER)
+        badge_high    = ParagraphStyle("BadgeH",   parent=styles["Normal"],  fontSize=9,  textColor=colors.HexColor("#991b1b"))
+        badge_med     = ParagraphStyle("BadgeM",   parent=styles["Normal"],  fontSize=9,  textColor=colors.HexColor("#92400e"))
+        badge_low     = ParagraphStyle("BadgeL",   parent=styles["Normal"],  fontSize=9,  textColor=colors.HexColor("#065f46"))
+
+        story = []
+
+        # ── Page de garde ─────────────────────────────────────────────────
+        story.append(Spacer(1, 2*cm))
+        story.append(Paragraph(request.title, title_style))
+        story.append(Spacer(1, 0.3*cm))
+        generated_at = pd.Timestamp.now().strftime("%d/%m/%Y %H:%M")
+        story.append(Paragraph(f"Généré le {generated_at}", meta_style))
+        if request.volume:
+            story.append(Paragraph(f"Volume analysé : {request.volume:,} tickets", meta_style))
+        if request.mttr_med:
+            story.append(Paragraph(f"MTTR médian : {request.mttr_med:.1f} jours", meta_style))
+        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#1d4ed8"), spaceAfter=12))
+
+        # ── Narratif IA ───────────────────────────────────────────────────
+        if request.ai_narrative:
+            story.append(Paragraph("Synthèse Managériale", h1_style))
+            story.append(Paragraph(request.ai_narrative.replace("\n", "<br/>"), body_style))
+            story.append(Spacer(1, 0.3*cm))
+
+        # ── Recommandations IA ────────────────────────────────────────────
+        recs = request.ai_recommendations or request.recommendations
+        if recs:
+            story.append(Paragraph("Recommandations Prioritaires", h1_style))
+            for rec in recs:
+                color = colors.HexColor("#991b1b") if "HIGH" in rec.upper() else (
+                    colors.HexColor("#92400e") if "MEDIUM" in rec.upper() else colors.HexColor("#065f46")
+                )
+                story.append(Paragraph(f"• {rec}", ParagraphStyle(
+                    "RecStyle", parent=body_style, textColor=color, spaceAfter=3
+                )))
+            story.append(Spacer(1, 0.3*cm))
+
+        # ── Scores de criticité ───────────────────────────────────────────
+        if request.criticality_scores:
+            story.append(Paragraph("Criticité par Catégorie", h1_style))
+            cs_data = [["Catégorie", "Score /100", "Volume", "Niveau", "Justification"]]
+            for cs in sorted(request.criticality_scores, key=lambda x: -x.get("score", 0)):
+                badge = cs.get("badge", "medium").upper()
+                cs_data.append([
+                    cs.get("category", "?"),
+                    str(int(cs.get("score", 0))),
+                    str(cs.get("volume", 0)),
+                    badge,
+                    cs.get("rationale", "")[:60],
+                ])
+            cs_table = Table(cs_data, colWidths=[4.5*cm, 2*cm, 2*cm, 2.5*cm, 6*cm])
+            cs_table.setStyle(TableStyle([
+                ("BACKGROUND",    (0, 0), (-1, 0), colors.HexColor("#1d4ed8")),
+                ("TEXTCOLOR",     (0, 0), (-1, 0), colors.white),
+                ("FONTSIZE",      (0, 0), (-1, 0), 9),
+                ("FONTSIZE",      (0, 1), (-1, -1), 8),
+                ("ROWBACKGROUNDS",(0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f4ff")]),
+                ("GRID",          (0, 0), (-1, -1), 0.3, colors.lightgrey),
+                ("ALIGN",         (1, 1), (2, -1), "CENTER"),
+                ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING",    (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ]))
+            story.append(cs_table)
+            story.append(Spacer(1, 0.4*cm))
+
+        # ── Top causes ────────────────────────────────────────────────────
+        if request.top_causes:
+            story.append(Paragraph("Top Causes", h1_style))
+            tc_data = [["Cause", "Volume", "% du total"]]
+            for c in request.top_causes[:10]:
+                tc_data.append([c.get("cause", "?"), str(c.get("volume", 0)), f"{c.get('pct', 0):.1f}%"])
+            tc_table = Table(tc_data, colWidths=[10*cm, 3*cm, 4*cm])
+            tc_table.setStyle(TableStyle([
+                ("BACKGROUND",    (0, 0), (-1, 0), colors.HexColor("#374151")),
+                ("TEXTCOLOR",     (0, 0), (-1, 0), colors.white),
+                ("FONTSIZE",      (0, 0), (-1, 0), 9),
+                ("FONTSIZE",      (0, 1), (-1, -1), 8),
+                ("ROWBACKGROUNDS",(0, 1), (-1, -1), [colors.white, colors.HexColor("#f9fafb")]),
+                ("GRID",          (0, 0), (-1, -1), 0.3, colors.lightgrey),
+                ("ALIGN",         (1, 1), (-1, -1), "CENTER"),
+                ("TOPPADDING",    (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ]))
+            story.append(tc_table)
+            story.append(Spacer(1, 0.4*cm))
+
+        # ── Anomalies temporelles ─────────────────────────────────────────
+        if request.temporal_anomalies:
+            story.append(Paragraph("Anomalies Temporelles Détectées", h1_style))
+            for a in request.temporal_anomalies[:6]:
+                icon = "📈" if a.get("direction") == "spike" else "📉"
+                delta = a.get("delta_pct", 0)
+                story.append(Paragraph(
+                    f"{icon} <b>{a.get('period', '?')}</b> — {a.get('volume', '?')} tickets "
+                    f"({'+' if delta > 0 else ''}{delta:.1f}% vs moyenne) — {a.get('hypothesis', '')}",
+                    body_style
+                ))
+
+        doc.build(story)
         buffer.seek(0)
-        
+
+        filename = request.title.replace(" ", "_").replace("/", "-")
         return StreamingResponse(
             buffer,
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename={request.title}.pdf"}
+            headers={"Content-Disposition": f"attachment; filename={filename}.pdf"}
         )
-    
+
+    except ImportError:
+        raise HTTPException(status_code=500, detail="reportlab not installed — pip install reportlab")
     except Exception as e:
         logger.error(f"PDF export failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/inject-insights")
+async def inject_ml_insights_to_qdrant(background_tasks: BackgroundTasks):
+    """
+    Idée 5 : injecte le résumé exécutif ML (narratif + stats + recommandations)
+    dans Qdrant (collection code_knowledge, type=ml_insight) pour que le chatbot
+    puisse répondre sur les tendances de tickets.
+    """
+    global _uploaded_data
+
+    if _uploaded_data is None:
+        raise HTTPException(status_code=400, detail="No data uploaded")
+
+    try:
+        # Appel exec-summary pour construire le payload
+        summary = await get_exec_summary(ai=True)
+        recs_raw   = [r.dict() for r in (summary.ai_recommendations or [])]
+        cs_raw     = [cs.dict() for cs in (summary.criticality_scores or [])]
+        anom_raw   = [a.dict() for a in (summary.temporal_anomalies or [])]
+
+        text_payload = ml_ai_analyst.build_qdrant_payload(
+            summary={
+                "volume": summary.volume,
+                "mttr_med": summary.mttr_med,
+                "top_causes": summary.top_causes,
+                "top_categories": summary.top_categories,
+            },
+            narrative=summary.ai_narrative,
+            recommendations=recs_raw,
+            criticality_scores=cs_raw,
+            temporal_anomalies=anom_raw,
+            date_range=summary.date_range,
+        )
+
+        background_tasks.add_task(
+            _inject_insights_background, text_payload, summary.dict()
+        )
+
+        return {"message": "Injection ML insights en cours", "text_length": len(text_payload)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"inject-insights failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _inject_insights_background(text_payload: str, summary_dict: dict):
+    """Tâche arrière-plan : injecte le snapshot ML dans Qdrant."""
+    try:
+        import uuid as uuid_lib
+        from app.services.knowledge.vector_service import VectorService
+        from qdrant_client.models import PointStruct
+
+        vs = VectorService()
+        if not vs.is_available():
+            logger.warning("[ML-Inject] VectorService non disponible")
+            return
+
+        embedding = vs.embedding_model.encode(text_payload).tolist()
+        point = PointStruct(
+            id=str(uuid_lib.uuid4()),
+            vector=embedding,
+            payload={
+                "code": text_payload,
+                "snippet_id": f"ml-insight-{pd.Timestamp.now().strftime('%Y%m%d-%H%M')}",
+                "name": "Analyse ML Tickets BRASIL",
+                "type": "ml_insight",
+                "language": "text",
+                "file_path": "ml/exec_summary",
+                "volume": summary_dict.get("volume", 0),
+                "mttr_med": summary_dict.get("mttr_med"),
+                "date_range": summary_dict.get("date_range", {}),
+                "ai_generated": summary_dict.get("ai_generated", False),
+                "indexed_at": pd.Timestamp.now().isoformat(),
+            }
+        )
+        vs.client.upsert(collection_name="code_knowledge", points=[point])
+        logger.info("[ML-Inject] Snapshot ML injecté dans code_knowledge")
+
+    except Exception as e:
+        logger.error(f"[ML-Inject] Erreur background: {e}")
+
+
+@router.post("/retrain-with-corrections")
+async def retrain_with_corrections():
+    """
+    Idée 6 : Relit le fichier ml_corrections.jsonl et réentraîne le modèle
+    en fusionnant les corrections validées avec le dataset courant.
+    """
+    global _uploaded_data
+
+    if _uploaded_data is None:
+        raise HTTPException(status_code=400, detail="No data uploaded")
+
+    if not CORRECTIONS_LOG.exists():
+        raise HTTPException(status_code=400, detail="No corrections found — correct predictions first")
+
+    try:
+        # Lire les corrections
+        corrections = []
+        with open(CORRECTIONS_LOG, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    corrections.append(json.loads(line))
+                except Exception:
+                    pass
+
+        if not corrections:
+            raise HTTPException(status_code=400, detail="Corrections file is empty")
+
+        # Construire un mini-dataframe de corrections
+        corr_df = pd.DataFrame(corrections)
+        corr_df = corr_df[corr_df["corrected_label"].notna() & (corr_df["corrected_label"] != "")]
+
+        # Chercher le label_col utilisé lors du dernier entraînement
+        label_col = "cause_canonique"
+        if _ml_classifier.model_card and _ml_classifier.model_card.get("label_col"):
+            label_col = _ml_classifier.model_card["label_col"]
+
+        # Sélectionner colonne texte disponible
+        text_col = None
+        for col in ["text_ml_postmortem", "texte_complet", "resume", "text"]:
+            if col in _uploaded_data.columns:
+                text_col = col
+                break
+        if not text_col and "text" in corr_df.columns:
+            text_col = "text"
+
+        if not text_col:
+            raise HTTPException(status_code=400, detail="Cannot find text column in current dataset")
+
+        # Fusionner dataset courant + corrections (les corrections écrasent le label)
+        df_base = _uploaded_data[[text_col, label_col]].dropna(subset=[label_col]).copy()
+        df_base = df_base.rename(columns={text_col: "__text__", label_col: "__label__"})
+
+        if "corrected_label" in corr_df.columns and "text" in corr_df.columns:
+            corr_subset = corr_df[["text", "corrected_label"]].rename(
+                columns={"text": "__text__", "corrected_label": "__label__"}
+            ).dropna()
+            df_merged = pd.concat([df_base, corr_subset], ignore_index=True)
+        else:
+            df_merged = df_base
+
+        df_merged = df_merged.rename(columns={"__text__": text_col, "__label__": label_col})
+
+        result = _ml_classifier.train(
+            df=df_merged,
+            text_col=text_col,
+            label_col=label_col,
+            max_features=5000,
+        )
+
+        logger.info(f"[Retrain] Model retrained with {len(corr_df)} corrections merged")
+
+        return {
+            "message": f"Modèle réentraîné avec {len(corr_df)} corrections fusionnées",
+            "corrections_merged": len(corr_df),
+            "total_samples": len(df_merged),
+            "macro_f1": result.get("macro_f1"),
+            "recommended_threshold": result.get("recommended_threshold"),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Retrain with corrections failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
