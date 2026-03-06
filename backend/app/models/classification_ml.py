@@ -124,6 +124,33 @@ class ExecHighlight(BaseModel):
     severity: Optional[str] = None
 
 
+class AIRecommendation(BaseModel):
+    """Structured AI-generated recommendation"""
+    priority: int = Field(default=1, ge=1, le=10)
+    action: str
+    impact: str = Field(default="medium", description="high / medium / low")
+    category: str = Field(default="")
+
+
+class CriticalityScore(BaseModel):
+    """Criticality score for a category"""
+    category: str
+    score: float = Field(..., ge=0, le=100, description="Criticality score 0-100")
+    volume: int
+    mttr: Optional[float] = None
+    badge: str = Field(default="medium", description="high / medium / low")
+    rationale: str = Field(default="")
+
+
+class TemporalAnomaly(BaseModel):
+    """Detected temporal anomaly"""
+    period: str
+    volume: int
+    delta_pct: float
+    direction: str  # "spike" | "drop"
+    hypothesis: str
+
+
 class ExecSummary(BaseModel):
     """Executive summary with KPIs"""
     volume: int
@@ -132,8 +159,14 @@ class ExecSummary(BaseModel):
     top_categories: List[Dict[str, Any]]
     top_codes: List[Dict[str, Any]]
     highlights: List[str]
-    recommendations: List[str]
+    recommendations: List[str]                         # legacy hardcoded
+    # ── IA-generated fields ─────────────────────────────────────────────
+    ai_narrative: Optional[str] = None                 # narratif exécutif généré par LLM
+    ai_recommendations: Optional[List[AIRecommendation]] = None  # recommandations structurées LLM
+    criticality_scores: Optional[List[CriticalityScore]] = None  # scores criticité par catégorie
+    temporal_anomalies: Optional[List[TemporalAnomaly]] = None   # anomalies temporelles détectées
     date_range: Optional[Dict[str, str]] = None
+    ai_generated: bool = False                         # flag indiquant si l'IA a été appelée
 
 
 class PDFExportRequest(BaseModel):
@@ -141,6 +174,15 @@ class PDFExportRequest(BaseModel):
     title: str = Field(default="Rapport Classification ML")
     rca_text: str = Field(default="")
     recommendations: List[str] = Field(default=[])
+    ai_recommendations: List[str] = Field(default=[])
+    ai_narrative: Optional[str] = None
+    criticality_scores: List[Dict[str, Any]] = Field(default=[])
+    temporal_anomalies: List[Dict[str, Any]] = Field(default=[])
+    top_causes: List[Dict[str, Any]] = Field(default=[])
+    top_categories: List[Dict[str, Any]] = Field(default=[])
+    top_codes: List[Dict[str, Any]] = Field(default=[])
+    volume: Optional[int] = None
+    mttr_med: Optional[float] = None
     synthesis: Dict[str, Any] = Field(default={})
     include_charts: bool = Field(default=False)
 
