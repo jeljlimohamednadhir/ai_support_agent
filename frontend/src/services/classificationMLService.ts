@@ -91,6 +91,30 @@ export interface TopValue {
   volume: number;
 }
 
+export interface CriticalityScore {
+  category: string;
+  score: number;
+  volume: number;
+  mttr?: number;
+  badge: 'high' | 'medium' | 'low';
+  rationale: string;
+}
+
+export interface TemporalAnomaly {
+  period: string;
+  volume: number;
+  delta_pct: number;
+  direction: 'spike' | 'drop';
+  hypothesis: string;
+}
+
+export interface AIRecommendation {
+  priority: number;
+  action: string;
+  impact: 'high' | 'medium' | 'low';
+  category: string;
+}
+
 export interface ExecSummary {
   volume: number;
   mttr_med: number | null;
@@ -99,6 +123,13 @@ export interface ExecSummary {
   top_codes: Array<{ code: string; volume: number }>;
   highlights: string[];
   recommendations: string[];
+  // AI fields (ideas 1+2+3+4)
+  ai_narrative?: string;
+  ai_recommendations?: AIRecommendation[];
+  criticality_scores?: CriticalityScore[];
+  temporal_anomalies?: TemporalAnomaly[];
+  ai_generated: boolean;
+  date_range?: { start: string; end: string };
 }
 
 export interface ModelInfo {
@@ -227,18 +258,48 @@ export const classificationMLService = {
   },
 
   /**
-   * Get executive summary
+   * Get executive summary (avec IA par défaut)
    */
-  async getExecSummary(): Promise<ExecSummary> {
-    const { data } = await axios.get<ExecSummary>(`${BASE_URL}/exec-summary`);
+  async getExecSummary(ai: boolean = true): Promise<ExecSummary> {
+    const { data } = await axios.get<ExecSummary>(`${BASE_URL}/exec-summary`, {
+      params: { ai }
+    });
     return data;
   },
 
   /**
-   * Export PDF report
+   * Export PDF enrichi (idée 7)
    */
-  async exportPDF(params: { title?: string; rca_text?: string; recommendations?: string[]; synthesis?: any }) {
-    const { data } = await axios.post(`${BASE_URL}/export-pdf`, params, {
+  async exportPDF(params: {
+    title?: string;
+    rca_text?: string;
+    recommendations?: string[];
+    synthesis?: any;
+    ai_narrative?: string;
+    ai_recommendations?: string[];
+    criticality_scores?: CriticalityScore[];
+    temporal_anomalies?: TemporalAnomaly[];
+    top_causes?: Array<{ cause: string; volume: number; pct: number }>;
+    top_categories?: Array<{ category: string; volume: number; pct: number }>;
+    top_codes?: Array<{ code: string; volume: number }>;
+    volume?: number;
+    mttr_med?: number | null;
+  }) {
+    const payload = {
+      title: params.title || 'Rapport ML',
+      rca_text: params.rca_text,
+      recommendations: params.recommendations,
+      ai_narrative: params.ai_narrative,
+      ai_recommendations: params.ai_recommendations,
+      criticality_scores: params.criticality_scores,
+      temporal_anomalies: params.temporal_anomalies,
+      top_causes: params.top_causes,
+      top_categories: params.top_categories,
+      top_codes: params.top_codes,
+      volume: params.volume,
+      mttr_med: params.mttr_med,
+    };
+    const { data } = await axios.post(`${BASE_URL}/export-pdf`, payload, {
       responseType: 'blob'
     });
     return data;
@@ -249,6 +310,28 @@ export const classificationMLService = {
    */
   async indexTickets(): Promise<{ message: string; ticket_count: number; text_columns: string[] }> {
     const { data } = await axios.post(`${BASE_URL}/index-tickets`);
+    return data;
+  },
+
+  /**
+   * Idée 5 : injecter le résumé ML dans Qdrant pour le chatbot
+   */
+  async injectInsights(): Promise<{ message: string; text_length: number }> {
+    const { data } = await axios.post<{ message: string; text_length: number }>(`${BASE_URL}/inject-insights`);
+    return data;
+  },
+
+  /**
+   * Idée 6 : réentraîner le modèle avec les corrections validées
+   */
+  async retrainWithCorrections(): Promise<{
+    message: string;
+    corrections_merged: number;
+    total_samples: number;
+    macro_f1?: number;
+    recommended_threshold?: number;
+  }> {
+    const { data } = await axios.post(`${BASE_URL}/retrain-with-corrections`);
     return data;
   }
 };

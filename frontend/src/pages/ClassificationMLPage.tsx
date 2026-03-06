@@ -11,15 +11,22 @@ import {
   FileDown,
   AlertCircle,
   TrendingUp,
+  TrendingDown,
   CheckCircle,
   Clock,
   BarChart3,
   PieChart,
   Database,
-  Loader
+  Loader,
+  Zap,
+  AlertTriangle,
+  ArrowUpRight,
+  ArrowDownRight,
+  RefreshCw,
+  BookOpen
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { classificationMLService, type UploadResponse, type TrainResponse, type ModelInfo, type PredictResponse, type ExecSummary } from '../services/classificationMLService';
+import { classificationMLService, type UploadResponse, type TrainResponse, type ModelInfo, type PredictResponse, type ExecSummary, type CriticalityScore, type TemporalAnomaly, type AIRecommendation } from '../services/classificationMLService';
 import { MetricCard } from '../components/ml/MetricCard';
 import { ParetoChart } from '../components/ml/ParetoChart';
 import { TimelineChart } from '../components/ml/TimelineChart';
@@ -193,8 +200,19 @@ export const ClassificationMLPage: React.FC = () => {
     try {
       const blob = await classificationMLService.exportPDF({
         title: 'Rapport Classification ML',
-        rca_text: JSON.stringify(execSummary),
-        recommendations: execSummary.recommendations
+        rca_text: '',
+        recommendations: execSummary.recommendations,
+        ai_narrative: execSummary.ai_narrative,
+        ai_recommendations: execSummary.ai_recommendations?.map(
+          (r: AIRecommendation) => `P${r.priority} [${r.impact.toUpperCase()}] ${r.action}`
+        ),
+        criticality_scores: execSummary.criticality_scores,
+        temporal_anomalies: execSummary.temporal_anomalies,
+        top_causes: execSummary.top_causes,
+        top_categories: execSummary.top_categories,
+        top_codes: execSummary.top_codes,
+        volume: execSummary.volume,
+        mttr_med: execSummary.mttr_med,
       });
 
       const url = window.URL.createObjectURL(blob);
@@ -365,67 +383,213 @@ export const ClassificationMLPage: React.FC = () => {
 
 // Tab Components
 
+const BADGE_COLORS = {
+  high:   'bg-red-100 text-red-800 border border-red-200',
+  medium: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+  low:    'bg-green-100 text-green-800 border border-green-200',
+};
+
+const IMPACT_COLORS = {
+  high:   'text-red-700 bg-red-50 border-l-4 border-red-400',
+  medium: 'text-yellow-700 bg-yellow-50 border-l-4 border-yellow-400',
+  low:    'text-green-700 bg-green-50 border-l-4 border-green-400',
+};
+
 const ResumeExecutifTab: React.FC<{ execSummary: ExecSummary | null; loading: boolean }> = ({ execSummary, loading }) => {
-  if (loading) return <div className="text-center py-12">Chargement...</div>;
+  const [injecting, setInjecting] = React.useState(false);
+  const [injectMsg, setInjectMsg] = React.useState<string | null>(null);
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <Loader className="w-8 h-8 animate-spin text-blue-500" />
+      <span className="text-gray-500">Génération de l'analyse IA en cours…</span>
+    </div>
+  );
   if (!execSummary) return <div className="text-center py-12 text-gray-500">Aucune donnée disponible</div>;
+
+  const handleInjectChatbot = async () => {
+    setInjecting(true);
+    setInjectMsg(null);
+    try {
+      const res = await classificationMLService.injectInsights();
+      setInjectMsg(`✅ ${res.message}`);
+    } catch {
+      setInjectMsg('❌ Injection échouée');
+    } finally {
+      setInjecting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* KPI row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <MetricCard
-          title="Volume Total"
-          value={execSummary.volume.toLocaleString()}
-          icon={BarChart3}
-          color="blue"
-        />
-        <MetricCard
-          title="MTTR Médian"
-          value={execSummary.mttr_med ? `${execSummary.mttr_med.toFixed(1)}j` : 'N/A'}
-          icon={Clock}
-          color="green"
-        />
-        <MetricCard
-          title="Catégories"
-          value={execSummary.top_categories.length.toString()}
-          icon={PieChart}
-          color="purple"
-        />
+        <MetricCard title="Volume Total" value={execSummary.volume.toLocaleString()} icon={BarChart3} color="blue" />
+        <MetricCard title="MTTR Médian" value={execSummary.mttr_med ? `${execSummary.mttr_med.toFixed(1)}j` : 'N/A'} icon={Clock} color="green" />
+        <MetricCard title="Catégories" value={execSummary.top_categories.length.toString()} icon={PieChart} color="purple" />
       </div>
 
+      {/* AI Narrative */}
+      {execSummary.ai_narrative && (
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Brain className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">Synthèse Managériale IA</h3>
+            {execSummary.ai_generated && (
+              <span className="ml-auto text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Groq AI</span>
+            )}
+          </div>
+          <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line">{execSummary.ai_narrative}</p>
+          <button
+            onClick={handleInjectChatbot}
+            disabled={injecting}
+            className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition disabled:opacity-50"
+          >
+            {injecting ? <Loader className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
+            Injecter dans le Chatbot
+          </button>
+          {injectMsg && <p className="mt-2 text-sm">{injectMsg}</p>}
+        </div>
+      )}
+
+      {/* AI Recommendations */}
+      {execSummary.ai_recommendations && execSummary.ai_recommendations.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap className="w-5 h-5 text-yellow-500" />
+            <h3 className="text-lg font-semibold">Recommandations Prioritaires</h3>
+          </div>
+          <div className="space-y-3">
+            {execSummary.ai_recommendations.map((rec: AIRecommendation, idx: number) => {
+              const impact = (rec?.impact ?? 'medium') as 'high' | 'medium' | 'low';
+              const priority = rec?.priority ?? idx + 1;
+              const action = rec?.action ?? String(rec);
+              const category = rec?.category ?? '';
+              return (
+              <div key={priority} className={`rounded-lg p-4 ${IMPACT_COLORS[impact] || IMPACT_COLORS.medium}`}>
+                <div className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-white/60 flex items-center justify-center text-sm font-bold">
+                    P{priority}
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-medium">{action}</p>
+                    {category && <p className="text-xs mt-1 opacity-70">Catégorie : {category}</p>}
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${BADGE_COLORS[impact] || BADGE_COLORS.medium}`}>
+                    {impact.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Criticality Scores */}
+      {execSummary.criticality_scores && execSummary.criticality_scores.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle className="w-5 h-5 text-orange-500" />
+            <h3 className="text-lg font-semibold">Criticité par Catégorie</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[...execSummary.criticality_scores]
+              .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+              .map((cs: CriticalityScore) => {
+                const badge = (cs?.badge ?? 'medium') as 'high' | 'medium' | 'low';
+                return (
+                <div key={cs.category} className="rounded-lg border border-gray-200 dark:border-gray-600 p-4 flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm truncate">{cs.category}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${BADGE_COLORS[badge] || BADGE_COLORS.medium}`}>
+                      {badge.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${
+                          badge === 'high' ? 'bg-red-500' : badge === 'medium' ? 'bg-yellow-400' : 'bg-green-500'
+                        }`}
+                        style={{ width: `${cs.score ?? 0}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-bold w-8 text-right">{cs.score ?? 0}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{cs.rationale}</p>
+                </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* Temporal Anomalies */}
+      {execSummary.temporal_anomalies && execSummary.temporal_anomalies.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="w-5 h-5 text-red-500" />
+            <h3 className="text-lg font-semibold">Anomalies Temporelles</h3>
+            <span className="ml-1 text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">{execSummary.temporal_anomalies.length} détectée{execSummary.temporal_anomalies.length > 1 ? 's' : ''}</span>
+          </div>
+          <div className="space-y-3">
+            {execSummary.temporal_anomalies.map((a: TemporalAnomaly, i: number) => (
+              <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-600">
+                {a.direction === 'spike'
+                  ? <ArrowUpRight className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  : <ArrowDownRight className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm">{a.period}</span>
+                    <span className={`text-xs font-bold ${a.direction === 'spike' ? 'text-red-600' : 'text-blue-600'}`}>
+                      {a.delta_pct > 0 ? '+' : ''}{a.delta_pct.toFixed(1)}%
+                    </span>
+                    <span className="text-xs text-gray-500">{a.volume} tickets</span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">{a.hypothesis}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Top lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TopList
-          title="Top Causes"
-          items={execSummary.top_causes.map(c => ({ name: c.cause, value: c.volume, percentage: c.pct }))}
-        />
-        <TopList
-          title="Top Catégories"
-          items={execSummary.top_categories.map(c => ({ name: c.category, value: c.volume, percentage: c.pct }))}
-        />
+        <TopList title="Top Causes" items={execSummary.top_causes.map(c => ({ name: c.cause, value: c.volume, percentage: c.pct }))} />
+        <TopList title="Top Catégories" items={execSummary.top_categories.map(c => ({ name: c.category, value: c.volume, percentage: c.pct }))} />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold mb-4">Highlights</h3>
-        <ul className="space-y-2">
-          {execSummary.highlights.map((h, i) => (
-            <li key={i} className="flex items-start gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span>{h}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* Highlights */}
+      {execSummary.highlights.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold mb-4">Highlights</h3>
+          <ul className="space-y-2">
+            {execSummary.highlights.map((h, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>{h}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
-        <h3 className="text-lg font-semibold mb-4 text-blue-900 dark:text-blue-100">Recommandations</h3>
-        <ul className="space-y-2">
-          {execSummary.recommendations.map((r, i) => (
-            <li key={i} className="flex items-start gap-2 text-blue-800 dark:text-blue-200">
-              <span className="font-bold">{i + 1}.</span>
-              <span>{r}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* Recommandations legacy (si pas d'IA) */}
+      {!execSummary.ai_narrative && execSummary.recommendations.length > 0 && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+          <h3 className="text-lg font-semibold mb-4 text-blue-900 dark:text-blue-100">Recommandations</h3>
+          <ul className="space-y-2">
+            {execSummary.recommendations.map((r, i) => (
+              <li key={i} className="flex items-start gap-2 text-blue-800 dark:text-blue-200">
+                <span className="font-bold">{i + 1}.</span>
+                <span>{r}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
@@ -505,6 +669,23 @@ const TrainingTab: React.FC<{
   const [labelCol, setLabelCol] = useState('cause');
   const [maxFeatures, setMaxFeatures] = useState(5000);
   const [useCauseHint, setUseCauseHint] = useState(false);
+  const [retraining, setRetraining] = React.useState(false);
+  const [retrainResult, setRetrainResult] = React.useState<any>(null);
+  const [retrainError, setRetrainError] = React.useState<string | null>(null);
+
+  const handleRetrainWithCorrections = async () => {
+    setRetraining(true);
+    setRetrainResult(null);
+    setRetrainError(null);
+    try {
+      const res = await classificationMLService.retrainWithCorrections();
+      setRetrainResult(res);
+    } catch (err: any) {
+      setRetrainError(err.response?.data?.detail || 'Erreur lors du réentraînement');
+    } finally {
+      setRetraining(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -563,6 +744,28 @@ const TrainingTab: React.FC<{
           <Brain className="w-5 h-5" />
           {loading ? 'Entraînement en cours...' : 'Entraîner le modèle'}
         </button>
+
+        {/* Idée 6 : Réentraîner avec corrections */}
+        <button
+          type="button"
+          onClick={handleRetrainWithCorrections}
+          disabled={retraining || !uploadedData}
+          className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
+        >
+          {retraining ? <Loader className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
+          {retraining ? 'Réentraînement en cours...' : 'Réentraîner avec corrections validées'}
+        </button>
+        {retrainResult && (
+          <div className="mt-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 text-sm text-green-800 dark:text-green-200">
+            ✅ {retrainResult.message} — F1 : <strong>{retrainResult.macro_f1?.toFixed(3) ?? 'N/A'}</strong>
+            {' '}• {retrainResult.total_samples?.toLocaleString()} samples
+          </div>
+        )}
+        {retrainError && (
+          <div className="mt-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 text-sm text-red-800 dark:text-red-200">
+            ⚠️ {retrainError}
+          </div>
+        )}
       </form>
 
       {modelInfo && (
