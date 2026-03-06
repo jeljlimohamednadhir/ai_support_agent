@@ -9,10 +9,8 @@ os.environ.setdefault('HF_HUB_OFFLINE', '1')
 os.environ.setdefault('TRANSFORMERS_OFFLINE', '1')
 import logging
 from typing import List, Dict, Any, Optional
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
-# NOTE: SentenceTransformer is imported LAZILY inside the `embedding_model` property
-# to avoid loading torch/transformers (~120s on OneDrive) at startup.
+# NOTE: qdrant_client (~25s sur OneDrive) et SentenceTransformer sont importés LAZILY
+# dans __init__ / embedding_model pour ne pas bloquer le démarrage.
 import uuid
 
 # Configuration SSL depuis variables d'environnement
@@ -64,6 +62,10 @@ class VectorService:
         # Initialiser Qdrant client (une seule fois) - avec gestion d'erreur
         if VectorService._client is None:
             try:
+                # Import lazy de qdrant_client (~25s sur OneDrive si fait au niveau module)
+                from qdrant_client import QdrantClient
+                from qdrant_client.models import Distance, VectorParams
+
                 logger.info(f"Initialisation Qdrant sur {qdrant_host}:{qdrant_port}...")
                 VectorService._client = QdrantClient(host=qdrant_host, port=qdrant_port, timeout=5)
                 
@@ -196,6 +198,9 @@ class VectorService:
             # Générer l'embedding
             embedding = self.embedding_model.encode(code).tolist()
             
+            # Import lazy
+            from qdrant_client.models import PointStruct
+
             # Créer le point pour Qdrant
             point = PointStruct(
                 id=str(uuid.uuid4()),
@@ -444,5 +449,27 @@ class VectorService:
             return {}
 
 
-# Instance globale du service vectoriel
-vector_service = VectorService()
+# Instance globale du service vectoriel — lazy init pour ne pas bloquer le démarrage
+_vector_service_instance: Optional["VectorService"] = None
+
+
+def get_vector_service() -> "VectorService":
+    """Retourne l'instance singleton VectorService (lazy, ne bloque pas le démarrage)."""
+    global _vector_service_instance
+    if _vector_service_instance is None:
+        _vector_service_instance = VectorService()
+    return _vector_service_instance
+
+
+# Compatibilité descendante : accès via `vector_service.xxx` fonctionne toujours
+# mais ne charge plus rien au démarrage du module.
+class _LazyVectorServiceProxy:
+    """Proxy transparent vers VectorService, instancié uniquement au premier accès."""
+    def __getattr__(self, name):
+        return getattr(get_vector_service(), name)
+
+    def __bool__(self):
+        return True
+
+
+vector_service = _LazyVectorServiceProxy()

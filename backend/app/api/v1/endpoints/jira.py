@@ -5,7 +5,7 @@ import logging
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends
-from qdrant_client.models import PointStruct
+# NOTE: qdrant_client importé lazily dans les fonctions pour ne pas bloquer le démarrage
 
 from app.schemas.jira import (
     JiraConnection, JiraStats, JiraSyncRequest, JiraSyncResponse,
@@ -94,6 +94,7 @@ async def sync_jira_issues(request: JiraSyncRequest):
                 embedding = vector_service.embedding_model.encode(formatted["content"]).tolist()
                 
                 # Create point
+                from qdrant_client.models import PointStruct
                 point = PointStruct(
                     id=hash(f"jira_{issue.key}_{issue.id}") % (2**63),
                     vector=embedding,

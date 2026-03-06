@@ -380,5 +380,20 @@ class JiraCollector:
         }
 
 
-# Global instance
-jira_collector = JiraCollector()
+# Global instance — lazy pour ne pas bloquer le démarrage
+_jira_collector_instance = None
+
+
+def get_jira_collector() -> "JiraCollector":
+    global _jira_collector_instance
+    if _jira_collector_instance is None:
+        _jira_collector_instance = JiraCollector()
+    return _jira_collector_instance
+
+
+class _LazyJiraProxy:
+    def __getattr__(self, name):
+        return getattr(get_jira_collector(), name)
+
+
+jira_collector = _LazyJiraProxy()

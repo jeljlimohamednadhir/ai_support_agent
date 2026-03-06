@@ -179,14 +179,24 @@ async def train_model(request: TrainRequest):
         # Auto-select text column if not provided
         text_col = request.text_col
         if not text_col:
-            if 'text_ml_postmortem' in df.columns:
-                text_col = 'text_ml_postmortem'
-            elif 'texte_complet' in df.columns:
-                text_col = 'texte_complet'
-            elif 'resume' in df.columns:
-                text_col = 'resume'
-            else:
-                raise HTTPException(status_code=400, detail="Cannot auto-detect text column. Available columns: " + ", ".join(df.columns))
+            _TEXT_CANDIDATES = [
+                "text_ml_postmortem", "texte_complet",
+                # colonnes BRASIL standard
+                "inc_resume", "resume",
+                "inc_cause", "cause",
+                "inc_commentaire", "commentaire",
+                "inc_solution", "solution",
+                "description", "text",
+            ]
+            for _candidate in _TEXT_CANDIDATES:
+                if _candidate in df.columns:
+                    text_col = _candidate
+                    break
+            if not text_col:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot auto-detect text column. Available columns: " + ", ".join(df.columns)
+                )
         
         # Prepare training data
         df_train = df.dropna(subset=[request.label_col]).copy()
@@ -198,8 +208,7 @@ async def train_model(request: TrainRequest):
                 detail=f"Not enough labeled data: {len(df_train)} rows (minimum 10)"
             )
         
-        # Prepare text column
-        text_col = request.text_col
+        # Prepare text column (do NOT overwrite auto-detected text_col here)
         if request.use_cause_hint and request.label_col == "categorie_intelligente":
             df_train["text_for_ml"] = (
                 df_train[text_col].fillna("") + 
@@ -953,7 +962,12 @@ async def retrain_with_corrections():
 
         # Sélectionner colonne texte disponible
         text_col = None
-        for col in ["text_ml_postmortem", "texte_complet", "resume", "text"]:
+        for col in ["text_ml_postmortem", "texte_complet",
+                    "inc_resume", "resume",
+                    "inc_cause", "cause",
+                    "inc_commentaire", "commentaire",
+                    "inc_solution", "solution",
+                    "description", "text"]:
             if col in _uploaded_data.columns:
                 text_col = col
                 break
@@ -1047,7 +1061,9 @@ async def index_tickets_for_rag(background_tasks: BackgroundTasks):
         
         # Détecter colonnes texte
         text_cols = []
-        for col in ['resume', 'signalement', 'cause', 'solution', 'description']:
+        for col in ['inc_resume', 'resume', 'inc_cause', 'cause',
+                    'inc_solution', 'solution', 'inc_commentaire', 'commentaire',
+                    'signalement', 'description', 'text']:
             if col in df.columns:
                 text_cols.append(col)
         
@@ -1085,7 +1101,12 @@ def _index_tickets_background(df: pd.DataFrame, vector_service):
         if _ml_classifier.model is not None:
             try:
                 text_col = None
-                for col in ["text_ml_postmortem", "texte_complet", "resume", "text", "text_for_rag"]:
+                for col in ["text_ml_postmortem", "texte_complet",
+                            "inc_resume", "resume",
+                            "inc_cause", "cause",
+                            "inc_commentaire", "commentaire",
+                            "inc_solution", "solution",
+                            "description", "text", "text_for_rag"]:
                     if col in df.columns:
                         text_col = col
                         break
@@ -1294,7 +1315,12 @@ async def auto_label_low_confidence(request: "AutoLabelRequest"):
 
     # Detect text column
     text_col = None
-    for col in ["text_ml_postmortem", "texte_complet", "resume", "text"]:
+    for col in ["text_ml_postmortem", "texte_complet",
+                "inc_resume", "resume",
+                "inc_cause", "cause",
+                "inc_commentaire", "commentaire",
+                "inc_solution", "solution",
+                "description", "text"]:
         if col in _uploaded_data.columns:
             text_col = col
             break
@@ -1450,7 +1476,12 @@ async def _auto_retrain_background():
 
         label_col = _ml_classifier.model_card.get("label_col", "cause") if _ml_classifier.model_card else "cause"
         text_col = None
-        for col in ["text_ml_postmortem", "texte_complet", "resume", "text"]:
+        for col in ["text_ml_postmortem", "texte_complet",
+                    "inc_resume", "resume",
+                    "inc_cause", "cause",
+                    "inc_commentaire", "commentaire",
+                    "inc_solution", "solution",
+                    "description", "text"]:
             if col in _uploaded_data.columns:
                 text_col = col
                 break

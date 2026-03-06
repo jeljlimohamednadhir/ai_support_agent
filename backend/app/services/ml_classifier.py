@@ -3,48 +3,74 @@ ML Classification Service
 Handles ML model training, prediction, and management
 Idea F: Hybrid TF-IDF + Sentence Transformers (paraphrase-multilingual-MiniLM-L12-v2)
 """
+from __future__ import annotations  # rend toutes les annotations lazily évaluées (PEP 563)
 import os
 import json
 import pickle
-import numpy as np
-import pandas as pd
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional, Any
 from pathlib import Path
 
-try:
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.model_selection import train_test_split
-    from sklearn.metrics import classification_report, confusion_matrix, f1_score
-    from sklearn.calibration import CalibratedClassifierCV
-    from scipy import sparse as sp
-    SKLEARN_AVAILABLE = True
-except ImportError:
-    SKLEARN_AVAILABLE = False
+# NOTE: numpy, pandas, sklearn importés lazily dans les méthodes pour ne pas
+# bloquer le démarrage (~40s sur OneDrive à cause du scan de fichiers).
+# Ils sont chargés une seule fois au premier appel à train() ou predict().
+_np = None
+_pd = None
+SKLEARN_AVAILABLE: Optional[bool] = None  # None = non encore testé
 
-# Idea F: Sentence Transformers for semantic embeddings
-try:
-    from sentence_transformers import SentenceTransformer
-    _ST_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
-    _sentence_transformer: Optional[SentenceTransformer] = None
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
-    _sentence_transformer = None
+
+def _get_np():
+    global _np
+    if _np is None:
+        import numpy as np
+        _np = np
+    return _np
+
+
+def _get_pd():
+    global _pd
+    if _pd is None:
+        import pandas as pd
+        _pd = pd
+    return _pd
+
+
+def _ensure_sklearn():
+    global SKLEARN_AVAILABLE
+    if SKLEARN_AVAILABLE is None:
+        try:
+            from sklearn.feature_extraction.text import TfidfVectorizer  # noqa
+            SKLEARN_AVAILABLE = True
+        except ImportError:
+            SKLEARN_AVAILABLE = False
+    return SKLEARN_AVAILABLE
+
+# Idea F: Sentence Transformers for semantic embeddings — import LAZY pour ne pas bloquer le démarrage
+# (~567s sur OneDrive à cause du scan de fichiers torch/transformers)
+_ST_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
+_sentence_transformer = None
+SENTENCE_TRANSFORMERS_AVAILABLE: Optional[bool] = None  # None = non encore testé
 
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 
-def _get_sentence_transformer() -> Optional["SentenceTransformer"]:
-    """Lazy-load the sentence transformer (singleton)."""
-    global _sentence_transformer
+def _get_sentence_transformer():
+    """Lazy-load the sentence transformer (singleton) — importe sentence_transformers la première fois."""
+    global _sentence_transformer, SENTENCE_TRANSFORMERS_AVAILABLE
+    # Tester la disponibilité une seule fois
+    if SENTENCE_TRANSFORMERS_AVAILABLE is None:
+        try:
+            from sentence_transformers import SentenceTransformer as _ST  # noqa: F401
+            SENTENCE_TRANSFORMERS_AVAILABLE = True
+        except ImportError:
+            SENTENCE_TRANSFORMERS_AVAILABLE = False
     if not SENTENCE_TRANSFORMERS_AVAILABLE:
         return None
     if _sentence_transformer is None:
         try:
+            from sentence_transformers import SentenceTransformer
             _sentence_transformer = SentenceTransformer(_ST_MODEL_NAME)
             logger.info(f"[MLClassifier] Sentence Transformer loaded: {_ST_MODEL_NAME}")
         except Exception as e:
@@ -110,6 +136,7 @@ class MLClassifier:
     
     def _build_vectorizers(self, max_features: int = 5000) -> Dict:
         """Build word + char TF-IDF vectorizers"""
+        from sklearn.feature_extraction.text import TfidfVectorizer
         word_vec = TfidfVectorizer(
             lowercase=True,
             strip_accents="unicode",
@@ -128,15 +155,17 @@ class MLClassifier:
         )
         return {"word": word_vec, "char": char_vec}
     
-    def _vectorize_fit(self, vec_dict: Dict, texts: pd.Series):
+    def _vectorize_fit(self, vec_dict: Dict, texts):
         """Fit vectorizers and return combined features"""
+        from scipy import sparse as sp
         Xw = vec_dict["word"].fit_transform(texts)
         Xc = vec_dict["char"].fit_transform(texts)
         X = sp.hstack([Xw, Xc], format="csr")
         return X
     
-    def _vectorize_transform(self, vec_dict: Dict, texts: pd.Series):
+    def _vectorize_transform(self, vec_dict: Dict, texts):
         """Transform texts using fitted vectorizers"""
+        from scipy import sparse as sp
         Xw = vec_dict["word"].transform(texts)
         Xc = vec_dict["char"].transform(texts)
         X = sp.hstack([Xw, Xc], format="csr")
@@ -144,11 +173,13 @@ class MLClassifier:
 
     # ── Idea F: Hybrid features (TF-IDF + Sentence Transformers) ──────────────
 
-    def _build_hybrid_features_fit(self, vec_dict: Dict, texts: pd.Series):
+    def _build_hybrid_features_fit(self, vec_dict: Dict, texts):
         """
         Fit TF-IDF and concatenate with Sentence Transformer dense embeddings.
         Falls back to TF-IDF only if ST not available.
         """
+        import numpy as np
+        from scipy import sparse as sp
         X_tfidf = self._vectorize_fit(vec_dict, texts)
         st = _get_sentence_transformer()
         if st is None:
@@ -167,8 +198,10 @@ class MLClassifier:
             self._use_hybrid = False
             return X_tfidf
 
-    def _build_hybrid_features_transform(self, vec_dict: Dict, texts: pd.Series):
+    def _build_hybrid_features_transform(self, vec_dict: Dict, texts):
         """Transform using fitted TF-IDF + fresh ST embeddings."""
+        import numpy as np
+        from scipy import sparse as sp
         X_tfidf = self._vectorize_transform(vec_dict, texts)
         if not self._use_hybrid:
             return X_tfidf
@@ -196,7 +229,13 @@ class MLClassifier:
         
         Returns dict with metrics, classes, recommended_threshold, etc.
         """
-        if not SKLEARN_AVAILABLE:
+        import numpy as np
+        import pandas as pd
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.model_selection import train_test_split
+        from sklearn.metrics import classification_report, confusion_matrix, f1_score
+        from sklearn.calibration import CalibratedClassifierCV
+        if not _ensure_sklearn():
             raise RuntimeError("scikit-learn not available")
         
         texts = df[text_col].fillna("").astype(str)
@@ -295,8 +334,9 @@ class MLClassifier:
         
         return result
     
-    def _compute_threshold(self, max_probs: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    def _compute_threshold(self, max_probs, y_true, y_pred) -> float:
         """Compute recommended threshold targeting 85% accuracy on accepted predictions"""
+        import numpy as np
         thresholds = np.arange(0.50, 0.96, 0.01)
         best_thresh = 0.70
         best_coverage = 0.0
@@ -318,12 +358,13 @@ class MLClassifier:
         self,
         texts: pd.Series,
         threshold: float = 0.7
-    ) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+    ) -> Tuple:
         """
         Predict labels with confidence scores
         
         Returns: (predictions, confidences, all_probabilities)
         """
+        import numpy as np
         if self.model is None or self.vectorizer is None:
             raise RuntimeError("Model not loaded")
 

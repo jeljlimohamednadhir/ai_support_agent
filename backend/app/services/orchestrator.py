@@ -279,5 +279,20 @@ IMPORTANT : Synthétise le contexte ci-dessus en UNE SEULE réponse. Ne répète
 """
 
 
-# Singleton global
-intelligence_orchestrator = IntelligenceOrchestrator()
+# Singleton global — lazy pour ne pas bloquer le démarrage
+_intelligence_orchestrator_instance: Optional["IntelligenceOrchestrator"] = None
+
+
+def get_intelligence_orchestrator() -> "IntelligenceOrchestrator":
+    global _intelligence_orchestrator_instance
+    if _intelligence_orchestrator_instance is None:
+        _intelligence_orchestrator_instance = IntelligenceOrchestrator()
+    return _intelligence_orchestrator_instance
+
+
+class _LazyOrchestratorProxy:
+    def __getattr__(self, name):
+        return getattr(get_intelligence_orchestrator(), name)
+
+
+intelligence_orchestrator = _LazyOrchestratorProxy()
