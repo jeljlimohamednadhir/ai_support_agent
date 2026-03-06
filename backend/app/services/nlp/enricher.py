@@ -126,7 +126,19 @@ INTENT_PATTERNS: Dict[str, List[str]] = {
         "t_prestations", "t_nodes", "t_media_links", "t_tech_serv",
         "t_port_groups", "t_d_booked", "t_ftth", "t_mrt",
     ],
-    # ── PRIORITY 13: Knowledge gap detection (fallback) ──────────────────────
+    # ── PRIORITY 13: ML Analysis ─────────────────────────────────────────────
+    "ml_analysis": [
+        "analyse ml", "analyse classification", "résumé ml", "résumé de classification",
+        "causes principales", "top causes", "top catégories", "top categories",
+        "tendances tickets", "anomalies temporelles", "volume de tickets",
+        "classification tickets", "statistiques tickets", "stats ml",
+        "rapport ml", "rapport de classification", "insights ml",
+        "répartition des causes", "répartition causes", "distribution tickets",
+        "les principales causes", "principales catégories", "mttr moyen",
+        "temps de résolution moyen", "score de criticité", "criticité",
+        "quelles sont les causes", "causes récurrentes", "incidents récurrents",
+    ],
+    # ── PRIORITY 14: Knowledge gap detection (fallback) ──────────────────────
     "knowledge_gap_detection": ["je ne sais pas", "pas de procédure", "aucune doc",
                                  "pas de solution connue", "pas documenté",
                                  "connaissance manquante", "pas de fr", "pas de fiche"],
@@ -157,7 +169,8 @@ INTENT_PRIORITY: List[str] = [
     "pattern_analysis",         # PRIORITY 10
     "diagnostic_request",       # PRIORITY 11 — generic error/incident
     "knowledge_lookup",         # PRIORITY 12
-    "knowledge_gap_detection",  # PRIORITY 13 — fallback
+    "ml_analysis",              # PRIORITY 13 — ML stats & insights
+    "knowledge_gap_detection",  # PRIORITY 14 — fallback
 ]
 
 # ─────────────────────────────────────────────

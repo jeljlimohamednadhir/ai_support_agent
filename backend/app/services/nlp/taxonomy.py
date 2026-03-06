@@ -670,6 +670,22 @@ INCIDENT_TAXONOMY: Dict[str, IncidentTypeDefinition] = {
         related_systems=["BRASIL"],
         severity="low",
     ),
+    "ml_analysis": IncidentTypeDefinition(
+        id="ml_analysis",
+        category="analytics",
+        name="Analyse ML / Classification Tickets",
+        description="Engineer asks for ML classification statistics, top causes, trends or AI insights from the ticket analysis module.",
+        typical_patterns=[
+            "causes principales", "top causes", "top catégories", "tendances tickets",
+            "analyse ml", "résumé ml", "anomalies temporelles", "volume de tickets",
+            "classification tickets", "statistiques tickets", "insights ml",
+            "répartition des causes", "distribution tickets", "mttr moyen",
+            "quelles sont les causes", "causes récurrentes", "incidents récurrents",
+        ],
+        possible_root_causes=[],
+        related_systems=["BRASIL"],
+        severity="low",
+    ),
     "unknown.insufficient_information": IncidentTypeDefinition(
         id="unknown.insufficient_information",
         category="unknown",

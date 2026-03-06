@@ -122,7 +122,18 @@ class ChatbotService:
                     diagnostic_available=False,
                 )
 
-            # 2c. Détection intention Jira : "y a-t-il une carte Jira ?", "ticket similaire ?", etc.
+            # 2c. Détection intention ML Analysis : "causes principales", "analyse ML", etc.
+            if self._detect_ml_analysis_intent(message.content):
+                ml_response = await self._handle_ml_analysis_intent(
+                    user_message=message.content,
+                    conversation_id=conversation_id,
+                    app_id=message.app_id,
+                    orch_result=orch_result,
+                )
+                if ml_response:
+                    return ml_response
+
+            # 2d. Détection intention Jira : "y a-t-il une carte Jira ?", "ticket similaire ?", etc.
             if self._detect_jira_intent(message.content):
                 jira_response = await self._handle_jira_intent(
                     user_message=message.content,
@@ -597,6 +608,160 @@ Question : {message.content}"""
             bool(self._JIRA_INTENT_PATTERNS.search(text))
             or bool(self._JIRA_KEY_PATTERN.search(text))
         )
+
+    # ── ML Analysis intent ──────────────────────────────────────────────────
+    _ML_ANALYSIS_PATTERNS = re.compile(
+        r"\b(causes\s+principales|top\s+causes|top\s+cat[eé]gories|analyse\s+ml|"
+        r"r[eé]sum[eé]\s+ml|anomalies\s+temporelles|volume\s+de\s+tickets|"
+        r"classification\s+tickets|statistiques\s+tickets|insights\s+ml|"
+        r"r[eé]partition\s+(des\s+)?causes|distribution\s+tickets|"
+        r"mttr\s+moyen|temps\s+de\s+r[eé]solution\s+moyen|score\s+de\s+criticit[eé]|"
+        r"quelles?\s+sont\s+les\s+causes|causes\s+r[eé]currentes|incidents\s+r[eé]currents|"
+        r"rapport\s+ml|rapport\s+de\s+classification|tendances\s+tickets|"
+        r"principales?\s+cat[eé]gories)\b",
+        re.IGNORECASE,
+    )
+
+    def _detect_ml_analysis_intent(self, text: str) -> bool:
+        """Return True when the message asks about ML classification stats or insights."""
+        return bool(self._ML_ANALYSIS_PATTERNS.search(text))
+
+    async def _handle_ml_analysis_intent(
+        self,
+        user_message: str,
+        conversation_id: str,
+        app_id: str,
+        orch_result: dict,
+    ) -> Optional[ChatResponse]:
+        """
+        Handle an ML analysis request:
+        1. Try to get the exec-summary from the ML API (calls the endpoint function directly)
+        2. Format a rich markdown response from the summary
+        3. Fall back to Qdrant ml_insight if no live data
+        """
+        try:
+            # ── Attempt live exec-summary ──────────────────────────────────────
+            summary = None
+            try:
+                from app.api.v1.endpoints.classification_ml import get_exec_summary, _uploaded_data
+                if _uploaded_data is not None:
+                    summary = await get_exec_summary(ai=True)
+            except Exception as _e:
+                logger.debug(f"[ML-Intent] exec-summary live call failed: {_e}")
+
+            if summary:
+                # Build response from live summary
+                lines = [f"📊 **Analyse ML Tickets BRASIL** — {summary.date_range or 'dernière période'}\n"]
+
+                # KPIs
+                lines.append(
+                    f"🎫 **{summary.volume}** tickets analysés | "
+                    f"⏱️ MTTR médian : **{summary.mttr_med:.1f}j**"
+                )
+
+                # AI Narrative
+                if summary.ai_narrative:
+                    lines.append(f"\n---\n{summary.ai_narrative}")
+
+                # Top causes
+                if summary.top_causes:
+                    lines.append("\n\n**🔝 Top causes :**")
+                    for c in summary.top_causes[:5]:
+                        lines.append(f"  • {c.get('label', c)} — {c.get('count', '')} tickets")
+
+                # Criticality scores
+                if summary.criticality_scores:
+                    lines.append("\n\n**⚠️ Scores de criticité :**")
+                    for cs in summary.criticality_scores[:4]:
+                        badge = cs.category if isinstance(cs, dict) else cs.category
+                        score = cs.score if isinstance(cs, dict) else cs.score
+                        lines.append(f"  • **{badge}** — score {score:.0f}/100 {cs.rationale if hasattr(cs, 'rationale') else ''}")
+
+                # Temporal anomalies
+                if summary.temporal_anomalies:
+                    lines.append("\n\n**📈 Anomalies temporelles :**")
+                    for a in summary.temporal_anomalies[:3]:
+                        icon = "📈" if getattr(a, "direction", "") == "spike" else "📉"
+                        lines.append(
+                            f"  {icon} **{a.period}** — {a.volume} tickets "
+                            f"({'+' if a.delta_pct > 0 else ''}{a.delta_pct:.1f}%) — {a.hypothesis}"
+                        )
+
+                # Top recommendations
+                if summary.ai_recommendations:
+                    lines.append("\n\n**💡 Recommandations prioritaires :**")
+                    for rec in summary.ai_recommendations[:3]:
+                        priority = rec.priority if hasattr(rec, "priority") else "P?"
+                        action = rec.action if hasattr(rec, "action") else str(rec)
+                        lines.append(f"  [{priority}] {action}")
+
+                response_text = "\n".join(lines)
+                return ChatResponse(
+                    message=response_text,
+                    sources=[{"title": "Module ML Classification", "type": "ml_insight", "score": 1.0}],
+                    suggestions=[
+                        "Exporter le rapport PDF complet",
+                        "Injecter ces insights dans la base de connaissance",
+                        "Afficher les anomalies temporelles détaillées",
+                    ],
+                    confidence=0.95,
+                    conversation_id=conversation_id,
+                    app_id=app_id,
+                    pipeline_mode="ml_analysis",
+                    trust_score=90,
+                    trust_label="ml_live",
+                    diagnostic_available=False,
+                )
+
+            # ── Fallback: search ml_insight in Qdrant ────────────────────────
+            context_blocks = orch_result.get("context_blocks", [])
+            ml_blocks = [b for b in context_blocks if b.get("source_type") == "ml_insight"]
+            if ml_blocks:
+                content = ml_blocks[0].get("content", "")
+                return ChatResponse(
+                    message=f"📊 **Insights ML (base de connaissance) :**\n\n{content}",
+                    sources=[{"title": "ML Insight Qdrant", "type": "ml_insight", "score": 0.8}],
+                    suggestions=[
+                        "Aller dans le module ML pour voir les détails",
+                        "Y a-t-il des anomalies temporelles récentes ?",
+                    ],
+                    confidence=0.8,
+                    conversation_id=conversation_id,
+                    app_id=app_id,
+                    pipeline_mode="ml_analysis",
+                    trust_score=75,
+                    trust_label="ml_qdrant",
+                    diagnostic_available=False,
+                )
+
+            # ── No data available ────────────────────────────────────────────
+            return ChatResponse(
+                message=(
+                    "📊 **Analyse ML non disponible**\n\n"
+                    "Aucune donnée de classification n'est actuellement chargée. "
+                    "Pour obtenir une analyse ML complète :\n"
+                    "1. Allez dans le **module Classification ML**\n"
+                    "2. Uploadez votre CSV de tickets\n"
+                    "3. Entraînez le modèle\n"
+                    "4. Cliquez sur *Injecter dans le Chatbot* depuis l'onglet Résumé Exécutif"
+                ),
+                sources=[],
+                suggestions=[
+                    "Accéder au module Classification ML",
+                    "Comment fonctionne la classification automatique ?",
+                ],
+                confidence=0.0,
+                conversation_id=conversation_id,
+                app_id=app_id,
+                pipeline_mode="ml_analysis",
+                trust_score=0,
+                trust_label="no_data",
+                diagnostic_available=False,
+            )
+
+        except Exception as e:
+            logger.error(f"[ML-Intent] _handle_ml_analysis_intent failed: {e}")
+            return None
 
     def _extract_jira_keywords(self, user_message: str, orch_result: dict) -> str:
         """
