@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, BookOpen, X, Sparkles, Bot, User, FileText, Database, Clock } from 'lucide-react'
+import { Send, BookOpen, X, Sparkles, Bot, User, FileText, Database, Clock, ThumbsDown, Quote } from 'lucide-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { sendMessage } from '@/services/api'
 import { chatService } from '@/services/chatService'
@@ -16,11 +16,40 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<any[]>([])
   const [selectedSources, setSelectedSources] = useState<any[]>([])
+  const [sourcesQuestion, setSourcesQuestion] = useState<string>('')
   const [showSources, setShowSources] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [dismissedSources, setDismissedSources] = useState<Set<string>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const { activeConversationId } = useChatStore()
+  const { activeConversationId, updateConversation } = useChatStore()
+
+  // Build a stable key for a source in the context of the current question
+  const sourceKey = (sourceName: string, question: string) => `${sourceName}||${question}`
+
+  const handleDismissSource = async (source: any, question: string) => {
+    const key = sourceKey(source.name || source.file_path || '', question)
+    setDismissedSources(prev => new Set(prev).add(key))
+    try {
+      await chatService.reportIrrelevantSource({
+        source_name: source.name || source.file_path || 'unknown',
+        source_type: source.type || 'unknown',
+        question,
+        conversation_id: conversationId,
+      })
+    } catch (err) {
+      console.warn('Source feedback failed:', err)
+    }
+  }
+
+  const handleCiteSource = (source: any) => {
+    const frNums = source.source_fr_numbers?.length
+      ? `FR ${source.source_fr_numbers.join(', FR ')}`
+      : null
+    const label = frNums || source.name || source.title || 'cette source'
+    setMessage(prev => (prev ? prev + ' ' : '') + `Donne-moi plus de détails sur ${label}`)
+    inputRef.current?.focus()
+  }
   
   // Load messages from backend when conversation changes
   useEffect(() => {
@@ -65,7 +94,7 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
         sources: data.sources || [], 
         timestamp: new Date() 
       }
-      setMessages([...messages, assistantMsg])
+      setMessages(prev => [...prev, assistantMsg])
       
       // Save both user and assistant messages to backend
       if (activeConversationId) {
@@ -78,6 +107,19 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
             role: 'assistant',
             content: data.message
           })
+
+          // Generate AI title after the very first exchange (messages was empty before user sent)
+          if (messages.length === 0) {
+            try {
+              const updatedConv = await chatService.generateTitle(activeConversationId)
+              updateConversation(activeConversationId, { title: updatedConv.title, updated_at: new Date().toISOString() })
+            } catch (titleError) {
+              console.warn('Title generation failed:', titleError)
+            }
+          } else {
+            // Update timestamp so conversation bubbles to top of list
+            updateConversation(activeConversationId, { updated_at: new Date().toISOString() })
+          }
         } catch (error) {
           console.error('Failed to save messages:', error)
         }
@@ -85,6 +127,7 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
       
       if (data.sources && data.sources.length > 0) {
         setSelectedSources(data.sources)
+        setSourcesQuestion(message)
         setShowSources(true)
       }
       setMessage('')
@@ -96,8 +139,16 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
     if (!message.trim() || mutation.isPending) return
     
     const userMsg = { role: 'user', content: message, timestamp: new Date() }
-    setMessages([...messages, userMsg])
-    mutation.mutate({ message, conversation_id: conversationId })
+    const isFirstMessage = messages.length === 0
+    setMessages(prev => [...prev, userMsg])
+
+    // Construire l'historique local pour la mémoire conversationnelle (6 derniers échanges)
+    const localHistory = messages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .slice(-12)
+      .map(m => ({ role: m.role as string, content: m.content as string }))
+
+    mutation.mutate({ message, conversation_id: conversationId, conversation_history: localHistory })
   }
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -208,35 +259,77 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
                     <div className="flex flex-wrap gap-2 mt-1">
                       {msg.sources.slice(0, 4).map((source: any, i: number) => {
                         const isTable = source.type === 'database_table'
-                        const isFiche = source.type === 'resolution_fiche'
+                        const isFiche = source.type === 'resolution_fiche' || source.type === 'procedure' || source.source_fr_numbers?.length > 0
+                        // Resolve display name — backend now always sends source.name
+                        const sName = source.name || source.title || source.file_path?.split('/').pop() || `Source ${i + 1}`
+                        // Find the last user message before this assistant message
+                        const lastUserMsg = messages.slice(0, messages.indexOf(msg)).filter((m: any) => m.role === 'user').slice(-1)[0]
+                        const question = lastUserMsg?.content || ''
+                        const isDismissed = dismissedSources.has(sourceKey(source.name || source.title || '', question))
                         
                         return (
-                          <button
-                            key={i}
-                            onClick={() => {
-                              setSelectedSources(msg.sources)
-                              setShowSources(true)
-                            }}
-                            className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all duration-200 hover:scale-105 flex items-center gap-1.5 ${
-                              isTable
-                                ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                                : isFiche
-                                ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
-                                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                            }`}
-                          >
-                            {isTable ? <Database className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
-                            {source.name || source.file_path?.split('/').pop() || 'Source'}
-                          </button>
+                          <div key={i} className="flex items-center gap-0 group/pill rounded-full overflow-hidden">
+                            {/* Main pill — opens sources sidebar */}
+                            <button
+                              onClick={() => {
+                                setSelectedSources(msg.sources)
+                                setSourcesQuestion(question)
+                                setShowSources(true)
+                              }}
+                              className={`text-xs px-3 py-1.5 font-medium transition-all duration-200 flex items-center gap-1.5 ${
+                                isDismissed
+                                  ? 'bg-gray-100 text-gray-400 line-through'
+                                  : isTable
+                                  ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                                  : isFiche
+                                  ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                              }`}
+                            >
+                              {isTable ? <Database className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
+                              {sName}
+                            </button>
+                            {/* Cite button — appears on hover */}
+                            {!isDismissed && (
+                              <button
+                                onClick={() => handleCiteSource(source)}
+                                className={`text-xs px-1.5 py-1.5 font-medium transition-all duration-200 opacity-0 group-hover/pill:opacity-100 border-l ${
+                                  isTable ? 'bg-blue-100 text-blue-500 hover:bg-blue-200 border-blue-200'
+                                  : isFiche ? 'bg-purple-100 text-purple-500 hover:bg-purple-200 border-purple-200'
+                                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border-gray-200'
+                                }`}
+                                title="Citer cette source dans le chat"
+                              >
+                                <Quote className="w-3 h-3" />
+                              </button>
+                            )}
+                            {/* Dismiss button — appears on hover */}
+                            {!isDismissed && (
+                              <button
+                                onClick={() => handleDismissSource(source, question)}
+                                className={`text-xs px-1.5 py-1.5 font-medium transition-all duration-200 opacity-0 group-hover/pill:opacity-100 border-l ${
+                                  isTable ? 'bg-blue-100 text-blue-400 hover:bg-red-100 hover:text-red-500 border-blue-200'
+                                  : isFiche ? 'bg-purple-100 text-purple-400 hover:bg-red-100 hover:text-red-500 border-purple-200'
+                                  : 'bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-500 border-gray-200'
+                                }`}
+                                title="Source non pertinente"
+                              >
+                                <ThumbsDown className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
                         )
                       })}
                       {msg.sources.length > 4 && (
                         <button
                           onClick={() => {
                             setSelectedSources(msg.sources)
+                            setSourcesQuestion(
+                              messages.slice(0, messages.indexOf(msg)).filter((m: any) => m.role === 'user').slice(-1)[0]?.content || ''
+                            )
                             setShowSources(true)
                           }}
-                          className="text-xs text-gray-500 hover:text-primary-600 font-medium"
+                          className="text-xs px-3 py-1.5 bg-gray-50 text-gray-600 hover:bg-gray-100 rounded-full font-medium transition-colors"
                         >
                           +{msg.sources.length - 4} autres
                         </button>
@@ -326,17 +419,23 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {selectedSources.map((source: any, idx: number) => {
               const isTable = source.type === 'database_table'
-              const isFiche = source.type === 'resolution_fiche'
+              const isFiche = source.type === 'resolution_fiche' || source.type === 'procedure' || source.source_fr_numbers?.length > 0
+              // Always show a meaningful name
+              const sName = source.name || source.title || source.source_id || `Source ${idx + 1}`
+              const frNums: string[] = source.source_fr_numbers || []
+              const isDismissed = dismissedSources.has(sourceKey(sName, sourcesQuestion))
               
               return (
                 <div 
                   key={idx} 
-                  className={`p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md cursor-pointer ${
-                    isTable
-                      ? 'bg-blue-50 border-blue-200 hover:border-blue-400'
+                  className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                    isDismissed
+                      ? 'bg-gray-50 border-gray-200 opacity-50'
+                      : isTable
+                      ? 'bg-blue-50 border-blue-200 hover:border-blue-400 hover:shadow-md'
                       : isFiche
-                      ? 'bg-purple-50 border-purple-200 hover:border-purple-400'
-                      : 'bg-gray-50 border-gray-200 hover:border-gray-400'
+                      ? 'bg-purple-50 border-purple-200 hover:border-purple-400 hover:shadow-md'
+                      : 'bg-gray-50 border-gray-200 hover:border-gray-400 hover:shadow-md'
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -346,20 +445,60 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
                       <FileText className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 mb-1">
-                        {source.name || 'Source inconnue'}
-                      </p>
-                      <p className="text-xs text-gray-600 mb-2 truncate">
-                        {source.file_path || 'Fichier non spécifié'}
-                      </p>
-                      {source.relevance !== undefined && (
-                        <div className="flex items-center gap-2">
+                      {/* Name row + action buttons */}
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold ${isDismissed ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                            {sName}
+                          </p>
+                          {frNums.length > 0 && (
+                            <p className="text-xs text-purple-600 font-medium mt-0.5">
+                              {frNums.map(f => `FR ${f}`).join(' · ')}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {!isDismissed && (
+                            <button
+                              onClick={() => { handleCiteSource(source); setShowSources(false) }}
+                              className={`p-1.5 rounded-md transition-colors text-xs flex items-center gap-1 font-medium ${
+                                isFiche ? 'text-purple-500 hover:bg-purple-100' : isTable ? 'text-blue-500 hover:bg-blue-100' : 'text-gray-500 hover:bg-gray-100'
+                              }`}
+                              title="Poser une question sur cette source"
+                            >
+                              <Quote className="w-3.5 h-3.5" />
+                              <span className="hidden group-hover:inline text-xs">Citer</span>
+                            </button>
+                          )}
+                          {!isDismissed && (
+                            <button
+                              onClick={() => handleDismissSource(source, sourcesQuestion)}
+                              className="p-1.5 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                              title="Marquer comme non pertinent"
+                            >
+                              <ThumbsDown className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {isDismissed && (
+                            <span className="text-xs text-orange-500 font-medium">Signalé</span>
+                          )}
+                        </div>
+                      </div>
+                      {/* Content snippet if available */}
+                      {source.content_snippet && (
+                        <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                          {source.content_snippet}
+                        </p>
+                      )}
+                      {/* Relevance bar */}
+                      {source.relevance !== undefined && source.relevance > 0 && (
+                        <div className="flex items-center gap-2 mt-1">
                           <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                             <div 
                               className={`h-full ${
                                 isTable ? 'bg-blue-500' : isFiche ? 'bg-purple-500' : 'bg-gray-500'
                               }`}
-                              style={{ width: `${source.relevance * 100}%` }}
+                              style={{ width: `${Math.min(source.relevance * 100, 100)}%` }}
                             />
                           </div>
                           <span className="text-xs text-gray-500 font-medium">

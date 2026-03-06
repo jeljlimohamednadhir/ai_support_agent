@@ -1,10 +1,12 @@
 import { MessageSquare, Plus, Clock, Calendar, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { useChatStore } from '@/stores/chatStore'
 
 interface ChatHistoryProps {
   selectedConversation: string | null
   onSelectConversation: (id: string) => void
   onNewConversation: () => void
+  onDeleteConversation: (id: number) => void
   visible: boolean
   onToggle: () => void
 }
@@ -13,18 +15,12 @@ export default function ChatHistory({
   selectedConversation, 
   onSelectConversation, 
   onNewConversation,
+  onDeleteConversation,
   visible,
   onToggle
 }: ChatHistoryProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
-  
-  const conversations = [
-    { id: '1', title: 'Erreur BRASIL 1002 - Champ NIFolderID obligatoire', date: '2026-01-09', preview: 'Comment résoudre l\'erreur BRASIL 1002 ?' },
-    { id: '2', title: 'Table t_ports - Structure et utilisation', date: '2026-01-09', preview: 'Qu\'est-ce que la table t_ports ?' },
-    { id: '3', title: 'Compteurs DSLAM à 100% - FR 1583', date: '2026-01-08', preview: 'Quelles tables sont concernées par les compteurs DSLAM ?' },
-    { id: '4', title: 'Migration base de données PostgreSQL', date: '2026-01-08', preview: 'Comment migrer la base brasil_db ?' },
-    { id: '5', title: 'Recherche de broche en échec', date: '2026-01-07', preview: 'Que faire en cas de recherche de broche en échec ?' },
-  ]
+  const { conversations } = useChatStore()
   
   if (!visible) {
     return (
@@ -73,45 +69,47 @@ export default function ChatHistory({
           conversations.map((conv) => (
             <div
               key={conv.id}
-              onMouseEnter={() => setHoveredId(conv.id)}
+              onMouseEnter={() => setHoveredId(String(conv.id))}
               onMouseLeave={() => setHoveredId(null)}
               className="relative group"
             >
               <button
-                onClick={() => onSelectConversation(conv.id)}
+                onClick={() => onSelectConversation(String(conv.id))}
                 className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
-                  selectedConversation === conv.id
+                  selectedConversation === String(conv.id)
                     ? 'bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 border-2 border-primary-500 dark:border-primary-400 shadow-sm'
                     : 'hover:bg-gray-50 dark:hover:bg-gray-700 border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-600'
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className={`mt-1 ${selectedConversation === conv.id ? 'text-primary-600' : 'text-gray-400'}`}>
+                  <div className={`mt-1 ${selectedConversation === String(conv.id) ? 'text-primary-600' : 'text-gray-400'}`}>
                     <MessageSquare className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-medium truncate mb-1 ${
-                      selectedConversation === conv.id ? 'text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
+                      selectedConversation === String(conv.id) ? 'text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
                     }`}>
                       {conv.title}
                     </p>
-                    <p className="text-xs text-gray-500 truncate mb-1">
-                      {conv.preview}
-                    </p>
+                    {conv.message_count !== undefined && (
+                      <p className="text-xs text-gray-500 truncate mb-1">
+                        {conv.message_count} message{conv.message_count !== 1 ? 's' : ''}
+                      </p>
+                    )}
                     <div className="flex items-center gap-1 text-xs text-gray-400">
                       <Calendar className="w-3 h-3" />
-                      {conv.date}
+                      {new Date(conv.updated_at || conv.created_at).toLocaleDateString('fr-FR')}
                     </div>
                   </div>
                 </div>
               </button>
               
               {/* Delete button on hover */}
-              {hoveredId === conv.id && (
+              {hoveredId === String(conv.id) && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    // Handle delete
+                    onDeleteConversation(conv.id)
                   }}
                   className="absolute right-2 top-2 p-1.5 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors opacity-0 group-hover:opacity-100"
                   title="Supprimer"

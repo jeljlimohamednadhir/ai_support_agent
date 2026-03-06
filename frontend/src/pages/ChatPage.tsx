@@ -11,7 +11,8 @@ export default function ChatPage() {
     conversations, 
     activeConversationId, 
     setConversations, 
-    setActiveConversation 
+    setActiveConversation,
+    deleteConversation,
   } = useChatStore()
   
   // Load conversations from backend on mount
@@ -56,6 +57,20 @@ export default function ChatPage() {
     setSelectedConversation(id)
     setActiveConversation(Number(id))
   }
+
+  const handleDeleteConversation = async (id: number) => {
+    try {
+      await chatService.deleteConversation(id)
+      deleteConversation(id)
+      // If we deleted the active conversation, clear selection
+      if (activeConversationId === id) {
+        setSelectedConversation(null)
+        setActiveConversation(null)
+      }
+    } catch (error) {
+      console.error('Failed to delete conversation:', error)
+    }
+  }
   
   return (
     <div className="h-full flex relative">
@@ -63,6 +78,7 @@ export default function ChatPage() {
         selectedConversation={selectedConversation}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
+        onDeleteConversation={handleDeleteConversation}
         visible={historyVisible}
         onToggle={() => setHistoryVisible(!historyVisible)}
       />

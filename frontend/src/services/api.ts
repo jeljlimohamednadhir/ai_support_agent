@@ -10,10 +10,16 @@ const api = axios.create({
 })
 
 // Chatbot API
-export const sendMessage = async (data: { message: string; conversation_id?: string | null }) => {
+export const sendMessage = async (data: {
+  message: string
+  conversation_id?: string | null
+  conversation_history?: Array<{ role: string; content: string }>
+}) => {
   const response = await api.post('/chatbot/chat', {
     content: data.message,
-    role: 'user'
+    role: 'user',
+    conversation_id: data.conversation_id ?? null,
+    conversation_history: data.conversation_history ?? null,
   })
   return response.data
 }
@@ -40,6 +46,41 @@ export const submitValidation = async (data: any) => {
   const response = await api.post('/validation/submit', data)
   return response.data
 }
+
+// Chatbot N3 Validation API
+export const getChatbotTasks = async (limit = 50, offset = 0) => {
+  const res = await api.get('/validation/chatbot-tasks', { params: { limit, offset } })
+  return res.data
+}
+
+export const getChatbotStats = async () => {
+  const res = await api.get('/validation/chatbot-stats')
+  return res.data
+}
+
+export const approveChatbotTask = async (taskId: number, validatorId: string, comment = '') =>
+  (await api.post(`/validation/chatbot-tasks/${taskId}/approve`, { validator_id: validatorId, comment })).data
+
+export const correctChatbotTask = async (
+  taskId: number,
+  validatorId: string,
+  correctedResponse: string,
+  correctionReason: string,
+) =>
+  (await api.post(`/validation/chatbot-tasks/${taskId}/correct`, {
+    validator_id: validatorId,
+    corrected_response: correctedResponse,
+    correction_reason:  correctionReason,
+  })).data
+
+export const rejectChatbotTask = async (taskId: number, validatorId: string, reason: string) =>
+  (await api.post(`/validation/chatbot-tasks/${taskId}/reject`, { validator_id: validatorId, reason })).data
+
+export const escalateChatbotTask = async (taskId: number, escalatedBy: string, note: string) =>
+  (await api.post(`/validation/chatbot-tasks/${taskId}/escalate`, { escalated_by: escalatedBy, escalation_note: note })).data
+
+export const triggerRetraining = async () =>
+  (await api.post('/validation/retrain', { triggered_by: 'n3_dashboard' })).data
 
 // Dashboard API
 export const getDashboardStats = async () => {

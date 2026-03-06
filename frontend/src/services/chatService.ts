@@ -99,6 +99,23 @@ class ChatService {
     );
     return response.data;
   }
+
+  async generateTitle(conversationId: number): Promise<ChatConversation> {
+    const response = await this.api.post<ChatConversation>(
+      `/chat/conversations/${conversationId}/generate-title`
+    );
+    return response.data;
+  }
+
+  async reportIrrelevantSource(payload: {
+    source_name: string;
+    source_type: string;
+    question: string;
+    conversation_id?: string | null;
+    reason?: string;
+  }): Promise<void> {
+    await this.api.post('/chatbot/source-feedback', payload);
+  }
 }
 
 export const chatService = new ChatService();
