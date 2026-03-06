@@ -201,3 +201,151 @@ async def create_validation_task(
         return {"task_id": task_id, "status": "created"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Chatbot N3 Validation endpoints ────────────────────────────────────────
+
+from pydantic import BaseModel  # noqa: E402
+
+
+class ApproveRequest(BaseModel):
+    validator_id: str
+    comment: str = ""
+
+
+class CorrectRequest(BaseModel):
+    validator_id: str
+    corrected_response: str
+    correction_reason: str
+
+
+class RejectRequest(BaseModel):
+    validator_id: str
+    reason: str
+
+
+class EscalateRequest(BaseModel):
+    escalated_by: str
+    escalation_note: str
+
+
+class RetrainRequest(BaseModel):
+    triggered_by: str = "n3_dashboard"
+
+
+@router.get("/chatbot-tasks")
+def get_chatbot_tasks(
+    priority_min: Optional[int] = None,
+    application:  Optional[str] = None,
+    limit:  int = 50,
+    offset: int = 0,
+    service: ValidationService = Depends(get_validation_service),
+):
+    """
+    Dashboard N3 — Réponses chatbot en attente de validation.
+    Triées par priorité décroissante.
+    """
+    return service.get_chatbot_tasks(
+        priority_min=priority_min,
+        application=application,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/chatbot-stats")
+def get_chatbot_stats(
+    service: ValidationService = Depends(get_validation_service),
+):
+    """Stats chatbot N3 pour le dashboard (pending, validées, corrections…)."""
+    return service.get_chatbot_stats()
+
+
+@router.post("/chatbot-tasks/{task_id}/approve")
+def approve_chatbot_task(
+    task_id: int,
+    body: ApproveRequest,
+    service: ValidationService = Depends(get_validation_service),
+):
+    """N3 approuve la réponse → trust +0.15."""
+    result = service.approve_chatbot_response(task_id, body.validator_id, body.comment)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+@router.post("/chatbot-tasks/{task_id}/correct")
+def correct_chatbot_task(
+    task_id: int,
+    body: CorrectRequest,
+    service: ValidationService = Depends(get_validation_service),
+):
+    """N3 corrige la réponse → sauvegardée pour réapprentissage KB."""
+    result = service.correct_chatbot_response(
+        task_id,
+        body.validator_id,
+        body.corrected_response,
+        body.correction_reason,
+    )
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+@router.post("/chatbot-tasks/{task_id}/reject")
+def reject_chatbot_task(
+    task_id: int,
+    body: RejectRequest,
+    service: ValidationService = Depends(get_validation_service),
+):
+    """N3 rejette la réponse → trust -0.20."""
+    result = service.reject_chatbot_response(task_id, body.validator_id, body.reason)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+@router.post("/chatbot-tasks/{task_id}/escalate")
+def escalate_chatbot_task(
+    task_id: int,
+    body: EscalateRequest,
+    service: ValidationService = Depends(get_validation_service),
+):
+    """Escalade vers expert N3 senior — priorité max."""
+    result = service.escalate_chatbot_response(
+        task_id, body.escalated_by, body.escalation_note
+    )
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+@router.post("/retrain")
+def trigger_retraining(
+    body: RetrainRequest,
+    service: ValidationService = Depends(get_validation_service),
+):
+    """
+    Lance le pipeline de réapprentissage KB depuis les corrections N3.
+
+    Ce que ça fait :
+      1. Charge les corrections chatbot N3 non traitées
+      2. Génère des chunks RAG (trust=0.85, validé humain)
+      3. Recalcule les trust scores des FRs
+      4. Indexe dans Qdrant (si dispo)
+      5. Génère des procédures draft si ≥2 corrections même type
+      6. Sauvegarde data_pipeline/output/kb_corrections.json
+
+    Ce que ça NE fait PAS :
+      - Fine-tuning LLM (Groq est une API externe)
+    """
+    try:
+        stats = service.trigger_retraining()
+        return {
+            "status":       "success",
+            "message":      "Réapprentissage KB terminé",
+            "triggered_by": body.triggered_by,
+            **stats,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur pipeline: {str(e)}")

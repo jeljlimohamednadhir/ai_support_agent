@@ -9,10 +9,16 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 # Create SQLAlchemy engine
+_connect_args = {}
+if not settings.db_url.startswith("sqlite"):
+    _connect_args["connect_timeout"] = 5  # fail fast if postgres is unreachable
+
 engine = create_engine(
     settings.db_url,
-    pool_pre_ping=True,
+    pool_pre_ping=False,        # avoid blocking the asyncio event loop at startup
     echo=settings.DEBUG,
+    connect_args=_connect_args,
+    pool_timeout=10,            # max wait for a pool connection
 )
 
 # Create SessionLocal class

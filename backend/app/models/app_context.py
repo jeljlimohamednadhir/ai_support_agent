@@ -39,7 +39,7 @@ class ApplicationContext(Base):
 
     # Mode d'intelligence (détermine quel pipeline utiliser)
     mode = Column(
-        Enum(AppMode),
+        Enum(AppMode, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=AppMode.FR_WEAK
     )
@@ -53,7 +53,7 @@ class ApplicationContext(Base):
 
     # Stratégie de parsing des logs (Mode 3)
     log_parser_strategy = Column(
-        Enum(LogParserStrategy),
+        Enum(LogParserStrategy, values_callable=lambda x: [e.value for e in x]),
         nullable=True,
         default=LogParserStrategy.CUSTOM
     )

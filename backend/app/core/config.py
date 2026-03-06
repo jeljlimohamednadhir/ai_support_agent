@@ -101,6 +101,7 @@ class Settings(BaseSettings):
     JIRA_URL: Optional[str] = None
     JIRA_EMAIL: Optional[str] = None
     JIRA_API_TOKEN: Optional[str] = None
+    JIRA_PROJECT_KEY: Optional[str] = "BRASIL"
     
     # Worker Settings
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"

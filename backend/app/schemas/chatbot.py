@@ -16,6 +16,13 @@ class ChatMessage(BaseModel):
     # Multi-tenant : identifiant de l'application cible
     app_id: str = Field(default="BRASIL", description="Identifiant de l'application (ex: BRASIL)")
 
+    # Mémoire conversationnelle : historique passé par le frontend ou rechargé depuis la DB
+    # Format : [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+    conversation_history: Optional[List[dict]] = Field(
+        default=None,
+        description="Historique des échanges précédents pour la mémoire conversationnelle"
+    )
+
     # Mode 3 enrichi : logs et stack traces optionnels
     logs: Optional[str] = Field(default=None, description="Logs bruts (Mode 3)")
     stack_trace: Optional[str] = Field(default=None, description="Stack trace brute (Mode 3)")
@@ -45,6 +52,10 @@ class ChatResponse(BaseModel):
     trust_score: Optional[int] = None        # 0-100
     trust_label: Optional[str] = None        # strong | moderate | weak | insufficient
     diagnostic_available: Optional[bool] = None
+
+    # Diagnostic Engine N3 enrichment
+    procedure_id: Optional[str] = None           # matched N3 procedure ID (e.g. PROC-BRASIL-PROV-0001)
+    exceptions_detected: Optional[List[str]] = None  # list of detected exception class names
 
 
 class ConversationHistory(BaseModel):

@@ -13,7 +13,7 @@ import secrets
 import uuid
 
 from jose import jwt, JWTError
-from passlib.context import CryptContext
+import bcrypt as _bcrypt
 from cryptography.fernet import Fernet
 import base64
 import hashlib
@@ -21,8 +21,6 @@ import hashlib
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Short-lived access tokens
@@ -144,13 +142,20 @@ def decode_token(token: str) -> dict:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify password against hash (bcrypt-safe truncation)."""
-    return pwd_context.verify(_truncate_bcrypt_input(plain_password), hashed_password)
+    """Verify password against bcrypt hash (Python 3.13 compatible)."""
+    try:
+        pwd_bytes = _truncate_bcrypt_input(plain_password).encode('utf-8')
+        hash_bytes = hashed_password.encode('utf-8') if isinstance(hashed_password, str) else hashed_password
+        return _bcrypt.checkpw(pwd_bytes, hash_bytes)
+    except Exception as e:
+        logger.warning(f"Password verification error: {e}")
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    """Hash password (bcrypt-safe truncation)."""
-    return pwd_context.hash(_truncate_bcrypt_input(password))
+    """Hash password with bcrypt (Python 3.13 compatible)."""
+    pwd_bytes = _truncate_bcrypt_input(password).encode('utf-8')
+    return _bcrypt.hashpw(pwd_bytes, _bcrypt.gensalt()).decode('utf-8')
 
 
 def generate_secure_token(length: int = 32) -> str:

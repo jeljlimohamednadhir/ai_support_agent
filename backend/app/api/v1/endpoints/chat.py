@@ -10,6 +10,7 @@ from datetime import datetime
 from app.db.session import get_db
 from app.models.user import User, ChatConversation, ChatMessage
 from app.core.auth import get_current_active_user
+from app.core.llm_client import llm_client
 from pydantic import BaseModel
 import logging
 
@@ -43,7 +44,7 @@ class ConversationResponse(BaseModel):
     user_id: int
     title: str
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
     message_count: Optional[int] = 0
     
     class Config:
@@ -93,9 +94,12 @@ async def create_conversation(
     """
     Create a new conversation for current user
     """
+    now = datetime.utcnow()
     conversation = ChatConversation(
         user_id=current_user.id,
-        title=conversation_data.title or "New Conversation"
+        title=conversation_data.title or "New Conversation",
+        created_at=now,
+        updated_at=now
     )
     
     db.add(conversation)
@@ -291,3 +295,68 @@ async def list_messages(
     )
     
     return messages
+
+
+@router.post("/conversations/{conversation_id}/generate-title", response_model=ConversationResponse)
+async def generate_conversation_title(
+    conversation_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate an AI title for a conversation based on its first user message.
+    Updates the conversation title in DB and returns the updated conversation.
+    """
+    conversation = db.query(ChatConversation).filter(
+        ChatConversation.id == conversation_id,
+        ChatConversation.user_id == current_user.id
+    ).first()
+
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found or access denied"
+        )
+
+    # Get first user message
+    first_message = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.conversation_id == conversation_id, ChatMessage.role == "user")
+        .order_by(ChatMessage.timestamp.asc())
+        .first()
+    )
+
+    if not first_message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No user message found in this conversation"
+        )
+
+    # Ask LLM for a short title
+    try:
+        prompt = (
+            f"Génère un titre court (5 à 8 mots maximum, en français) pour une conversation "
+            f"dont la première question est : \"{first_message.content[:300]}\"\n"
+            f"Réponds uniquement avec le titre, sans guillemets ni ponctuation finale."
+        )
+        title = await llm_client.generate(prompt, max_tokens=30)
+        title = title.strip().strip('"').strip("'")
+        if len(title) > 80:
+            title = title[:77] + "..."
+    except Exception as e:
+        logger.warning(f"LLM title generation failed: {e} — using truncated message")
+        title = first_message.content[:60].strip()
+        if len(first_message.content) > 60:
+            title += "..."
+
+    conversation.title = title
+    conversation.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(conversation)
+
+    conversation.message_count = db.query(ChatMessage).filter(
+        ChatMessage.conversation_id == conversation.id
+    ).count()
+
+    logger.info(f"Generated title for conversation {conversation_id}: '{title}'")
+    return conversation

@@ -58,9 +58,9 @@ class CanonicalProcedure(Base):
     resolution_steps = Column(JSON, nullable=True)   # ["Supprimer entrée BDD", ...]
 
     # Niveaux
-    risk_level = Column(Enum(RiskLevel), default=RiskLevel.MEDIUM, nullable=False)
-    impact_scope = Column(Enum(ImpactScope), default=ImpactScope.SINGLE_CUSTOMER, nullable=False)
-    trust_level = Column(Enum(TrustLevel), default=TrustLevel.MEDIUM, nullable=False)
+    risk_level = Column(Enum(RiskLevel, values_callable=lambda x: [e.name for e in x]), default=RiskLevel.MEDIUM, nullable=False)
+    impact_scope = Column(Enum(ImpactScope, values_callable=lambda x: [e.name for e in x]), default=ImpactScope.SINGLE_CUSTOMER, nullable=False)
+    trust_level = Column(Enum(TrustLevel, values_callable=lambda x: [e.name for e in x]), default=TrustLevel.MEDIUM, nullable=False)
 
     # Validation humaine
     validated_by = Column(String, nullable=True)      # Ex: "N3", "user_id"

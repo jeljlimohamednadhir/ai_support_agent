@@ -1,8 +1,14 @@
 """
 FastAPI Application Entry Point
 """
+import os as _os
+# Force offline mode for HuggingFace to use local cache (no internet access)
+_os.environ.setdefault('HF_HUB_OFFLINE', '1')
+_os.environ.setdefault('TRANSFORMERS_OFFLINE', '1')
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.api.v1.api import api_router
 from app.core.logging import get_logger
@@ -13,10 +19,61 @@ logger = get_logger(__name__)
 # Variable globale pour l'état de préparation
 app_ready = False
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager — remplace @app.on_event('startup'/'shutdown')"""
+    global app_ready
+
+    # --- STARTUP ---
+    print(f"[START] Starting {settings.PROJECT_NAME}")
+    print(f"   LLM Provider: {settings.LLM_PROVIDER}")
+    print(f"   Model: {settings.GROQ_MODEL if settings.LLM_PROVIDER == 'groq' else 'N/A'}")
+
+    # Initialize database
+    try:
+        import asyncio
+        from app.db.session import init_db
+        await asyncio.get_event_loop().run_in_executor(None, init_db)
+        print("   [OK] Database initialized")
+    except Exception as e:
+        print(f"   [ERREUR] Database init failed: {e}")
+        print("   [INFO] Application will continue without database")
+
+    # Initialiser Jira si configuré
+    try:
+        from app.services.collector.jira_collector import jira_collector
+        if jira_collector.jira_url and jira_collector.api_token:
+            print("   [INFO] Initializing Jira connection...")
+            if jira_collector._connect():
+                print("   [OK] Jira connected")
+            else:
+                print("   [WARN] Jira connection failed")
+    except Exception as e:
+        print(f"   [WARN] Jira init error: {e}")
+
+    # Initialiser le GraphService (Neo4j) — connexion lazy, pas de probe au démarrage
+    try:
+        from app.services.knowledge.manager import get_graph_service
+        get_graph_service()  # instancie le singleton sans se connecter
+        print("   [OK] GraphService configuré (connexion lazy)")
+    except Exception as e:
+        print(f"   [WARN] GraphService init error: {e}")
+
+    app_ready = True
+    print("[READY] Application is ready to accept requests")
+
+    yield  # <-- l'application tourne ici
+
+    # --- SHUTDOWN ---
+    print(f"[STOP] Shutting down {settings.PROJECT_NAME}")
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=lifespan,
 )
 
 # CORS Configuration
@@ -77,55 +134,5 @@ async def readiness_check():
     }
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Actions on application startup"""
-    global app_ready
-    
-    print(f"[START] Starting {settings.PROJECT_NAME}")
-    print(f"   LLM Provider: {settings.LLM_PROVIDER}")
-    print(f"   Model: {settings.GROQ_MODEL if settings.LLM_PROVIDER == 'groq' else 'N/A'}")
-    
-    # Initialize database (désactivé temporairement pour éviter les erreurs d'encodage)
-    try:
-        from app.db.session import init_db
-        init_db()
-        print("   [OK] Database initialized")
-    except Exception as e:
-        print(f"   [ERREUR] Database init failed: {e}")
-        print("   [INFO] Application will continue without database")
-    
-    # Initialiser Jira si configuré
-    try:
-        from app.services.collector.jira_collector import jira_collector
-        if jira_collector.jira_url and jira_collector.api_token:
-            print("   [INFO] Initializing Jira connection...")
-            if jira_collector._connect():
-                print("   [OK] Jira connected")
-            else:
-                print("   [WARN] Jira connection failed")
-    except Exception as e:
-        print(f"   [WARN] Jira init error: {e}")
-    
-    # Initialiser le GraphService (Neo4j)
-    try:
-        from app.services.knowledge.manager import get_graph_service
-        graph_service = get_graph_service()
-        if graph_service.is_available():
-            print("   [OK] Neo4j Graph Service connected")
-        else:
-            print("   [WARN] Neo4j not available - graph features disabled")
-    except Exception as e:
-        print(f"   [WARN] GraphService init error: {e}")
-    
-    # Marquer l'application comme prête
-    app_ready = True
-    print("[READY] Application is ready to accept requests")
 
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Actions on application shutdown"""
-    print(f"[STOP] Shutting down {settings.PROJECT_NAME}")
-    # Close database connections
-    # Save state
