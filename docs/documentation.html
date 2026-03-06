@@ -153,9 +153,12 @@
       <h3>Guide Utilisateur</h3>
       <ul>
         <li><a href="#collector">Module Collector</a></li>
+        <li><a href="#log-ingestion">Log Ingestion BRASIL</a></li>
         <li><a href="#workers">Workers</a></li>
         <li><a href="JIRA_INTEGRATION.md">Jira Integration</a></li>
         <li><a href="#knowledge">Knowledge Graph</a></li>
+        <li><a href="#n3-pipeline">Pipeline N3</a></li>
+        <li><a href="#diagnostic-engine">Moteur Diagnostic N3</a></li>
         <li><a href="#chatbot">Chatbot</a></li>
         <li><a href="#validation">Validation</a></li>
       </ul>
@@ -168,6 +171,7 @@
         <li><a href="#api-collector">Collector API</a></li>
         <li><a href="#api-chat">Chat API</a></li>
         <li><a href="#api-knowledge">Knowledge API</a></li>
+        <li><a href="#api-n3">N3 Diagnostic API</a></li>
       </ul>
       
       <h3>Développement</h3>
@@ -195,29 +199,30 @@
         
         <div class="alert alert-info">
           <div class="alert-title">📚 Version actuelle</div>
-          Cette documentation correspond à la version <strong>1.0.0</strong> d'AI Support Agent.
+          Cette documentation correspond à la version <strong>2.0.0</strong> d'AI Support Agent — incluant le pipeline N3 Knowledge Engineering et le moteur de diagnostic BRASIL.
         </div>
         
         <h2>Qu'est-ce qu'AI Support Agent ?</h2>
-        <p>AI Support Agent est une plateforme complète qui combine l'intelligence artificielle, le traitement du langage naturel et l'analyse de code pour automatiser le support technique.</p>
+        <p>AI Support Agent est une plateforme complète qui combine l'intelligence artificielle, le traitement du langage naturel et l'analyse de code pour automatiser le support technique N3 de la plateforme BRASIL.</p>
         
         <h3>Fonctionnalités principales</h3>
         <ul>
-          <li><strong>Collecte automatique</strong> : Ingestion de logs, introspection DB, clonage Git</li>
-          <li><strong>Analyse intelligente</strong> : Workers asynchrones pour parser et enrichir les données</li>
-          <li><strong>Knowledge Graph</strong> : Stockage structuré dans Neo4j et Qdrant</li>
-          <li><strong>RAG Pipeline</strong> : Recherche sémantique et génération de réponses contextualisées</li>
-          <li><strong>Validation continue</strong> : Feedback loop avec experts humains</li>
+          <li><strong>Collecte automatique</strong> : Ingestion de logs BRASIL (connectorCL, connectorCreationVlan, transactions, sollicitations), introspection DB, clonage Git</li>
+          <li><strong>Analyse intelligente</strong> : Workers asynchrones pour parser et enrichir les données avec taxonomie BRASIL</li>
+          <li><strong>Knowledge Graph N3</strong> : Pipeline complet FR→Cluster→Procédure→Qdrant avec trust scoring</li>
+          <li><strong>Moteur de Diagnostic N3</strong> : Détection d'exceptions BRASIL, retrieval de procédures, raisonnement structuré</li>
+          <li><strong>RAG Pipeline</strong> : Recherche sémantique sur <code>brasil_log_patterns</code> + <code>brasil_procedures</code> via Qdrant</li>
+          <li><strong>Validation continue</strong> : Feedback loop avec experts humains et scoring de confiance</li>
           <li><strong>Observabilité</strong> : Dashboards et métriques en temps réel</li>
         </ul>
         
         <h3>Cas d'usage</h3>
         <ul>
-          <li>Support technique niveau 1 et 2</li>
-          <li>Diagnostic automatique d'erreurs</li>
+          <li>Diagnostic N3 automatique BRASIL (DslamClosed, UnknownMRT, BusinessRuleViolation…)</li>
+          <li>Support technique niveau 1, 2 et 3</li>
+          <li>Analyse d'incidents et corrélation avec tickets Jira</li>
           <li>Documentation automatique de code legacy</li>
-          <li>Onboarding de nouveaux développeurs</li>
-          <li>Analyse d'incidents et post-mortems</li>
+          <li>Onboarding de nouveaux développeurs N3</li>
         </ul>
       </section>
       
@@ -561,8 +566,133 @@ kubectl port-forward svc/backend 8000:8000</code></pre>
         </div>
       </section>
       
-      <!-- Workers -->
-      <section id="workers">
+      <!-- Log Ingestion BRASIL -->
+      <section id="log-ingestion">
+        <h2>📂 Log Ingestion BRASIL</h2>
+        <p>Le pipeline d'ingestion transforme les fichiers logs applicatifs BRASIL en événements structurés, prêts pour l'extraction de connaissances N3.</p>
+
+        <h3>Formats supportés</h3>
+        <table>
+          <thead><tr><th>Stratégie</th><th>Fichiers cibles</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>brasil_error</code></td><td><code>errors_sample.log</code>, <code>connectorCL_*.log</code>, <code>connectorCreationVlan_*.log</code></td><td>Logs applicatifs Spring/BRASIL avec préfixe filepath — détecté automatiquement</td></tr>
+            <tr><td><code>brasil_transaction</code></td><td><code>*transaction*.log</code></td><td>Transactions XML avec status KO</td></tr>
+            <tr><td><code>brasil_solicitation</code></td><td><code>sollicitation*.log</code></td><td>Statistiques de performance SEBA/BRASIL (appels lents)</td></tr>
+            <tr><td><code>brasil_api</code></td><td>Logs JSON ou texte génériques</td><td>Format JSON ou texte libre</td></tr>
+            <tr><td><code>nginx</code></td><td><code>nginx*.log</code></td><td>Logs HTTP gateway (4xx/5xx)</td></tr>
+            <tr><td><code>oracle</code></td><td>Logs Oracle DB</td><td>Erreurs ORA-*</td></tr>
+            <tr><td><code>generic</code></td><td>Tout autre fichier</td><td>Fallback générique</td></tr>
+          </tbody>
+        </table>
+
+        <div class="alert alert-info">
+          <div class="alert-title">🤖 Auto-détection</div>
+          Par défaut (<code>--strategy auto</code>), la stratégie est choisie automatiquement d'après le nom de fichier. Plus besoin de spécifier manuellement la stratégie.
+        </div>
+
+        <h3>Classificateurs d'erreurs BRASIL</h3>
+        <p>Le parseur reconnaît automatiquement 30+ patterns d'erreurs :</p>
+        <table>
+          <thead><tr><th>Code interne</th><th>Pattern détecté</th></tr></thead>
+          <tbody>
+            <tr><td><code>DSLAM_CLOSED</code></td><td>DSLAM/Card closed for production, fermé à la production</td></tr>
+            <tr><td><code>MRT_DUPLICATE</code></td><td>accès client existe déjà, MRTChemin déjà porté</td></tr>
+            <tr><td><code>UNKNOWN_MRT</code></td><td>Macro Ressource Technique inconnu</td></tr>
+            <tr><td><code>MRT_NOT_FOUND</code></td><td>MRT Access DSLAM ne correspond pas</td></tr>
+            <tr><td><code>BIZ_RULE</code></td><td>BusinessRuleException, BusinessRuleViolationException</td></tr>
+            <tr><td><code>DB_DEADLOCK</code></td><td>deadlock detected, LockAcquisitionException, transaction aborted</td></tr>
+            <tr><td><code>DUPLICATE_RESOURCE</code></td><td>Vlan déjà existant, EPC déjà utilisé</td></tr>
+            <tr><td><code>TRANSACTION_KO</code></td><td>rapportTransaction status KO</td></tr>
+            <tr><td><code>ACCESS_LOCKED</code></td><td>accès en cours de modification, dossier en cours</td></tr>
+            <tr><td><code>PORT_NOT_FOUND</code></td><td>No port found, Aucune broche disponible</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Utilisation</h3>
+        <div class="command">python data_pipeline/log_ingester.py --log-dir data_pipeline/input</div>
+        <div class="command">python data_pipeline/log_ingester.py --log-file path/to/error.log --strategy brasil_error</div>
+        <p>Les fichiers à ingérer doivent être placés dans <code>data_pipeline/input/</code>. La sortie est écrite dans <code>data_pipeline/output/log_events.json</code>.</p>
+      </section>
+
+      <!-- N3 Pipeline -->
+      <section id="n3-pipeline">
+        <h2>🔬 Pipeline N3 Knowledge Engineering</h2>
+        <p>Le pipeline N3 transforme les événements de logs en procédures de diagnostic structurées et les indexe dans Qdrant pour retrieval sémantique.</p>
+
+        <h3>Architecture du pipeline</h3>
+        <ol>
+          <li><strong>Log Knowledge Extractor</strong> (<code>log_knowledge_extractor.py</code>) : Mine les templates d'erreurs, calcule un trust score composite, injecte les records du catalogue BRASIL</li>
+          <li><strong>Procedure Generator</strong> (<code>procedure_generator.py</code>) : Croise les clusters de tickets avec les log knowledge records pour générer des procédures N3 numérotées (<code>PROC-BRASIL-GEN-XXXX</code>)</li>
+          <li><strong>Knowledge Indexer</strong> (<code>knowledge_indexer.py</code>) : Vectorise et indexe dans deux collections Qdrant : <code>brasil_log_patterns</code> et <code>brasil_procedures</code></li>
+        </ol>
+
+        <h3>Lancer le pipeline</h3>
+        <div class="command">python data_pipeline/run_knowledge_pipeline.py --step log_extract</div>
+        <div class="command">python data_pipeline/run_knowledge_pipeline.py --step proc_gen</div>
+        <div class="command">python data_pipeline/run_knowledge_pipeline.py --step kb_index</div>
+        <div class="command">python data_pipeline/run_knowledge_pipeline.py --step n3</div>
+
+        <h3>Artefacts générés</h3>
+        <table>
+          <thead><tr><th>Fichier</th><th>Contenu</th></tr></thead>
+          <tbody>
+            <tr><td><code>output/log_events.json</code></td><td>Événements bruts extraits des logs (classifiés)</td></tr>
+            <tr><td><code>output/log_knowledge.json</code></td><td>40 knowledge records avec trust scores</td></tr>
+            <tr><td><code>output/procedures.json</code></td><td>27 procédures N3 numérotées</td></tr>
+            <tr><td>Qdrant: <code>brasil_log_patterns</code></td><td>12 log patterns indexés (trust ≥ 0.35)</td></tr>
+            <tr><td>Qdrant: <code>brasil_procedures</code></td><td>27 procédures indexées</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Formule de Trust Score</h3>
+        <pre><code>trust = 0.35 × S_source   # catalog_validated
+      + 0.25 × S_freq     # fréquence normalisée
+      + 0.30 × S_valid    # corrélation tickets/FRs
+      + 0.10 × S_recency  # fraîcheur</code></pre>
+
+        <div class="alert alert-warning">
+          <div class="alert-title">⚠️ Embeddings</div>
+          Le modèle <code>paraphrase-multilingual-MiniLM-L12-v2</code> (SentenceTransformer, dim=384) peut échouer si le projet est dans un dossier OneDrive (DLL reparse point). Déplacez <code>.venv</code> hors OneDrive pour activer les embeddings sémantiques complets. En fallback, TF-IDF est utilisé automatiquement.
+        </div>
+      </section>
+
+      <!-- Diagnostic Engine N3 -->
+      <section id="diagnostic-engine">
+        <h2>🧠 Moteur de Diagnostic N3</h2>
+        <p>Le <code>DiagnosticEngine</code> analyse chaque message utilisateur pour détecter des exceptions BRASIL connues, retriever la procédure N3 correspondante et construire un contexte structuré pour le LLM.</p>
+
+        <h3>Catalogue inline (toujours disponible)</h3>
+        <p>5 procédures complètes intégrées directement dans le code, fonctionnelles sans Qdrant :</p>
+        <table>
+          <thead><tr><th>Exception</th><th>Procédure inline</th></tr></thead>
+          <tbody>
+            <tr><td><code>DslamClosedForProductionException</code></td><td>Vérif DSLAM, port ouverture, re-provisioning</td></tr>
+            <tr><td><code>UnknownMRTIdException</code></td><td>Vérif MRT dans ADELIA, cohérence BRASIL/SEBA</td></tr>
+            <tr><td><code>BusinessRuleViolationException</code></td><td>Analyse règle métier, code erreur 1300</td></tr>
+            <tr><td><code>ConnectorUnavailableException</code></td><td>Vérif connecteur CL/VLAN, SEBA/ORCHESTRA</td></tr>
+            <tr><td><code>DslamUnreachableException</code></td><td>Ping DSLAM, supervision réseau, escalade</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Niveaux de confiance</h3>
+        <table>
+          <thead><tr><th>Niveau</th><th>Seuil trust</th><th>Comportement LLM</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-success">HIGH</span></td><td>≥ 0.75</td><td>Suit la procédure avec confiance élevée</td></tr>
+            <tr><td><span class="badge badge-warning">MEDIUM</span></td><td>0.50–0.75</td><td>Applique la procédure avec mise en garde</td></tr>
+            <tr><td><span class="badge badge-primary">LOW</span></td><td>0.35–0.50</td><td>Indique explicitement l'incertitude</td></tr>
+            <tr><td>INSUFFICIENT</td><td>&lt; 0.35</td><td>Refuse et demande escalade N3</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Intégration chatbot</h3>
+        <p>Le moteur est injecté à l'étape <strong>2f</strong> du pipeline chatbot, avant la construction du contexte LLM. La réponse <code>ChatResponse</code> inclut deux nouveaux champs :</p>
+        <pre><code>{
+  "response": "...",
+  "procedure_id": "PROC-BRASIL-GEN-0006",
+  "exceptions_detected": ["DslamClosedForProductionException"]
+}</code></pre>
+      </section>
         <h2>⚙️ Workers</h2>
         <p>Les workers Celery traitent les tâches asynchrones en arrière-plan.</p>
         
@@ -847,6 +977,49 @@ RETURN t.name</code></pre>
         </div>
       </section>
       
+      <!-- N3 API -->
+      <section id="api-n3">
+        <h2>🔬 N3 Diagnostic API</h2>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/v1/intelligence/pipeline-status</span>
+          </div>
+          <p>Statut du pipeline N3 — artefacts générés, taille des collections Qdrant</p>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/intelligence/analyze-ticket</span>
+          </div>
+          <p>Analyse un ticket et retourne la procédure N3 correspondante</p>
+          <h4>Body</h4>
+          <pre><code>{
+  "query": "DSLAM DSCAH114 fermé à la production",
+  "app_id": "connectorCL"
+}</code></pre>
+          <h4>Réponse</h4>
+          <pre><code>{
+  "procedure_id": "PROC-BRASIL-GEN-0006",
+  "confidence": "HIGH",
+  "trust_score": 0.82,
+  "exceptions_detected": ["DslamClosedForProductionException"],
+  "diagnostic_steps": [...],
+  "resolution_steps": [...]
+}</code></pre>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/chat/message</span>
+          </div>
+          <p>Chat avec diagnostic N3 intégré — retourne <code>procedure_id</code> et <code>exceptions_detected</code> en plus de la réponse LLM</p>
+        </div>
+      </section>
+
       <!-- Dev Setup -->
       <section id="dev-setup">
         <h2>👨‍💻 Setup Développeur</h2>

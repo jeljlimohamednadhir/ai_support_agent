@@ -115,7 +115,7 @@
   <section class="hero">
       <div class="hero-content">
       <h1>AI Support Agent</h1>
-      <p>Assistant intelligent pour diagnostiquer, analyser et résoudre les problèmes techniques en temps réel</p>
+      <p>Assistant intelligent N3 pour diagnostiquer, analyser et résoudre les incidents BRASIL en temps réel</p>
       <div class="hero-cta">
         <a href="#features" class="btn btn-primary">Découvrir</a>
         <a href="#workflow" class="btn btn-secondary">Comment ça marche</a>
@@ -130,6 +130,21 @@
       <h2>Fonctionnalités Principales</h2>
       <div class="features-grid">
         <div class="feature-card">
+          <div class="feature-icon">🔬</div>
+          <h3>Pipeline N3 Knowledge Engineering</h3>
+          <p>Transforme automatiquement les logs BRASIL en procédures de diagnostic structurées, indexées dans Qdrant avec scoring de confiance.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🧠</div>
+          <h3>Moteur Diagnostic N3</h3>
+          <p>Détecte les exceptions BRASIL connues (DslamClosed, UnknownMRT, BusinessRule…) et récupère la procédure N3 adaptée avec niveau de confiance.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📂</div>
+          <h3>Log Ingestion Intelligente</h3>
+          <p>Parse 7 formats de logs BRASIL (connectorCL, transactions, sollicitations…), classifie 30+ types d'erreurs, filtre le bruit applicatif.</p>
+        </div>
+        <div class="feature-card">
           <div class="feature-icon">🔍</div>
           <h3>Collecte Automatique</h3>
           <p>Rassemble automatiquement les données nécessaires : logs, schémas, code source pour une analyse complète du système.</p>
@@ -142,12 +157,12 @@
         <div class="feature-card">
           <div class="feature-icon">🎯</div>
           <h3>Recherche Sémantique</h3>
-          <p>Organise le savoir dans un graphe de connaissances et un vector store pour retrouver les réponses instantanément.</p>
+          <p>Organise le savoir dans deux collections Qdrant (<code>brasil_log_patterns</code>, <code>brasil_procedures</code>) pour retrouver les réponses instantanément.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">💬</div>
           <h3>Chatbot Contextualisé</h3>
-          <p>Fournit des réponses utiles et des recommandations actionnables basées sur le contexte de votre système.</p>
+          <p>Fournit des réponses utiles et des recommandations actionnables basées sur le contexte de votre système, enrichies par le moteur diagnostic N3.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">✅</div>
@@ -163,7 +178,6 @@
           <div class="feature-icon">🧾</div>
           <h3>Intégration Jira</h3>
           <p>Synchronisez vos tickets Jira pour enrichir le knowledge graph et rechercher des incidents similaires directement depuis le chatbot.</p>
-          <p style="margin-top:0.5rem"><a href="JIRA_INTEGRATION.md" target="_blank" rel="noopener" style="color:var(--primary);font-weight:700">En savoir plus →</a></p>
         </div>
       </div>
     </div>
@@ -177,7 +191,7 @@
         <div class="timeline-item">
           <div class="timeline-content">
             <h3>1. Collecte</h3>
-            <p>Ingestion automatique des logs, introspection DB, clonage Git et détection des endpoints.</p>
+            <p>Ingestion automatique des logs BRASIL (connectorCL, transactions, sollicitations), introspection DB, clonage Git et détection des endpoints.</p>
           </div>
           <div class="timeline-dot"></div>
           <div class="timeline-content" style="opacity:0"></div>
@@ -186,22 +200,14 @@
           <div class="timeline-content" style="opacity:0"></div>
           <div class="timeline-dot"></div>
           <div class="timeline-content">
-            <h3>2. Workers</h3>
-            <p>Parsing AST, extraction de métadonnées, génération d'embeddings et enrichissement des données.</p>
+            <h3>2. Log Ingestion &amp; Classification</h3>
+            <p>7 stratégies de parsing, 30+ classificateurs d'erreurs BRASIL, filtrage du bruit applicatif (rollbacks, stack traces inutiles).</p>
           </div>
         </div>
         <div class="timeline-item">
           <div class="timeline-content">
-            <h3>3. Synchronisation Jira</h3>
-            <p>Optionnel : synchronisez les tickets Jira pour indexation et corrélation avec les incidents détectés.</p>
-          </div>
-          <div class="timeline-dot"></div>
-          <div class="timeline-content" style="opacity:0"></div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-content">
-            <h3>3. Indexation</h3>
-            <p>Stockage dans Neo4j (graphe), Qdrant (vectors) et Postgres (métadonnées) pour recherche optimale.</p>
+            <h3>3. Knowledge Extraction N3</h3>
+            <p>Mining de templates d'erreurs, calcul de trust score (source ×0.35 + fréquence ×0.25 + validation ×0.30 + fraîcheur ×0.10), injection du catalogue BRASIL.</p>
           </div>
           <div class="timeline-dot"></div>
           <div class="timeline-content" style="opacity:0"></div>
@@ -210,14 +216,30 @@
           <div class="timeline-content" style="opacity:0"></div>
           <div class="timeline-dot"></div>
           <div class="timeline-content">
-            <h3>4. RAG Pipeline</h3>
-            <p>Sélection du contexte pertinent, construction de prompts et génération de réponses intelligentes.</p>
+            <h3>4. Génération de Procédures N3</h3>
+            <p>Croisement clusters tickets × log knowledge records → 27 procédures structurées (PROC-BRASIL-GEN-XXXX) avec étapes diagnostiques, causes, résolutions et escalade.</p>
           </div>
         </div>
         <div class="timeline-item">
           <div class="timeline-content">
-            <h3>5. Validation</h3>
-            <p>Revue humaine, corrections persistées et amélioration continue basée sur les feedbacks.</p>
+            <h3>5. Indexation Qdrant</h3>
+            <p>Vectorisation et indexation dans <code>brasil_log_patterns</code> (12 records) et <code>brasil_procedures</code> (27 procédures) pour retrieval sémantique.</p>
+          </div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-content" style="opacity:0"></div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-content" style="opacity:0"></div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <h3>6. Diagnostic N3 en temps réel</h3>
+            <p>Détection d'exceptions → retrieval procédure (catalogue inline ou Qdrant) → scoring de confiance → instruction anti-hallucination injectée au LLM.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-content">
+            <h3>7. Validation</h3>
+            <p>Revue humaine, corrections persistées et amélioration continue basée sur les feedbacks et le re-training du trust score.</p>
           </div>
           <div class="timeline-dot"></div>
           <div class="timeline-content" style="opacity:0"></div>
@@ -250,39 +272,57 @@
           </ul>
         </div>
         <div class="arch-card">
-          <h3>Workers</h3>
+          <h3>Pipeline N3</h3>
           <ul>
-            <li>Celery (async tasks)</li>
-            <li>Redis (broker)</li>
-            <li>Pipelines ETL</li>
-            <li>Scalable horizontalement</li>
+            <li>log_knowledge_extractor.py</li>
+            <li>procedure_generator.py</li>
+            <li>knowledge_indexer.py</li>
+            <li>Trust scoring composite</li>
+          </ul>
+        </div>
+        <div class="arch-card">
+          <h3>Diagnostic Engine</h3>
+          <ul>
+            <li>DiagnosticEngine (async)</li>
+            <li>Catalogue inline (5 proc.)</li>
+            <li>Qdrant vector retrieval</li>
+            <li>Confiance HIGH/MED/LOW</li>
+          </ul>
+        </div>
+        <div class="arch-card">
+          <h3>Log Ingestion</h3>
+          <ul>
+            <li>brasil_error (Spring logs)</li>
+            <li>brasil_transaction (XML KO)</li>
+            <li>brasil_solicitation (stats)</li>
+            <li>30+ classificateurs métier</li>
           </ul>
         </div>
         <div class="arch-card">
           <h3>Bases de Données</h3>
           <ul>
             <li>PostgreSQL (métadonnées)</li>
-            <li>Neo4j (graphe)</li>
-            <li>Qdrant (vectors)</li>
+            <li>Qdrant brasil_log_patterns</li>
+            <li>Qdrant brasil_procedures</li>
             <li>Redis (cache)</li>
           </ul>
         </div>
         <div class="arch-card">
-          <h3>LLM & IA</h3>
+          <h3>LLM &amp; IA</h3>
           <ul>
             <li>Groq API (inference)</li>
-            <li>Embeddings models</li>
-            <li>Prompt engineering</li>
-            <li>RAG pipeline</li>
+            <li>DiagnosticEngine N3</li>
+            <li>HDBSCAN clustering</li>
+            <li>Trust scoring</li>
           </ul>
         </div>
         <div class="arch-card">
           <h3>Infrastructure</h3>
           <ul>
             <li>Docker containers</li>
-            <li>Kubernetes (orchestration)</li>
             <li>CI/CD pipelines</li>
             <li>Monitoring (Prometheus)</li>
+            <li>Scalable horizontalement</li>
           </ul>
         </div>
       </div>
@@ -298,16 +338,17 @@
         <div class="tech-badge">FastAPI</div>
         <div class="tech-badge">React</div>
         <div class="tech-badge">TypeScript</div>
-        <div class="tech-badge">Neo4j</div>
         <div class="tech-badge">Qdrant</div>
         <div class="tech-badge">PostgreSQL</div>
-        <div class="tech-badge">Celery</div>
         <div class="tech-badge">Redis</div>
         <div class="tech-badge">Docker</div>
-        <div class="tech-badge">Kubernetes</div>
         <div class="tech-badge">Groq</div>
+        <div class="tech-badge">SentenceTransformers</div>
+        <div class="tech-badge">HDBSCAN</div>
         <div class="tech-badge">TailwindCSS</div>
         <div class="tech-badge">Vite</div>
+        <div class="tech-badge">Spring (BRASIL)</div>
+        <div class="tech-badge">TF-IDF</div>
       </div>
     </div>
   </section>
@@ -318,20 +359,20 @@
       <h2>Performance & Impact</h2>
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-number">80%</div>
-          <div class="stat-label">Réduction du temps de diagnostic</div>
+          <div class="stat-number">27</div>
+          <div class="stat-label">Procédures N3 générées</div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">95%</div>
-          <div class="stat-label">Précision des réponses</div>
+          <div class="stat-number">30+</div>
+          <div class="stat-label">Classificateurs d’erreurs BRASIL</div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">24/7</div>
-          <div class="stat-label">Disponibilité continue</div>
+          <div class="stat-number">1 133</div>
+          <div class="stat-label">Événements de logs classifiés</div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">∞</div>
-          <div class="stat-label">Évolutivité scalable</div>
+          <div class="stat-number">5</div>
+          <div class="stat-label">Procédures inline (offline)</div>
         </div>
       </div>
     </div>
