@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional, List, Dict
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 
@@ -985,12 +986,24 @@ async def retrain_with_corrections():
 
         logger.info(f"[Retrain] Model retrained with {len(corr_df)} corrections merged")
 
+        # Idea G: check if we should trigger auto-retrain next time
+        total_corrections = 0
+        if CORRECTIONS_LOG.exists():
+            try:
+                with open(CORRECTIONS_LOG, "r", encoding="utf-8") as _f:
+                    total_corrections = sum(1 for _l in _f if _l.strip())
+            except Exception:
+                pass
+        logger.info(f"[Retrain] Total corrections on file: {total_corrections}")
+
         return {
             "message": f"Modèle réentraîné avec {len(corr_df)} corrections fusionnées",
             "corrections_merged": len(corr_df),
             "total_samples": len(df_merged),
             "macro_f1": result.get("macro_f1"),
             "recommended_threshold": result.get("recommended_threshold"),
+            "auto_retrain_threshold": AUTO_RETRAIN_THRESHOLD,
+            "total_corrections_on_file": total_corrections,
         }
 
     except HTTPException:
@@ -1061,34 +1074,65 @@ async def index_tickets_for_rag(background_tasks: BackgroundTasks):
 
 
 def _index_tickets_background(df: pd.DataFrame, vector_service):
-    """Tâche arrière-plan: indexer tickets dans Qdrant"""
+    """Tâche arrière-plan: indexer tickets dans Qdrant avec labels ML enrichis"""
     try:
         from qdrant_client.models import PointStruct
         import uuid as uuid_lib
-        
+
+        # ── Pré-classification ML pour enrichir le payload ───────────────────
+        ml_labels: dict = {}
+        ml_confidences: dict = {}
+        if _ml_classifier.model is not None:
+            try:
+                text_col = None
+                for col in ["text_ml_postmortem", "texte_complet", "resume", "text", "text_for_rag"]:
+                    if col in df.columns:
+                        text_col = col
+                        break
+                if text_col:
+                    preds, confs, _ = _ml_classifier.predict(
+                        df[text_col].fillna("").astype(str),
+                        threshold=0.0  # all tickets regardless of confidence
+                    )
+                    for idx_pos, idx_label in enumerate(df.index):
+                        ml_labels[idx_label] = str(preds[idx_pos])
+                        ml_confidences[idx_label] = float(confs[idx_pos])
+            except Exception as ml_err:
+                logger.warning(f"[RAG] ML pre-labeling failed: {ml_err}")
+
         points = []
         for idx, row in df.iterrows():
             # Générer embedding
             text = row['text_for_rag']
             embedding = vector_service.embedding_model.encode(text).tolist()
-            
-            # Construire point Qdrant
+
+            # Extraire mois depuis date_debut si disponible
+            date_str = str(row.get('date_debut', ''))
+            mois = date_str[:7] if len(date_str) >= 7 else ""
+
+            # Construire point Qdrant avec payload enrichi ML
             point = PointStruct(
                 id=str(uuid_lib.uuid4()),
                 vector=embedding,
                 payload={
-                    "ticket_id": row.get('ticket_id', f"ticket_{idx}"),
-                    "text": text[:500],  # Limiter taille
-                    "resume": str(row.get('resume', '')),
-                    "cause": str(row.get('cause', '')),
-                    "solution": str(row.get('solution', '')),
-                    "application": str(row.get('application', '')),
-                    "date": str(row.get('date_debut', '')),
-                    "indexed_at": pd.Timestamp.now().isoformat()
+                    "ticket_id":       row.get('ticket_id', f"ticket_{idx}"),
+                    "text":            text[:500],
+                    "resume":          str(row.get('resume', '')),
+                    "cause":           str(row.get('cause', '')),
+                    "solution":        str(row.get('solution', '')),
+                    "application":     str(row.get('application', '')),
+                    "date":            date_str,
+                    "mois":            mois,
+                    "groupe":          str(row.get('groupe', '')),
+                    # ML enrichment fields
+                    "predicted_label": ml_labels.get(idx, ""),
+                    "confidence":      round(ml_confidences.get(idx, 0.0), 3),
+                    "mttr":            float(row.get('mttr', 0)) if pd.notna(row.get('mttr', None)) else None,
+                    "indexed_at":      pd.Timestamp.now().isoformat(),
                 }
             )
             points.append(point)
-            
+
             # Batch upsert every 100 tickets
             if len(points) >= 100:
                 vector_service.client.upsert(
@@ -1097,15 +1141,464 @@ def _index_tickets_background(df: pd.DataFrame, vector_service):
                 )
                 logger.info(f"[RAG] Indexed {len(points)} tickets batch")
                 points = []
-        
+
         # Upsert remaining
         if points:
             vector_service.client.upsert(
                 collection_name="tickets_rag",
                 points=points
             )
-        
-        logger.info(f"[RAG] Indexation complete: {len(df)} tickets")
-        
+
+        logger.info(f"[RAG] Indexation complete: {len(df)} tickets (ML labels: {len(ml_labels)})")
+
     except Exception as e:
         logger.error(f"[RAG] Indexation failed: {e}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Idea B — Solution Index by Cause
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post("/build-solution-index")
+async def build_solution_index(background_tasks: BackgroundTasks):
+    """
+    Idée B : construit un index de solutions groupées par cause dans Qdrant.
+    Pour chaque cause (top 20), agrège les solutions des tickets correspondants
+    et injecte un document de type solution_pattern dans code_knowledge.
+    """
+    global _uploaded_data
+
+    if _uploaded_data is None:
+        raise HTTPException(status_code=400, detail="No data uploaded")
+    if _ml_classifier.model is None:
+        raise HTTPException(status_code=400, detail="Model not trained yet")
+
+    # Detect columns
+    label_col = _ml_classifier.model_card.get("label_col", "") if _ml_classifier.model_card else ""
+    solution_col = None
+    for col in ["solution", "inc_solution", "resolution", "résolution"]:
+        if col in _uploaded_data.columns:
+            solution_col = col
+            break
+
+    if not label_col or label_col not in _uploaded_data.columns:
+        raise HTTPException(status_code=400, detail="Label column not found in data")
+    if not solution_col:
+        raise HTTPException(status_code=400, detail="No solution column found (solution, inc_solution, resolution)")
+
+    background_tasks.add_task(
+        _build_solution_index_background,
+        _uploaded_data.copy(),
+        label_col,
+        solution_col,
+    )
+    return {"message": "Construction de l'index de solutions en cours (arrière-plan)"}
+
+
+def _build_solution_index_background(df: pd.DataFrame, label_col: str, solution_col: str):
+    """Tâche arrière-plan : construire et injecter les patterns de solutions par cause."""
+    try:
+        from app.services.knowledge.vector_service import VectorService
+        from qdrant_client.models import PointStruct
+        import uuid as uuid_lib
+
+        vs = VectorService()
+        if not vs.is_available():
+            logger.warning("[SolutionIndex] VectorService non disponible")
+            return
+
+        # Group solutions by label (top 20 by frequency)
+        df_valid = df[[label_col, solution_col]].dropna(subset=[label_col])
+        df_valid = df_valid[df_valid[solution_col].fillna("").str.len() > 10]
+        top_labels = df_valid[label_col].value_counts().head(20).index.tolist()
+
+        injected = 0
+        for label in top_labels:
+            group = df_valid[df_valid[label_col] == label]
+            # Aggregate unique solutions (max 10 per label)
+            solutions = (
+                group[solution_col]
+                .dropna()
+                .astype(str)
+                .str.strip()
+                .unique()
+                .tolist()
+            )[:10]
+
+            if not solutions:
+                continue
+
+            solution_text = (
+                f"Solutions connues pour la cause « {label} » ({len(group)} tickets) :\n\n"
+                + "\n---\n".join(f"• {s[:500]}" for s in solutions)
+            )
+
+            embedding = vs.embedding_model.encode(solution_text).tolist()
+            point = PointStruct(
+                id=str(uuid_lib.uuid4()),
+                vector=embedding,
+                payload={
+                    "code":       solution_text[:800],
+                    "snippet_id": f"sol-pattern-{label[:40].replace(' ', '-')}",
+                    "name":       f"Solutions — {label}",
+                    "type":       "solution_pattern",
+                    "cause":      label,
+                    "ticket_count": len(group),
+                    "indexed_at": pd.Timestamp.now().isoformat(),
+                }
+            )
+            vs.client.upsert(collection_name="code_knowledge", points=[point])
+            injected += 1
+
+        logger.info(f"[SolutionIndex] {injected} solution patterns injected into code_knowledge")
+
+    except Exception as e:
+        logger.error(f"[SolutionIndex] Failed: {e}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Idea A — Groq Auto-Labeling on Low Confidence
+# ─────────────────────────────────────────────────────────────────────────────
+
+class AutoLabelRequest(BaseModel):
+    threshold: float = 0.5
+    max_tickets: int = 50
+
+
+class AutoLabelResult(BaseModel):
+    ticket_id: str
+    text: str
+    current_label: Optional[str]
+    current_confidence: float
+    groq_suggested_label: str
+    groq_rationale: str
+
+
+class AutoLabelResponse(BaseModel):
+    auto_labeled: int
+    results: List[AutoLabelResult]
+
+
+@router.post("/auto-label-low-confidence", response_model=AutoLabelResponse)
+async def auto_label_low_confidence(request: "AutoLabelRequest"):
+    """
+    Idée A : pour les tickets dont la confiance < threshold, appelle Groq
+    avec la liste des classes comme few-shot pour proposer un label alternatif.
+    """
+    global _uploaded_data
+
+    if _uploaded_data is None:
+        raise HTTPException(status_code=400, detail="No data uploaded")
+    if _ml_classifier.model is None:
+        raise HTTPException(status_code=400, detail="Model not trained yet")
+
+    # Detect text column
+    text_col = None
+    for col in ["text_ml_postmortem", "texte_complet", "resume", "text"]:
+        if col in _uploaded_data.columns:
+            text_col = col
+            break
+    if not text_col:
+        raise HTTPException(status_code=400, detail="No text column found")
+
+    label_col = _ml_classifier.model_card.get("label_col", "") if _ml_classifier.model_card else ""
+    classes = _ml_classifier.model_card.get("classes", []) if _ml_classifier.model_card else []
+    if not classes:
+        raise HTTPException(status_code=400, detail="No classes in model card")
+
+    # Predict all and filter low confidence
+    try:
+        preds, confs, _ = _ml_classifier.predict(
+            _uploaded_data[text_col].fillna("").astype(str),
+            threshold=0.0,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
+
+    df_w = _uploaded_data.copy()
+    df_w["__pred__"] = preds
+    df_w["__conf__"] = confs
+    low_conf = df_w[df_w["__conf__"] < request.threshold].head(request.max_tickets)
+
+    if low_conf.empty:
+        return AutoLabelResponse(auto_labeled=0, results=[])
+
+    classes_str = ", ".join(f"« {c} »" for c in classes)
+    results = []
+
+    for idx, row in low_conf.iterrows():
+        ticket_text = str(row[text_col])[:600]
+        current_label = str(row.get(label_col, "")) if label_col and label_col in row else ""
+        current_conf = float(row["__conf__"])
+
+        groq_prompt = (
+            f"Tu es un expert en classification de tickets d'incident BRASIL (opérateur télécom).\n"
+            f"Classes disponibles : {classes_str}\n\n"
+            f"Ticket à classifier :\n\"\"\"\n{ticket_text}\n\"\"\"\n\n"
+            f"Réponds en JSON strict : {{\"label\": \"<label>\", \"rationale\": \"<explication courte>\"}}"
+        )
+
+        try:
+            raw = await ml_ai_analyst.llm_client.generate(
+                prompt=groq_prompt,
+                system_prompt="Tu es un classificateur de tickets télécom. Réponds uniquement en JSON.",
+                max_tokens=150,
+            )
+            parsed = ml_ai_analyst._parse_json_response(raw)
+            groq_label = parsed.get("label", current_label or "Autre")
+            groq_rationale = parsed.get("rationale", "")
+        except Exception as groq_err:
+            groq_label = current_label or "Autre"
+            groq_rationale = f"Groq indisponible: {groq_err}"
+
+        results.append(AutoLabelResult(
+            ticket_id=str(row.get("ticket_id", f"row_{idx}")),
+            text=ticket_text[:200],
+            current_label=current_label,
+            current_confidence=round(current_conf, 3),
+            groq_suggested_label=groq_label,
+            groq_rationale=groq_rationale,
+        ))
+
+    return AutoLabelResponse(auto_labeled=len(results), results=results)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Idea G — Auto-retrain threshold (enhancement to retrain-with-corrections)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Track last auto-retrain metadata
+_auto_retrain_status: Dict = {"last_trigger": None, "corrections_at_trigger": 0, "status": "idle"}
+AUTO_RETRAIN_THRESHOLD = 20  # trigger auto-retrain when corrections >= this
+
+
+@router.get("/corrections-status")
+async def get_corrections_status():
+    """Statut des corrections en attente et de l'auto-réentraînement."""
+    n_corrections = 0
+    if CORRECTIONS_LOG.exists():
+        try:
+            with open(CORRECTIONS_LOG, "r", encoding="utf-8") as f:
+                n_corrections = sum(1 for line in f if line.strip())
+        except Exception:
+            pass
+
+    return {
+        "corrections_pending": n_corrections,
+        "auto_retrain_threshold": AUTO_RETRAIN_THRESHOLD,
+        "auto_retrain_eligible": n_corrections >= AUTO_RETRAIN_THRESHOLD,
+        "last_auto_retrain": _auto_retrain_status.get("last_trigger"),
+        "auto_retrain_status": _auto_retrain_status.get("status", "idle"),
+    }
+
+
+def _maybe_auto_retrain(n_corrections: int, background_tasks: Optional[BackgroundTasks] = None):
+    """
+    Idea G: Si n_corrections >= seuil ET modèle dispo → déclencher auto-réentraînement
+    + inject-insights en arrière-plan.
+    """
+    global _auto_retrain_status
+
+    if n_corrections < AUTO_RETRAIN_THRESHOLD:
+        return
+    if _ml_classifier.model is None or _uploaded_data is None:
+        return
+    if _auto_retrain_status.get("status") == "running":
+        return
+
+    _auto_retrain_status["status"] = "running"
+    _auto_retrain_status["last_trigger"] = pd.Timestamp.now().isoformat()
+    _auto_retrain_status["corrections_at_trigger"] = n_corrections
+    logger.info(f"[AutoRetrain] Triggered: {n_corrections} corrections >= {AUTO_RETRAIN_THRESHOLD}")
+
+    if background_tasks:
+        background_tasks.add_task(_auto_retrain_background)
+    else:
+        import threading
+        threading.Thread(target=_auto_retrain_background_sync, daemon=True).start()
+
+
+def _auto_retrain_background_sync():
+    """Wrapper sync pour threading (sans background_tasks)."""
+    import asyncio
+    try:
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(_auto_retrain_background())
+    except Exception as e:
+        logger.error(f"[AutoRetrain] Sync wrapper error: {e}")
+    finally:
+        _auto_retrain_status["status"] = "idle"
+
+
+async def _auto_retrain_background():
+    """Auto-retrain + inject-insights en arrière-plan."""
+    global _auto_retrain_status
+    try:
+        # Read corrections
+        if not CORRECTIONS_LOG.exists():
+            return
+        corrections = []
+        with open(CORRECTIONS_LOG, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    corrections.append(json.loads(line.strip()))
+                except Exception:
+                    pass
+
+        if not corrections or _uploaded_data is None:
+            return
+
+        label_col = _ml_classifier.model_card.get("label_col", "cause") if _ml_classifier.model_card else "cause"
+        text_col = None
+        for col in ["text_ml_postmortem", "texte_complet", "resume", "text"]:
+            if col in _uploaded_data.columns:
+                text_col = col
+                break
+        if not text_col:
+            return
+
+        corr_df = pd.DataFrame(corrections)
+        df_base = _uploaded_data[[text_col, label_col]].dropna(subset=[label_col]).copy()
+        df_base = df_base.rename(columns={text_col: "__text__", label_col: "__label__"})
+
+        if "corrected_label" in corr_df.columns and "text" in corr_df.columns:
+            corr_subset = corr_df[["text", "corrected_label"]].rename(
+                columns={"text": "__text__", "corrected_label": "__label__"}
+            ).dropna()
+            df_merged = pd.concat([df_base, corr_subset], ignore_index=True)
+        else:
+            df_merged = df_base
+
+        df_merged = df_merged.rename(columns={"__text__": text_col, "__label__": label_col})
+        _ml_classifier.train(df=df_merged, text_col=text_col, label_col=label_col, max_features=5000)
+        logger.info(f"[AutoRetrain] Model retrained with {len(corrections)} corrections")
+
+        # Inject insights to Qdrant
+        try:
+            summary = await get_exec_summary(ai=True)
+            recs_raw = [r.dict() for r in (summary.ai_recommendations or [])]
+            cs_raw = [cs.dict() for cs in (summary.criticality_scores or [])]
+            anom_raw = [a.dict() for a in (summary.temporal_anomalies or [])]
+            text_payload = ml_ai_analyst.build_qdrant_payload(
+                summary={"volume": summary.volume, "mttr_med": summary.mttr_med,
+                         "top_causes": summary.top_causes, "top_categories": summary.top_categories},
+                narrative=summary.ai_narrative,
+                recommendations=recs_raw,
+                criticality_scores=cs_raw,
+                temporal_anomalies=anom_raw,
+                date_range=summary.date_range,
+            )
+            _inject_insights_background(text_payload, summary.dict())
+            logger.info("[AutoRetrain] Insights injected post-retrain")
+        except Exception as inj_err:
+            logger.warning(f"[AutoRetrain] Post-retrain inject-insights failed: {inj_err}")
+
+        _auto_retrain_status["status"] = "idle"
+
+    except Exception as e:
+        logger.error(f"[AutoRetrain] Failed: {e}")
+        _auto_retrain_status["status"] = "error"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Idea C — Distribution Drift Detection
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _compute_kl_divergence(p: Dict[str, float], q: Dict[str, float]) -> float:
+    """KL divergence D(P||Q) between two label distributions (as dicts)."""
+    all_labels = set(p) | set(q)
+    kl = 0.0
+    for label in all_labels:
+        pi = p.get(label, 1e-10)
+        qi = q.get(label, 1e-10)
+        if pi > 0:
+            kl += pi * np.log(pi / qi)
+    return float(kl)
+
+
+@router.get("/drift-detection")
+async def detect_distribution_drift():
+    """
+    Idée C : compare la distribution actuelle des labels avec la distribution
+    enregistrée au moment de l'entraînement (model_card.json) via la divergence KL.
+    Retourne une alerte si drift significatif (KL > 0.15).
+    """
+    global _uploaded_data
+
+    if _uploaded_data is None:
+        raise HTTPException(status_code=400, detail="No data uploaded")
+    if _ml_classifier.model is None or _ml_classifier.model_card is None:
+        raise HTTPException(status_code=400, detail="Model not trained yet")
+
+    label_col = _ml_classifier.model_card.get("label_col", "")
+    if not label_col or label_col not in _uploaded_data.columns:
+        raise HTTPException(status_code=400, detail=f"Label column '{label_col}' not found in data")
+
+    # Current distribution
+    current_counts = _uploaded_data[label_col].value_counts(normalize=True)
+    current_dist: Dict[str, float] = current_counts.to_dict()
+
+    # Training distribution from model_card
+    training_classes = _ml_classifier.model_card.get("classes", [])
+    n_samples = _ml_classifier.model_card.get("n_samples", 1)
+
+    # Try to reconstruct training dist from a saved distribution snapshot
+    training_dist_saved = _ml_classifier.model_card.get("label_distribution", {})
+    if training_dist_saved:
+        training_dist = {k: v / sum(training_dist_saved.values()) for k, v in training_dist_saved.items()}
+    else:
+        # Assume uniform if no snapshot
+        training_dist = {c: 1.0 / len(training_classes) for c in training_classes} if training_classes else {}
+
+    if not training_dist:
+        raise HTTPException(status_code=400, detail="No training distribution available in model card")
+
+    # KL divergence
+    kl_score = _compute_kl_divergence(current_dist, training_dist)
+    drift_detected = kl_score > 0.15
+
+    # Identify shifted labels
+    drifted_labels = []
+    for label in set(current_dist) | set(training_dist):
+        curr = current_dist.get(label, 0.0)
+        train = training_dist.get(label, 0.0)
+        delta = curr - train
+        if abs(delta) > 0.05:  # >5% shift
+            drifted_labels.append({
+                "label": label,
+                "current_pct": round(curr * 100, 1),
+                "training_pct": round(train * 100, 1),
+                "delta_pct": round(delta * 100, 1),
+                "direction": "increase" if delta > 0 else "decrease",
+            })
+    drifted_labels.sort(key=lambda x: abs(x["delta_pct"]), reverse=True)
+
+    alert_level = (
+        "critical" if kl_score > 0.40
+        else "warning" if kl_score > 0.15
+        else "ok"
+    )
+
+    return {
+        "kl_divergence": round(kl_score, 4),
+        "drift_detected": drift_detected,
+        "alert_level": alert_level,
+        "alert_message": (
+            f"⚠️ Dérive significative détectée (KL={kl_score:.3f}). "
+            "Réentraîner le modèle avec les nouvelles données est recommandé."
+            if drift_detected else
+            f"✅ Distribution stable (KL={kl_score:.3f})"
+        ),
+        "drifted_labels": drifted_labels[:10],
+        "current_distribution": {k: round(v * 100, 1) for k, v in list(current_dist.items())[:15]},
+        "training_distribution": {k: round(v * 100, 1) for k, v in list(training_dist.items())[:15]},
+        "training_date": _ml_classifier.model_card.get("trained_at"),
+        "recommendation": (
+            "Réentraîner le modèle avec les données actuelles via /retrain-with-corrections"
+            if alert_level == "critical"
+            else "Surveiller l'évolution de la distribution"
+            if alert_level == "warning"
+            else "Aucune action requise"
+        ),
+    }
+
