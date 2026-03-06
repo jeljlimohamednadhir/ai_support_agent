@@ -72,3 +72,6 @@ qdrant_storage/
 *.pem
 *.key
 secrets.yaml
+
+# Pipeline generated outputs
+data_pipeline/output/
