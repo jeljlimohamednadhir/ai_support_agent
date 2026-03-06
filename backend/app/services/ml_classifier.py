@@ -1,6 +1,7 @@
 """
 ML Classification Service
 Handles ML model training, prediction, and management
+Idea F: Hybrid TF-IDF + Sentence Transformers (paraphrase-multilingual-MiniLM-L12-v2)
 """
 import os
 import json
@@ -22,25 +23,53 @@ try:
 except ImportError:
     SKLEARN_AVAILABLE = False
 
+# Idea F: Sentence Transformers for semantic embeddings
+try:
+    from sentence_transformers import SentenceTransformer
+    _ST_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
+    _sentence_transformer: Optional[SentenceTransformer] = None
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+    _sentence_transformer = None
+
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 
+def _get_sentence_transformer() -> Optional["SentenceTransformer"]:
+    """Lazy-load the sentence transformer (singleton)."""
+    global _sentence_transformer
+    if not SENTENCE_TRANSFORMERS_AVAILABLE:
+        return None
+    if _sentence_transformer is None:
+        try:
+            _sentence_transformer = SentenceTransformer(_ST_MODEL_NAME)
+            logger.info(f"[MLClassifier] Sentence Transformer loaded: {_ST_MODEL_NAME}")
+        except Exception as e:
+            logger.warning(f"[MLClassifier] Failed to load Sentence Transformer: {e}")
+            return None
+    return _sentence_transformer
+
+
 class MLClassifier:
-    """Wrapper for ML classification model with calibration"""
-    
+    """Wrapper for ML classification model with calibration.
+    Idea F: Uses hybrid TF-IDF + Sentence Transformer features when available.
+    """
+
     def __init__(self, data_dir: str = "data"):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(exist_ok=True)
-        
+
         self.model_path = self.data_dir / "model_classifier.pkl"
         self.vectorizer_path = self.data_dir / "vectorizer.pkl"
         self.model_card_path = self.data_dir / "model_card.json"
-        
+
         self.model = None
         self.vectorizer = None
         self.model_card = None
+        self._use_hybrid = False  # set to True when ST embeddings were used at train time
         
     def load(self) -> bool:
         """Load model and vectorizer from disk"""
@@ -49,11 +78,18 @@ class MLClassifier:
                 with open(self.model_path, "rb") as f:
                     self.model = pickle.load(f)
                 with open(self.vectorizer_path, "rb") as f:
-                    self.vectorizer = pickle.load(f)
+                    vec_data = pickle.load(f)
+                    # Support both old format (plain dict) and new format (with use_hybrid)
+                    if isinstance(vec_data, dict) and "vec" in vec_data:
+                        self.vectorizer = vec_data["vec"]
+                        self._use_hybrid = vec_data.get("use_hybrid", False)
+                    else:
+                        self.vectorizer = vec_data
+                        self._use_hybrid = False
                 if self.model_card_path.exists():
                     with open(self.model_card_path, "r", encoding="utf-8") as f:
                         self.model_card = json.load(f)
-                logger.info("ML model loaded successfully")
+                logger.info(f"ML model loaded (hybrid={self._use_hybrid})")
                 return True
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
@@ -65,8 +101,8 @@ class MLClassifier:
             with open(self.model_path, "wb") as f:
                 pickle.dump(self.model, f)
             with open(self.vectorizer_path, "wb") as f:
-                pickle.dump(self.vectorizer, f)
-            logger.info("ML model saved successfully")
+                pickle.dump({"vec": self.vectorizer, "use_hybrid": self._use_hybrid}, f)
+            logger.info(f"ML model saved (hybrid={self._use_hybrid})")
             return True
         except Exception as e:
             logger.error(f"Failed to save model: {e}")
@@ -105,6 +141,47 @@ class MLClassifier:
         Xc = vec_dict["char"].transform(texts)
         X = sp.hstack([Xw, Xc], format="csr")
         return X
+
+    # ── Idea F: Hybrid features (TF-IDF + Sentence Transformers) ──────────────
+
+    def _build_hybrid_features_fit(self, vec_dict: Dict, texts: pd.Series):
+        """
+        Fit TF-IDF and concatenate with Sentence Transformer dense embeddings.
+        Falls back to TF-IDF only if ST not available.
+        """
+        X_tfidf = self._vectorize_fit(vec_dict, texts)
+        st = _get_sentence_transformer()
+        if st is None:
+            self._use_hybrid = False
+            return X_tfidf
+        try:
+            logger.info(f"[MLClassifier] Computing ST embeddings for {len(texts)} texts...")
+            st_emb = st.encode(texts.tolist(), batch_size=64, show_progress_bar=False)
+            X_dense = sp.csr_matrix(st_emb.astype(np.float32))
+            X_hybrid = sp.hstack([X_tfidf, X_dense], format="csr")
+            self._use_hybrid = True
+            logger.info(f"[MLClassifier] Hybrid features: TF-IDF ({X_tfidf.shape[1]}) + ST ({st_emb.shape[1]}) = {X_hybrid.shape[1]}")
+            return X_hybrid
+        except Exception as e:
+            logger.warning(f"[MLClassifier] ST embedding failed, falling back to TF-IDF: {e}")
+            self._use_hybrid = False
+            return X_tfidf
+
+    def _build_hybrid_features_transform(self, vec_dict: Dict, texts: pd.Series):
+        """Transform using fitted TF-IDF + fresh ST embeddings."""
+        X_tfidf = self._vectorize_transform(vec_dict, texts)
+        if not self._use_hybrid:
+            return X_tfidf
+        st = _get_sentence_transformer()
+        if st is None:
+            return X_tfidf
+        try:
+            st_emb = st.encode(texts.tolist(), batch_size=64, show_progress_bar=False)
+            X_dense = sp.csr_matrix(st_emb.astype(np.float32))
+            return sp.hstack([X_tfidf, X_dense], format="csr")
+        except Exception as e:
+            logger.warning(f"[MLClassifier] ST transform failed: {e}")
+            return X_tfidf
     
     def train(
         self,
@@ -127,7 +204,7 @@ class MLClassifier:
         
         # Build vectorizers
         vec_dict = self._build_vectorizers(max_features=max_features)
-        X_all = self._vectorize_fit(vec_dict, texts)
+        X_all = self._build_hybrid_features_fit(vec_dict, texts)
         
         # Filter rare classes (< 2 samples)
         y_series = pd.Series(y_all)
@@ -209,7 +286,8 @@ class MLClassifier:
             "confusion_matrix": cm.tolist(),
             "recommended_threshold": float(round(recommended, 2)),
             "training_count": self._get_training_count() + 1,
-            "rare_labels": rare_labels
+            "rare_labels": rare_labels,
+            "label_distribution": dict(pd.Series(y_all).value_counts()),
         }
         
         # Save model card
@@ -248,8 +326,8 @@ class MLClassifier:
         """
         if self.model is None or self.vectorizer is None:
             raise RuntimeError("Model not loaded")
-        
-        X = self._vectorize_transform(self.vectorizer, texts)
+
+        X = self._build_hybrid_features_transform(self.vectorizer, texts)
         
         if hasattr(self.model, "predict_proba"):
             probs = self.model.predict_proba(X)
@@ -289,7 +367,10 @@ class MLClassifier:
                 "max_features": max_features,
                 "ngram_range": [[1, 2], [3, 5]]
             },
-            "rare_labels": metrics.get("rare_labels", [])
+            "rare_labels": metrics.get("rare_labels", []),
+            "label_distribution": metrics.get("label_distribution", {}),
+            "hybrid_embeddings": self._use_hybrid,
+            "sentence_transformer_model": _ST_MODEL_NAME if self._use_hybrid else None,
         }
         
         try:
@@ -313,7 +394,9 @@ class MLClassifier:
                     "n_samples": card.get("n_samples"),
                     "classes": card.get("classes", []),
                     "macro_f1": card.get("macro_f1_val"),
-                    "recommended_threshold": card.get("recommended_threshold", 0.7)
+                    "recommended_threshold": card.get("recommended_threshold", 0.7),
+                    "use_sentence_transformers": card.get("use_sentence_transformers", False),
+                    "label_distribution": card.get("label_distribution", {}),
                 }
             except:
                 pass
