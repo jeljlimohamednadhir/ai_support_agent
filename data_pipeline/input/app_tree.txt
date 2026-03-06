@@ -1,0 +1,178 @@
+/opt/application
+├── 49mapp
+│   ├── current -> /opt/application/49mapp/G09R16C01
+│   ├── current.old -> /opt/application/49mapp/G09R16C00
+│   ├── DSM_a_supp
+│   │   ├── Scripts_Fonctionnel
+│   │   ├── Scripts_IHM
+│   │   └── Scripts_Soutien
+│   ├── dump
+│   │   ├── java_pid107838.hprof
+│   │   ├── java_pid11652.hprof
+│   │   ├── java_pid123193.hprof
+│   │   ├── java_pid2062.hprof
+│   │   ├── java_pid21824.hprof
+│   │   ├── java_pid29264.hprof
+│   │   ├── java_pid88968.hprof
+│   │   ├── java_pid9098.hprof
+│   │   └── lost+found
+│   ├── G09R16C00
+│   │   ├── ChargementFichierKarma
+│   │   ├── clients
+│   │   ├── LogRotation
+│   │   ├── tomcat
+│   │   └── umidico
+│   ├── G09R16C01
+│   │   ├── ChargementFichierKarma
+│   │   ├── clients
+│   │   ├── LogRotation
+│   │   ├── tomcat
+│   │   └── umidico
+│   ├── InputDatarecovery
+│   │   ├── Brasil_test_sur_clients_avec_codeop_0106.txt
+│   │   ├── etp1_huawei_ICCKO_1025.txt
+│   │   ├── JB2.txt
+│   │   ├── JB.txt
+│   │   ├── remoteid-20160308.txt
+│   │   ├── test-prod-remoteid-3nds.txt
+│   │   ├── test-prod-remoteid-545925437.txt
+│   │   └── test_remoteid-4nd.txt
+│   ├── Logs_IHM_Script
+│   ├── Logs_Scripts_Fonctionnel
+│   ├── Logs_Scripts_Soutien
+│   │   └── SurveillanceMQ
+│   ├── lost+found [error opening dir]
+│   ├── messagesmq
+│   │   ├── mess21
+│   │   └── mess21.tar
+│   ├── mqm
+│   │   └── BRASIL11
+│   ├── ParamBrasil
+│   │   ├── current -> /opt/application/49mapp/ParamBrasil/G09R16C01
+│   │   ├── G09R16C00
+│   │   ├── G09R16C01
+│   │   ├── ParamBrasil_G09R16C00.tar.gz
+│   │   ├── ParamBrasil_G09R16C01.tar.gz
+│   │   └── UpdateParametrage.ksh
+│   ├── RUNN3
+│   │   ├── Scripts_Fonctionnel
+│   │   ├── Scripts_IHM
+│   │   └── Scripts_Soutien
+│   ├── ScriptMOE
+│   │   ├── testBrasilAPI.ksh
+│   │   ├── testBrasilAPI.ksh.ori
+│   │   ├── ZZZ_in_PATCH_Card.json
+│   │   ├── ZZZ_in_PATCH_IAR.json
+│   │   ├── ZZZ_in_PATCH_MSAN.json
+│   │   ├── ZZZ_in_PATCH_Shelf.json
+│   │   ├── ZZZ_in_PATCH_VLAN_NEW.json
+│   │   ├── ZZZ_in_PATCH_VLAN_OLD.json
+│   │   ├── ZZZ_in_POST_MSAN_TST.json
+│   │   ├── ZZZ_in_POST_sync_eqpt.json
+│   │   ├── ZZZ_in_POST_VLAN_NEW.json
+│   │   ├── ZZZ_in_POST_VLAN_OLD.json
+│   │   ├── ZZZ_in_POST_VLAN_TSF.json
+│   │   ├── ZZZ_out_checkDelete.json
+│   │   ├── ZZZ_out_GET_Card.json
+│   │   ├── ZZZ_out_GET_IAR.json
+│   │   ├── ZZZ_out_GET_IAR_Position.json
+│   │   ├── ZZZ_out_GET_IAR_SN.json
+│   │   ├── ZZZ_out_GET_MSAN_NEW.json
+│   │   ├── ZZZ_out_GET_MSAN_OLD.json
+│   │   ├── ZZZ_out_GET_MSAN_TST.json
+│   │   ├── ZZZ_out_GET_Shelf.json
+│   │   ├── ZZZ_out_GET_VLAN_Criteria_NEW.json
+│   │   ├── ZZZ_out_GET_VLAN_Criteria_OLD.json
+│   │   ├── ZZZ_out_GET_VLAN_NEW.json
+│   │   ├── ZZZ_out_GET_VLAN_OLD.json
+│   │   ├── ZZZ_out_PATCH_Card.json
+│   │   ├── ZZZ_out_PATCH_IAR.json
+│   │   ├── ZZZ_out_PATCH_MSAN.json
+│   │   ├── ZZZ_out_PATCH_Shelf.json
+│   │   ├── ZZZ_out_PATCH_VLAN_NEW.json
+│   │   ├── ZZZ_out_PATCH_VLAN_OLD.json
+│   │   ├── ZZZ_out_POST_MSAN_TST.json
+│   │   ├── ZZZ_out_POST_sync_eqpt.json
+│   │   ├── ZZZ_out_POST_VLAN_NEW.json
+│   │   ├── ZZZ_out_POST_VLAN_OLD.json
+│   │   └── ZZZ_out_POST_VLAN_TSF.json
+│   ├── static
+│   │   └── client_api.properties
+│   └── SuppND
+│       ├── deleteNdFromPrevious_KARMA.ksh
+│       ├── ND_supp.txt
+│       ├── ND.txt
+│       ├── nohup.out
+│       └── previous_KARMA.csv
+├── 49muni
+│   ├── current -> /opt/application/49muni/G09R04C06
+│   ├── current.old -> /opt/application/49muni/G09R04C00
+│   ├── G08R00C00
+│   │   ├── 49M-UNI_WAS-G08R00C00-KSH.SIG
+│   │   ├── config
+│   │   ├── logs
+│   │   ├── outils
+│   │   ├── scripts
+│   │   ├── sh
+│   │   └── tmp
+│   ├── G08R00C01
+│   │   ├── 49M-UNI_WAS-G08R00C01-KSH.SIG
+│   │   ├── config
+│   │   ├── logs
+│   │   ├── outils
+│   │   ├── scripts
+│   │   ├── sh
+│   │   └── tmp
+│   ├── G08R00C02
+│   │   ├── 49M-UNI_WAS-G08R00C02-KSH.SIG
+│   │   ├── config
+│   │   ├── logs
+│   │   ├── outils
+│   │   ├── scripts
+│   │   ├── sh
+│   │   └── tmp
+│   ├── G09R04C00
+│   │   ├── 49M-UNI_WAS-G08R00C02-KSH.SIG
+│   │   ├── config
+│   │   ├── logs
+│   │   ├── outils
+│   │   ├── scripts
+│   │   ├── sh
+│   │   └── tmp
+│   ├── G09R04C06
+│   │   ├── 49M-UNI_WAS-G08R00C02-KSH.SIG
+│   │   ├── config
+│   │   ├── logs
+│   │   ├── outils
+│   │   ├── scripts
+│   │   ├── sh
+│   │   └── tmp
+│   └── Livraisons
+└── imp
+    ├── current -> /opt/application/imp/G02R08C01
+    ├── G02R08C01
+    │   ├── bin
+    │   ├── release_notes.txt
+    │   ├── templates
+    │   └── tools
+    ├── G02R09C02
+    │   ├── bin
+    │   ├── release_notes.txt
+    │   ├── templates
+    │   └── tools
+    ├── G03R00C04
+    │   ├── bin
+    │   ├── release_notes.txt
+    │   ├── templates
+    │   ├── templates_PRA
+    │   └── tools
+    ├── G03R01C00
+    │   ├── bin
+    │   ├── release_notes.txt
+    │   ├── templates
+    │   ├── templates_PRA
+    │   └── tools
+    └── sauvegardes
+        └── UNI_WAS
+
+102 directories, 73 files
