@@ -31,16 +31,14 @@ def load_candidates() -> List[Dict]:
 # ── INJECTION POSTGRESQL ────────────────────────────────────────────────────
 
 def inject_to_postgres(candidates: List[Dict], dry_run: bool = False) -> Dict:
-    """Injecte dans PostgreSQL via SQLAlchemy"""
+    """Injecte dans PostgreSQL via psycopg2 direct (sans dépendance au backend)"""
     stats = {"inserted": 0, "updated": 0, "skipped": 0, "errors": 0}
 
     try:
-        from app.core.database import SessionLocal
-        from app.models.canonical import CanonicalProcedure
-        from sqlalchemy import select
-    except ImportError as e:
-        print(f"⚠️  Import SQLAlchemy échoué: {e}")
-        print("   Vérifier que PostgreSQL est actif et les dépendances installées.")
+        import psycopg2
+        import psycopg2.extras
+    except ImportError:
+        print("⚠️  psycopg2 non installé. Lancer: pip install psycopg2-binary")
         return stats
 
     if dry_run:
@@ -48,66 +46,86 @@ def inject_to_postgres(candidates: List[Dict], dry_run: bool = False) -> Dict:
         stats["skipped"] = len(candidates)
         return stats
 
-    db = SessionLocal()
+    DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
+    DB_PORT = os.getenv("POSTGRES_PORT", "5432")
+    DB_NAME = os.getenv("POSTGRES_DB", "ai_support_agent")
+    DB_USER = os.getenv("POSTGRES_USER", "postgres")
+    DB_PASS = os.getenv("POSTGRES_PASSWORD", "postgres")
+
     try:
+        conn = psycopg2.connect(host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
+                                user=DB_USER, password=DB_PASS)
+        cur = conn.cursor()
+        trust_order = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
+
         for candidate in candidates:
             try:
-                # Vérifier si déjà existant (par app_id + title)
-                existing = db.execute(
-                    select(CanonicalProcedure).where(
-                        CanonicalProcedure.app_id == candidate["app_id"],
-                        CanonicalProcedure.title == candidate["title"],
-                    )
-                ).scalar_one_or_none()
+                cur.execute("SAVEPOINT sp1")
+                # Vérifier si déjà existant
+                cur.execute(
+                    "SELECT id, trust_level FROM canonical_procedures WHERE app_id=%s AND title=%s",
+                    (candidate["app_id"], candidate["title"])
+                )
+                existing = cur.fetchone()
 
                 if existing:
-                    # Mise à jour si le trust_level est meilleur
-                    trust_order = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
-                    if trust_order.get(candidate["trust_level"], 0) > trust_order.get(existing.trust_level, 0):
-                        existing.trust_level = candidate["trust_level"]
-                        existing.error_codes = candidate.get("error_codes", [])
-                        existing.symptoms = candidate.get("symptoms", [])
-                        existing.root_causes = candidate.get("root_causes", [])
-                        existing.diagnostic_checks = candidate.get("diagnostic_checks", [])
-                        existing.resolution_steps = candidate.get("resolution_steps", [])
-                        existing.source_fr_numbers = candidate.get("source_fr_numbers", [])
+                    existing_id, existing_trust = existing
+                    if trust_order.get(candidate["trust_level"], 0) > trust_order.get(existing_trust, 0):
+                        cur.execute("""
+                            UPDATE canonical_procedures SET
+                                trust_level=%s, error_codes=%s, symptoms=%s,
+                                root_causes=%s, diagnostic_checks=%s,
+                                resolution_steps=%s, source_fr_numbers=%s
+                            WHERE id=%s
+                        """, (
+                            candidate["trust_level"],
+                            json.dumps(candidate.get("error_codes", []), ensure_ascii=False),
+                            json.dumps(candidate.get("symptoms", []), ensure_ascii=False),
+                            json.dumps(candidate.get("root_causes", []), ensure_ascii=False),
+                            json.dumps(candidate.get("diagnostic_checks", []), ensure_ascii=False),
+                            json.dumps(candidate.get("resolution_steps", []), ensure_ascii=False),
+                            json.dumps(candidate.get("source_fr_numbers", []), ensure_ascii=False),
+                            existing_id
+                        ))
                         stats["updated"] += 1
                     else:
                         stats["skipped"] += 1
                 else:
-                    # Nouveau enregistrement
-                    proc = CanonicalProcedure(
-                        app_id=candidate["app_id"],
-                        title=candidate["title"],
-                        category=candidate.get("category", "Général"),
-                        error_codes=candidate.get("error_codes", []),
-                        symptoms=candidate.get("symptoms", []),
-                        root_causes=candidate.get("root_causes", []),
-                        diagnostic_checks=candidate.get("diagnostic_checks", []),
-                        resolution_steps=candidate.get("resolution_steps", []),
-                        risk_level=candidate.get("risk_level", "MEDIUM"),
-                        impact_scope=candidate.get("impact_scope", "Brasil"),
-                        trust_level=candidate["trust_level"],
-                        validated_by=candidate.get("validated_by", "pipeline"),
-                        source_fr_numbers=candidate.get("source_fr_numbers", []),
-                        usage_count=0,
-                        success_count=0,
-                    )
-                    db.add(proc)
+                    cur.execute("""
+                        INSERT INTO canonical_procedures
+                            (app_id, title, category, error_codes, symptoms, root_causes,
+                             diagnostic_checks, resolution_steps, risk_level, impact_scope,
+                             trust_level, validated_by, source_fr_numbers, usage_count, success_count)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,0)
+                    """, (
+                        candidate["app_id"],
+                        candidate["title"],
+                        candidate.get("category", "Général"),
+                        json.dumps(candidate.get("error_codes", []), ensure_ascii=False),
+                        json.dumps(candidate.get("symptoms", []), ensure_ascii=False),
+                        json.dumps(candidate.get("root_causes", []), ensure_ascii=False),
+                        json.dumps(candidate.get("diagnostic_checks", []), ensure_ascii=False),
+                        json.dumps(candidate.get("resolution_steps", []), ensure_ascii=False),
+                        candidate.get("risk_level", "MEDIUM"),
+                        candidate.get("impact_scope", "Brasil"),
+                        candidate["trust_level"],
+                        candidate.get("validated_by", "pipeline"),
+                        json.dumps(candidate.get("source_fr_numbers", []), ensure_ascii=False),
+                    ))
                     stats["inserted"] += 1
 
             except Exception as e:
                 print(f"    ❌ Erreur pour '{candidate.get('title', '?')}': {e}")
                 stats["errors"] += 1
+                cur.execute("ROLLBACK TO SAVEPOINT sp1")
 
-        db.commit()
+        conn.commit()
+        cur.close()
+        conn.close()
         print(f"  ✅ PostgreSQL: {stats['inserted']} insérés, {stats['updated']} mis à jour, {stats['skipped']} ignorés")
 
     except Exception as e:
-        db.rollback()
         print(f"  ❌ Erreur PostgreSQL: {e}")
-    finally:
-        db.close()
 
     return stats
 
@@ -128,8 +146,14 @@ def inject_to_qdrant(candidates: List[Dict], dry_run: bool = False) -> Dict:
 
     QDRANT_URL        = os.getenv("QDRANT_URL", "http://localhost:6333")
     COLLECTION_NAME   = "brasil_canonical"
-    EMBEDDING_MODEL   = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
-    VECTOR_SIZE       = 768
+    # Utiliser le modèle disponible en cache local
+    # mpnet (768 dim) si dispo, sinon MiniLM (384 dim) déjà en cache
+    import os as _os
+    _hf_cache = _os.path.expanduser("~/.cache/torch/sentence_transformers")
+    _has_mpnet = _os.path.exists(_os.path.join(_hf_cache, "sentence-transformers_paraphrase-multilingual-mpnet-base-v2"))
+    EMBEDDING_MODEL   = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2" if _has_mpnet else "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    VECTOR_SIZE       = 768 if _has_mpnet else 384
+    print(f"  Modèle embedding: {EMBEDDING_MODEL.split('/')[-1]} (dim={VECTOR_SIZE})")
 
     if dry_run:
         print(f"  [DRY-RUN] Qdrant ({COLLECTION_NAME}) — simulation uniquement")
@@ -140,16 +164,28 @@ def inject_to_qdrant(candidates: List[Dict], dry_run: bool = False) -> Dict:
         print(f"  Connexion Qdrant: {QDRANT_URL}...")
         client = QdrantClient(url=QDRANT_URL, timeout=30)
 
-        # Créer la collection si inexistante
-        existing_collections = [c.name for c in client.get_collections().collections]
-        if COLLECTION_NAME not in existing_collections:
+        # Créer/recréer la collection avec la bonne dimension
+        existing_collections = {c.name: c for c in client.get_collections().collections}
+        if COLLECTION_NAME in existing_collections:
+            # Vérifier la dimension actuelle
+            coll_info = client.get_collection(COLLECTION_NAME)
+            existing_dim = coll_info.config.params.vectors.size
+            if existing_dim != VECTOR_SIZE:
+                print(f"  ⚠️  Collection dim={existing_dim} incompatible avec modèle dim={VECTOR_SIZE} — recréation")
+                client.delete_collection(COLLECTION_NAME)
+                client.create_collection(
+                    collection_name=COLLECTION_NAME,
+                    vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
+                )
+                print(f"  ✅ Collection '{COLLECTION_NAME}' recréée (dim={VECTOR_SIZE})")
+            else:
+                print(f"  ℹ️  Collection '{COLLECTION_NAME}' existante (dim={existing_dim})")
+        else:
             client.create_collection(
                 collection_name=COLLECTION_NAME,
                 vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
             )
-            print(f"  ✅ Collection '{COLLECTION_NAME}' créée")
-        else:
-            print(f"  ℹ️  Collection '{COLLECTION_NAME}' déjà existante")
+            print(f"  ✅ Collection '{COLLECTION_NAME}' créée (dim={VECTOR_SIZE})")
 
         # Charger le modèle d'embedding
         print(f"  Chargement du modèle d'embedding...")

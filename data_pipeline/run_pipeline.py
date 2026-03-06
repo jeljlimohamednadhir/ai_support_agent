@@ -1,15 +1,24 @@
 """
-run_pipeline.py — Pipeline complet Brasil (FR → Score → Tickets → Canonical → Injection)
+run_pipeline.py — Pipeline complet Brasil (FR → Score → Tickets → Canonical → Injection → Knowledge)
 Usage : python data_pipeline/run_pipeline.py [--step STEP] [--dry-run] [--csv path]
 
-Étapes:
-  1. parse    — Parser les FRs .docx → fr_parsed.json
-  2. score    — Scorer la qualité FR → fr_scored.json
-  3. tickets  — Analyser le CSV tickets → ticket_analysis.json
-  4. build    — Générer les CanonicalProcedures → canonical_candidates.json
-  5. inject   — Injecter dans PostgreSQL + Qdrant
+Étapes classiques:
+  1. parse      — Parser les FRs .docx → fr_parsed.json
+  2. score      — Scorer la qualité FR → fr_scored.json
+  3. tickets    — Analyser le CSV tickets → ticket_analysis.json
+  4. build      — Générer les CanonicalProcedures → canonical_candidates.json
+  5. inject     — Injecter dans PostgreSQL + Qdrant
 
-  all         — Toutes les étapes (défaut)
+Étapes knowledge (NLP enrichment + indexation avancée):
+  6. structure  — NLP enrichment des tickets → ticket_structured.json
+  7. normalize  — Normalisation FRs → fr_normalized.json (chunks RAG)
+  8. cluster    — Clustering HDBSCAN → cluster_results.json
+  9. graph      — Graphe de connaissances → knowledge_graph.json
+  10. index     — Indexation Qdrant trust-filtered
+
+  all           — Toutes les étapes classiques (défaut)
+  knowledge     — Étapes 6–10 uniquement (intelligence layer)
+  full          — Étapes 1–10 (pipeline complet)
 """
 import sys
 import argparse
@@ -57,7 +66,7 @@ def print_pipeline_header():
 ╔══════════════════════════════════════════════════════════════════════╗
 ║          PIPELINE DATA — BRASIL INTELLIGENCE PLATFORM               ║
 ║  FR Parser → Quality Scorer → Ticket Analyzer → Canonical Builder   ║
-║                    → PostgreSQL + Qdrant Injector                    ║
+║     → PostgreSQL + Qdrant → NLP Structure → Cluster → Graph → RAG  ║
 ╚══════════════════════════════════════════════════════════════════════╝
 """)
 
@@ -76,18 +85,22 @@ def print_pipeline_summary(results: dict):
     # Vérifier les fichiers générés
     print(f"\n  Fichiers générés:")
     files = [
-        ("fr_parsed.json",          "FRs parsés"),
-        ("fr_scored.json",          "FRs scorés"),
-        ("ticket_analysis.json",    "Analyse tickets"),
-        ("canonical_candidates.json","Procédures candidates"),
+        ("fr_parsed.json",              "FRs parsés"),
+        ("fr_scored.json",              "FRs scorés"),
+        ("ticket_analysis.json",        "Analyse tickets"),
+        ("canonical_candidates.json",   "Procédures candidates"),
+        ("ticket_structured.json",      "Tickets NLP enrichis"),
+        ("fr_normalized.json",          "FRs normalisés + RAG chunks"),
+        ("cluster_results.json",        "Clusters HDBSCAN"),
+        ("knowledge_graph.json",        "Graphe de connaissances"),
     ]
     for filename, label in files:
         path = OUTPUT_DIR / filename
         if path.exists():
             size = path.stat().st_size // 1024
-            print(f"    ✅ {filename:<35} ({size} KB) — {label}")
+            print(f"    ✅ {filename:<40} ({size} KB) — {label}")
         else:
-            print(f"    ⚠️  {filename:<35} absent")
+            print(f"    ⚠️  {filename:<40} absent")
 
     if all_ok:
         print(f"\n🎉 Pipeline complet — Brasil Intelligence Platform opérationnel!")
@@ -101,7 +114,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Pipeline Brasil Intelligence")
     parser.add_argument(
         "--step",
-        choices=["parse", "score", "tickets", "build", "inject", "all"],
+        choices=[
+            "parse", "score", "tickets", "build", "inject",
+            "structure", "normalize", "cluster", "graph", "index",
+            "all", "knowledge", "full",
+        ],
         default="all",
         help="Étape à exécuter (défaut: all)"
     )
@@ -117,9 +134,14 @@ if __name__ == "__main__":
     results = {}
     step = args.step
 
+    # Étapes "classiques" (1–5)
+    CLASSIC_STEPS = {"parse", "score", "tickets", "build", "inject", "all", "full"}
+    # Étapes "knowledge" (6–10)
+    KNOWLEDGE_STEPS = {"structure", "normalize", "cluster", "graph", "index", "knowledge", "full"}
+
     # ── ÉTAPE 1 : PARSE FRs ────────────────────────────────────────────────
     if step in ("all", "parse"):
-        ok = run_step("fr_parser.py", label="Étape 1/5 — Parser les FRs .docx")
+        ok = run_step("fr_parser.py", label="Étape 1/10 — Parser les FRs .docx")
         results["1. FR Parser"] = ok
         if not ok and step == "parse":
             sys.exit(1)
@@ -130,7 +152,7 @@ if __name__ == "__main__":
             print("⚠️  fr_parsed.json absent — lancer d'abord: --step parse")
             results["2. FR Scorer"] = False
         else:
-            ok = run_step("fr_quality_scorer.py", label="Étape 2/5 — Scorer la qualité des FRs")
+            ok = run_step("fr_quality_scorer.py", label="Étape 2/10 — Scorer la qualité des FRs")
             results["2. FR Scorer"] = ok
 
     # ── ÉTAPE 3 : TICKETS ──────────────────────────────────────────────────
@@ -141,7 +163,7 @@ if __name__ == "__main__":
         ok = run_step(
             "ticket_analyzer.py",
             args=ticket_args,
-            label="Étape 3/5 — Analyser les tickets CSV"
+            label="Étape 3/10 — Analyser les tickets CSV"
         )
         results["3. Ticket Analyzer"] = ok
     elif args.skip_tickets:
@@ -154,7 +176,7 @@ if __name__ == "__main__":
             print("⚠️  fr_scored.json absent — lancer d'abord: --step score")
             results["4. Canonical Builder"] = False
         else:
-            ok = run_step("canonical_builder.py", label="Étape 4/5 — Générer les CanonicalProcedures")
+            ok = run_step("canonical_builder.py", label="Étape 4/10 — Générer les CanonicalProcedures")
             results["4. Canonical Builder"] = ok
 
     # ── ÉTAPE 5 : INJECT ──────────────────────────────────────────────────
@@ -169,11 +191,84 @@ if __name__ == "__main__":
             ok = run_step(
                 "canonical_injector.py",
                 args=inject_args,
-                label="Étape 5/5 — Injecter dans PostgreSQL + Qdrant"
+                label="Étape 5/10 — Injecter dans PostgreSQL + Qdrant"
             )
             results["5. Injector"] = ok
     elif args.skip_inject:
         print("\nℹ️  Étape injection ignorée (--skip-inject)")
+
+    # ══════════════════════════════════════════════════════════════════════
+    # COUCHE KNOWLEDGE INTELLIGENCE (étapes 6–10)
+    # ══════════════════════════════════════════════════════════════════════
+
+    # ── ÉTAPE 6 : STRUCTURE (NLP enrichment des tickets) ──────────────────
+    if step in ("structure", "knowledge", "full"):
+        structure_args = []
+        if args.csv:
+            structure_args = ["--csv", args.csv]
+        if args.dry_run:
+            structure_args.append("--dry-run")
+        ok = run_step(
+            "ticket_structurer.py",
+            args=structure_args,
+            label="Étape 6/10 — NLP enrichment des tickets → ticket_structured.json"
+        )
+        results["6. Ticket Structurer (NLP)"] = ok
+
+    # ── ÉTAPE 7 : NORMALIZE (FRs → structured procedures + RAG chunks) ────
+    if step in ("normalize", "knowledge", "full"):
+        if not check_output_exists("fr_scored.json"):
+            print("⚠️  fr_scored.json absent — lancer d'abord: --step score")
+            results["7. FR Normalizer"] = False
+        else:
+            ok = run_step(
+                "fr_normalizer.py",
+                label="Étape 7/10 — Normaliser FRs → fr_normalized.json + RAG chunks"
+            )
+            results["7. FR Normalizer"] = ok
+
+    # ── ÉTAPE 8 : CLUSTER (HDBSCAN clustering) ────────────────────────────
+    if step in ("cluster", "knowledge", "full"):
+        if not check_output_exists("ticket_structured.json"):
+            print("⚠️  ticket_structured.json absent — lancer d'abord: --step structure")
+            results["8. Clustering Engine"] = False
+        else:
+            ok = run_step(
+                "clustering_engine.py",
+                label="Étape 8/10 — Clustering HDBSCAN → cluster_results.json"
+            )
+            results["8. Clustering Engine"] = ok
+
+    # ── ÉTAPE 9 : GRAPH (Knowledge graph builder) ─────────────────────────
+    if step in ("graph", "knowledge", "full"):
+        if not check_output_exists("cluster_results.json"):
+            print("⚠️  cluster_results.json absent — lancer d'abord: --step cluster")
+            results["9. Knowledge Graph"] = False
+        elif not check_output_exists("fr_normalized.json"):
+            print("⚠️  fr_normalized.json absent — lancer d'abord: --step normalize")
+            results["9. Knowledge Graph"] = False
+        else:
+            ok = run_step(
+                "knowledge_graph_builder.py",
+                label="Étape 9/10 — Construire le graphe de connaissances → knowledge_graph.json"
+            )
+            results["9. Knowledge Graph"] = ok
+
+    # ── ÉTAPE 10 : INDEX (RAG indexation Qdrant) ──────────────────────────
+    if step in ("index", "knowledge", "full"):
+        if not check_output_exists("fr_normalized.json"):
+            print("⚠️  fr_normalized.json absent — lancer d'abord: --step normalize")
+            results["10. RAG Indexer"] = False
+        else:
+            index_args = []
+            if args.dry_run:
+                index_args.append("--dry-run")
+            ok = run_step(
+                "rag_indexer.py",
+                args=index_args,
+                label="Étape 10/10 — Indexer dans Qdrant (trust-filtered) → vecteurs RAG"
+            )
+            results["10. RAG Indexer"] = ok
 
     # ── RÉSUMÉ ─────────────────────────────────────────────────────────────
     if results:

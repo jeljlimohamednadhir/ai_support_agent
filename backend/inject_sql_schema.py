@@ -13,12 +13,12 @@ import uuid
 QDRANT_HOST = "localhost"
 QDRANT_PORT = 6333
 COLLECTION_NAME = "code_knowledge"
-SQL_FILE = "qd_db.sql"
+SQL_FILE = "brasil_db.sql"
 
 
 def parse_sql_schema(sql_file_path):
     """
-    Parser le fichier SQL pour extraire les tables et leurs structures
+    Parser le fichier SQL pour extraire les tables, leurs structures et les FK (ALTER TABLE).
     """
     # Essayer différents encodages
     for encoding in ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']:
@@ -31,14 +31,40 @@ def parse_sql_schema(sql_file_path):
             continue
     else:
         raise Exception("Impossible de lire le fichier SQL avec les encodages testés")
-    
+
+    # ── 1. Parser les ALTER TABLE … FOREIGN KEY (sortantes et entrantes) ──────
+    # Format PostgreSQL: ALTER TABLE child ADD CONSTRAINT name FOREIGN KEY (col) REFERENCES parent (col);
+    fk_pattern = re.compile(
+        r'ALTER\s+TABLE\s+(\w+)\s+ADD\s+(?:CONSTRAINT\s+\w+\s+)?FOREIGN\s+KEY\s*\(([^)]+)\)\s+REFERENCES\s+(\w+)\s*\(([^)]+)\)',
+        re.IGNORECASE,
+    )
+    # fk_out[table] = [{"column": ..., "ref_table": ..., "ref_column": ...}]
+    fk_out: dict = {}   # FK sortantes  : table → liste de dépendances vers d'autres tables
+    fk_in:  dict = {}   # FK entrantes  : table → liste des tables qui la référencent
+    for m in fk_pattern.finditer(sql_content):
+        child_table  = m.group(1).strip()
+        fk_col       = m.group(2).strip()
+        parent_table = m.group(3).strip()
+        ref_col      = m.group(4).strip()
+        fk_out.setdefault(child_table, []).append({
+            "column": fk_col, "ref_table": parent_table, "ref_column": ref_col
+        })
+        fk_in.setdefault(parent_table, []).append({
+            "from_table": child_table, "fk_column": fk_col, "ref_column": ref_col
+        })
+
     tables = []
-    
-    # Pattern pour extraire les CREATE TABLE
-    create_table_pattern = r'CREATE TABLE (\w+) \((.*?)\) ENGINE='
-    matches = re.findall(create_table_pattern, sql_content, re.DOTALL | re.IGNORECASE)
-    
-    for table_name, columns_def in matches:
+
+    # Pattern PostgreSQL : CREATE TABLE name (col1 ..., col2 ..., ...);
+    # tout sur une ligne ou multilignes, on capture tout entre les premières ( et le ; final
+    create_table_pattern = re.compile(
+        r'CREATE\s+TABLE\s+(\w+)\s*\((.+?)\)\s*;',
+        re.DOTALL | re.IGNORECASE,
+    )
+
+    for m in create_table_pattern.finditer(sql_content):
+        table_name = m.group(1).strip()
+        columns_def = m.group(2).strip()
         print(f"\n📋 Parsing table: {table_name}")
         
         # Parser les colonnes
@@ -70,76 +96,114 @@ def parse_sql_schema(sql_file_path):
         
         for line in lines:
             line = line.strip()
-            
+            if not line:
+                continue
+
+            line_upper = line.upper()
+
             # Primary key
-            if line.upper().startswith('PRIMARY KEY'):
-                pk_match = re.search(r'PRIMARY KEY \((.*?)\)', line, re.IGNORECASE)
+            if line_upper.startswith('PRIMARY KEY'):
+                pk_match = re.search(r'PRIMARY KEY\s*\(([^)]+)\)', line, re.IGNORECASE)
                 if pk_match:
-                    primary_keys = [col.strip() for col in pk_match.group(1).split(',')]
-            
+                    primary_keys = [col.strip().strip('"') for col in pk_match.group(1).split(',')]
+
             # Index
-            elif 'INDEX' in line.upper():
-                index_match = re.search(r'INDEX (\w+) \((.*?)\)', line, re.IGNORECASE)
+            elif 'INDEX' in line_upper and not line_upper.startswith('CONSTRAINT'):
+                index_match = re.search(r'INDEX\s+(\w+)\s*\(([^)]+)\)', line, re.IGNORECASE)
                 if index_match:
                     indexes.append({
                         'name': index_match.group(1),
                         'columns': [col.strip() for col in index_match.group(2).split(',')]
                     })
-            
-            # Foreign key (pas présent dans ce schema mais au cas où)
-            elif 'FOREIGN KEY' in line.upper() or 'REFERENCES' in line.upper():
-                fk_match = re.search(r'FOREIGN KEY \((.*?)\) REFERENCES (\w+)', line, re.IGNORECASE)
+
+            # Foreign key inline
+            elif 'FOREIGN KEY' in line_upper:
+                fk_match = re.search(
+                    r'FOREIGN KEY\s*\(([^)]+)\)\s*REFERENCES\s+(\w+)', line, re.IGNORECASE
+                )
                 if fk_match:
                     foreign_keys.append({
-                        'column': fk_match.group(1),
-                        'references_table': fk_match.group(2)
+                        'column': fk_match.group(1).strip(),
+                        'references_table': fk_match.group(2).strip()
                     })
-            
-            # Colonne normale
-            elif not line.upper().startswith(('CONSTRAINT', 'UNIQUE', 'CHECK', 'FULLTEXT')):
-                # Parse: column_name type [constraints] [COMMENT 'xxx']
-                col_match = re.match(r'(\w+)\s+(\w+(?:\([\d,]+\))?(?:\s+unsigned)?)(.*)', line, re.IGNORECASE)
-                if col_match:
-                    col_name = col_match.group(1)
-                    col_type = col_match.group(2)
-                    col_constraints = col_match.group(3)
-                    
-                    # Extraire le commentaire si présent
-                    comment = ''
-                    comment_match = re.search(r"COMMENT\s+'(.*?)'", col_constraints, re.IGNORECASE)
-                    if comment_match:
-                        comment = comment_match.group(1)
-                    
-                    # Déterminer si NOT NULL
-                    not_null = 'NOT NULL' in col_constraints.upper()
-                    
-                    # Déterminer si AUTO_INCREMENT
-                    auto_increment = 'AUTO_INCREMENT' in col_constraints.upper()
-                    
-                    # Déterminer la valeur par défaut
-                    default_value = None
-                    default_match = re.search(r"DEFAULT\s+'?([\w()]+)'?", col_constraints, re.IGNORECASE)
-                    if default_match:
-                        default_value = default_match.group(1)
-                    
-                    columns.append({
-                        'name': col_name,
-                        'type': col_type,
-                        'not_null': not_null,
-                        'auto_increment': auto_increment,
-                        'default': default_value,
-                        'comment': comment
-                    })
+
+            # Skip table-level constraints
+            elif line_upper.startswith(('CONSTRAINT', 'UNIQUE', 'CHECK', 'FULLTEXT', 'EXCLUDE')):
+                pass
+
+            # Normal column — PostgreSQL types: CHARACTER VARYING(n), TIMESTAMP(n) WITH TIME ZONE, etc.
+            else:
+                # col_name is always the first word
+                col_name_match = re.match(r'(\w+)\s+(.*)', line, re.IGNORECASE)
+                if not col_name_match:
+                    continue
+                col_name = col_name_match.group(1)
+                rest = col_name_match.group(2).strip()
+
+                # Build a human-readable type string:
+                # match PostgreSQL compound types before anything else
+                type_patterns = [
+                    # CHARACTER VARYING(n) / CHAR VARYING(n)
+                    r'^(CHARACTER\s+VARYING(?:\s*\(\s*\d+\s*\))?)',
+                    # CHARACTER(n) / CHAR(n)
+                    r'^(CHARACTER(?:\s*\(\s*\d+\s*\))?)',
+                    # TIMESTAMP(n) WITH TIME ZONE / WITHOUT TIME ZONE
+                    r'^(TIMESTAMP(?:\s*\(\s*\d+\s*\))?(?:\s+WITH(?:OUT)?\s+TIME\s+ZONE)?)',
+                    # TIME(n) WITH TIME ZONE
+                    r'^(TIME(?:\s*\(\s*\d+\s*\))?(?:\s+WITH(?:OUT)?\s+TIME\s+ZONE)?)',
+                    # DOUBLE PRECISION
+                    r'^(DOUBLE\s+PRECISION)',
+                    # Simple type with optional size: BIGINT, SMALLINT, INTEGER, VARCHAR(n), etc.
+                    r'^(\w+(?:\s*\(\s*[\d,]+\s*\))?)',
+                ]
+                col_type = rest  # fallback: whole rest string
+                rest_after_type = ""
+                for pat in type_patterns:
+                    tm = re.match(pat, rest, re.IGNORECASE)
+                    if tm:
+                        col_type = re.sub(r'\s+', ' ', tm.group(1)).strip()
+                        rest_after_type = rest[tm.end():].strip()
+                        break
+
+                constraints_str = rest_after_type or rest
+                not_null = 'NOT NULL' in constraints_str.upper()
+                auto_increment = 'AUTO_INCREMENT' in constraints_str.upper() or 'SERIAL' in col_type.upper()
+
+                default_value = None
+                default_match = re.search(
+                    r"DEFAULT\s+(.+?)(?:\s+NOT\s+NULL|\s+NULL|\s+CHECK|\s+REFERENCES|\s+UNIQUE|$)",
+                    constraints_str, re.IGNORECASE
+                )
+                if default_match:
+                    default_value = default_match.group(1).strip().rstrip(',')
+
+                comment = ''
+                comment_match = re.search(r"COMMENT\s+'(.*?)'", constraints_str, re.IGNORECASE)
+                if comment_match:
+                    comment = comment_match.group(1)
+
+                columns.append({
+                    'name': col_name,
+                    'type': col_type,
+                    'not_null': not_null,
+                    'auto_increment': auto_increment,
+                    'default': default_value,
+                    'comment': comment
+                })
         
         tables.append({
             'name': table_name,
             'columns': columns,
             'primary_keys': primary_keys,
             'indexes': indexes,
-            'foreign_keys': foreign_keys
+            'foreign_keys': foreign_keys,
+            'fk_out': fk_out.get(table_name, []),  # FK sortantes depuis ALTER TABLE
+            'fk_in':  fk_in.get(table_name, []),   # Tables qui référencent cette table
         })
         
-        print(f"   ✅ {len(columns)} colonnes, {len(indexes)} index")
+        print(f"   ✅ {len(columns)} colonnes, {len(indexes)} index, "
+              f"{len(fk_out.get(table_name, []))} FK sortantes, "
+              f"{len(fk_in.get(table_name, []))} FK entrantes")
     
     return tables
 
@@ -177,29 +241,46 @@ async def inject_schema_to_qdrant(tables):
     success_count = 0
     
     for table in tables:
-        # Créer une description enrichie de la table
-        table_desc = f"""
-Table de base de données: {table['name']}
+        # ── Description enrichie de la table ─────────────────────────────────
+        table_desc = (
+            f"Table BRASIL: {table['name']}\n\n"
+            f"Clé primaire: {', '.join(table['primary_keys']) if table['primary_keys'] else 'Aucune'}\n"
+            f"Nombre de colonnes: {len(table['columns'])}\n\n"
+            "Colonnes:\n"
+        )
 
-Nombre de colonnes: {len(table['columns'])}
-Clés primaires: {', '.join(table['primary_keys']) if table['primary_keys'] else 'Aucune'}
-
-Colonnes:
-"""
-        
         for col in table['columns']:
-            table_desc += f"\n- {col['name']} ({col['type']})"
+            line = f"- {col['name']} ({col['type']})"
             if col['not_null']:
-                table_desc += " NOT NULL"
+                line += " NOT NULL"
             if col['auto_increment']:
-                table_desc += " AUTO_INCREMENT"
+                line += " AUTO_INCREMENT"
             if col['comment']:
-                table_desc += f" -- {col['comment']}"
-        
+                line += f" -- {col['comment']}"
+            table_desc += line + "\n"
+
+        # FK sortantes : cette table → autres tables
+        fk_out = table.get('fk_out', [])
+        if fk_out:
+            table_desc += "\nClés étrangères (sortantes — cette table référence) :\n"
+            for fk in fk_out:
+                table_desc += (
+                    f"- {fk['column']} → {fk['ref_table']}.{fk['ref_column']}\n"
+                )
+
+        # FK entrantes : tables qui référencent cette table
+        fk_in = table.get('fk_in', [])
+        if fk_in:
+            table_desc += "\nTables qui référencent cette table (FK entrantes) :\n"
+            for fk in fk_in:
+                table_desc += (
+                    f"- {fk['from_table']}.{fk['fk_column']} → {fk['ref_column']}\n"
+                )
+
         if table['indexes']:
-            table_desc += "\n\nIndex:"
+            table_desc += "\nIndex:\n"
             for idx in table['indexes']:
-                table_desc += f"\n- {idx['name']} sur ({', '.join(idx['columns'])})"
+                table_desc += f"- {idx['name']} sur ({', '.join(idx['columns'])})\n"
         
         # Générer l'embedding
         embedding = model.encode(table_desc).tolist()
@@ -211,14 +292,19 @@ Colonnes:
             payload={
                 "code": table_desc,
                 "snippet_id": f"db-table-{table['name']}",
-                "name": f"Table {table['name']}",
+                "name": f"Table BRASIL: {table['name']}",
                 "type": "database_table",
                 "language": "sql",
                 "file_path": f"database/tables/{table['name']}",
                 "table_name": table['name'],
                 "column_count": len(table['columns']),
+                "primary_keys": table['primary_keys'],
                 "has_primary_key": len(table['primary_keys']) > 0,
-                "index_count": len(table['indexes'])
+                "index_count": len(table['indexes']),
+                "fk_out_count": len(table.get('fk_out', [])),
+                "fk_in_count": len(table.get('fk_in', [])),
+                "referenced_by": [fk['from_table'] for fk in table.get('fk_in', [])],
+                "references": [fk['ref_table'] for fk in table.get('fk_out', [])],
             }
         )
         
