@@ -1,0 +1,70 @@
+{
+  "level_1_categories": [
+    {
+      "name": "INCIDENT_UTILISATEUR",
+      "description": "Problèmes liés au comportement, droits, erreurs humaines ou demandes non justifiées de l'utilisateur.",
+      "level_2_categories": ["MAUVAIS_USAGE", "ANNULATION_UTILISATEUR", "INCIDENT_DISPARU", "ASSISTANCE_UTILISATEUR"]
+    },
+    {
+      "name": "INCIDENT_APPLICATIF",
+      "description": "Dysfonctionnements dans la logique applicative, fonctionnalités, traitements ou composants d'interface.",
+      "level_2_categories": ["BUG_FONCTIONNEL", "TRAITEMENT_INCOMPLET", "NON_CONFORMITE_APPLICATIVE", "INTERFACE_APPLICATIVE"]
+    },
+    {
+      "name": "INCIDENT_DONNEES",
+      "description": "Problèmes d'intégrité, de corruption, d'incohérence ou de qualité des données applicatives.",
+      "level_2_categories": ["INCOHERENCE_DONNEES", "DONNEES_CORROMPUES", "CORRECTION_AUTOMATIQUE"]
+    },
+    {
+      "name": "INCIDENT_INFRASTRUCTURE",
+      "description": "Pannes ou dégradations matérielles, réseau, serveur ou middleware.",
+      "level_2_categories": ["SERVEUR_RESEAU", "INTERFACE_SYSTEME"]
+    },
+    {
+      "name": "DEMANDE_SERVICE",
+      "description": "Demandes planifiées, travaux, évolutions, annulations de processus ou causes non déterminées.",
+      "level_2_categories": ["DEMANDE_TRAVAUX", "ANNULATION_PROCESS", "CAUSE_INDETERMINEE"]
+    }
+  ],
+  "level_2_descriptions": {
+    "MAUVAIS_USAGE":                "L'utilisateur n'utilise pas correctement l'application (méconnaissance, mauvaise pratique).",
+    "ANNULATION_UTILISATEUR":       "L'incident a été annulé à la demande de l'utilisateur (résolu de son côté, erreur de déclaration).",
+    "INCIDENT_DISPARU":             "L'incident signalé n'est plus reproductible ou a disparu spontanément.",
+    "ASSISTANCE_UTILISATEUR":       "L'utilisateur a besoin d'aide ou d'accompagnement sans dysfonctionnement réel.",
+    "BUG_FONCTIONNEL":              "Comportement inattendu ou incorrect d'une fonctionnalité applicative.",
+    "TRAITEMENT_INCOMPLET":         "Un traitement métier s'est arrêté prématurément ou ne s'est pas terminé.",
+    "NON_CONFORMITE_APPLICATIVE":   "L'application ne respecte pas les règles métier ou les spécifications attendues.",
+    "INTERFACE_APPLICATIVE":        "Problème d'interface ou d'échange entre composants applicatifs.",
+    "INCOHERENCE_DONNEES":          "Les données présentent des incohérences logiques sans corruption avérée.",
+    "DONNEES_CORROMPUES":           "Les données sont corrompues ou invalides suite à un dysfonctionnement.",
+    "CORRECTION_AUTOMATIQUE":       "L'incohérence a été corrigée automatiquement par un outil ou un script.",
+    "SERVEUR_RESEAU":               "Panne ou dégradation sur un serveur physique, virtuel ou réseau.",
+    "INTERFACE_SYSTEME":            "Problème d'interface ou d'échange entre systèmes (Oracle, middleware, etc.).",
+    "DEMANDE_TRAVAUX":              "Demande planifiée de travaux, d'évolution ou de prestation.",
+    "ANNULATION_PROCESS":           "Un processus ou workflow a été annulé (non liée à une erreur utilisateur).",
+    "CAUSE_INDETERMINEE":           "La cause racine n'a pas pu être déterminée."
+  },
+  "label_mapping": {
+    "ANNULATION PROCESS":                             { "level_1": "DEMANDE_SERVICE",         "level_2": "ANNULATION_PROCESS" },
+    "ANNULATION UTILISATEUR":                         { "level_1": "INCIDENT_UTILISATEUR",     "level_2": "ANNULATION_UTILISATEUR" },
+    "APPLICATIF":                                     { "level_1": "INCIDENT_APPLICATIF",      "level_2": "BUG_FONCTIONNEL" },
+    "APPLICATION COMPOSANT - FONCTIONNALITE":         { "level_1": "INCIDENT_APPLICATIF",      "level_2": "BUG_FONCTIONNEL" },
+    "ASSISTANCE":                                     { "level_1": "INCIDENT_UTILISATEUR",     "level_2": "ASSISTANCE_UTILISATEUR" },
+    "BON USAGE":                                      { "level_1": "INCIDENT_UTILISATEUR",     "level_2": "MAUVAIS_USAGE" },
+    "CAUSE INDETERMINEE":                             { "level_1": "DEMANDE_SERVICE",          "level_2": "CAUSE_INDETERMINEE" },
+    "DEMANDE DE TRAVAUX":                             { "level_1": "DEMANDE_SERVICE",          "level_2": "DEMANDE_TRAVAUX" },
+    "DONNEES":                                        { "level_1": "INCIDENT_DONNEES",         "level_2": "INCOHERENCE_DONNEES" },
+    "FONCTIONNALITE - DONNEE CORROMPUE":              { "level_1": "INCIDENT_DONNEES",         "level_2": "DONNEES_CORROMPUES" },
+    "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT":       { "level_1": "INCIDENT_DONNEES",         "level_2": "CORRECTION_AUTOMATIQUE" },
+    "INCOHERENCE DE DONNEES":                         { "level_1": "INCIDENT_DONNEES",         "level_2": "INCOHERENCE_DONNEES" },
+    "INFRASTRUCTURE TECHNIQUE - SERVEUR ET RESEAU":   { "level_1": "INCIDENT_INFRASTRUCTURE",  "level_2": "SERVEUR_RESEAU" },
+    "INTERFACE AUTRE":                                { "level_1": "INCIDENT_APPLICATIF",      "level_2": "INTERFACE_APPLICATIVE" },
+    "INTERFACE ORACLE":                               { "level_1": "INCIDENT_INFRASTRUCTURE",  "level_2": "INTERFACE_SYSTEME" },
+    "MECONNAISSANCE USAGE":                           { "level_1": "INCIDENT_UTILISATEUR",     "level_2": "MAUVAIS_USAGE" },
+    "NON CONFORMITE":                                 { "level_1": "INCIDENT_APPLICATIF",      "level_2": "NON_CONFORMITE_APPLICATIVE" },
+    "SERVEUR":                                        { "level_1": "INCIDENT_INFRASTRUCTURE",  "level_2": "SERVEUR_RESEAU" },
+    "TRAITEMENT IMPOSSIBLE - DESCRIPTION INCOMPLETE": { "level_1": "INCIDENT_APPLICATIF",      "level_2": "TRAITEMENT_INCOMPLET" },
+    "UTILISATEUR":                                    { "level_1": "INCIDENT_UTILISATEUR",     "level_2": "ASSISTANCE_UTILISATEUR" },
+    "UTILISATEUR - INCIDENT DISPARU":                 { "level_1": "INCIDENT_UTILISATEUR",     "level_2": "INCIDENT_DISPARU" }
+  }
+}

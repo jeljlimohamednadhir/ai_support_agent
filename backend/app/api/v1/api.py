@@ -19,6 +19,7 @@ from app.api.v1.endpoints import (
     classification_ml,
     apps,
     intelligence,
+    hierarchical_ml,
 )
 
 api_router = APIRouter()
@@ -39,3 +40,4 @@ api_router.include_router(config.router, prefix="/config", tags=["config"])
 api_router.include_router(classification_ml.router, prefix="/classification-ml", tags=["classification-ml"])
 api_router.include_router(apps.router, prefix="/apps", tags=["apps"])
 api_router.include_router(intelligence.router, prefix="/intelligence", tags=["intelligence"])
+api_router.include_router(hierarchical_ml.router, prefix="/hierarchical-ml", tags=["hierarchical-ml"])
