@@ -258,16 +258,94 @@ class VectorService:
             # Pattern: "table XXX" ou "XXX ?" ou juste un nom de table
             import re
             table_patterns = [
-                r'table\s+(\w+)',  # "table qd_anomalie"
+                r'table\s+(\w+)',  # "table qd_anomalie" ou "table t_ports"
                 r'(\w+)\s*\?',      # "qd_anomalie?"
-                r'\b((?:qd|rip|ora|aml|ano|ref|file|lv|i)_\w+)\b'  # Préfixes connus de tables
+                r'\b((?:t|qd|rip|ora|aml|ano|ref|file|lv|i|d_|lst|encoding)_\w+)\b'  # Préfixes connus (t_ = BRASIL)
             ]
+
+            # Mapping français → anglais pour les mots-clés courants BRASIL
+            _FR_TO_EN_TABLE_KEYWORDS = {
+                "equipement": "equipment",
+                "equipements": "equipments",
+                "équipement": "equipment",
+                "équipements": "equipments",
+                "port": "port",
+                "ports": "ports",
+                "carte": "card",
+                "cartes": "cards",
+                "slot": "slot",
+                "slots": "slots",
+                "noeud": "node",
+                "noeuds": "nodes",
+                "operateur": "operator",
+                "opérateur": "operator",
+                "operateurs": "operators",
+                "opérateurs": "operators",
+                "role": "role",
+                "roles": "roles",
+                "prestation": "prestation",
+                "prestations": "prestations",
+                "serveur": "server",
+                "serveurs": "servers",
+                "modele": "model",
+                "modeles": "models",
+                "modèle": "model",
+                "modèles": "models",
+                "logement": "shelf",
+                "logements": "shelfs",
+                "tiroir": "shelf",
+                "profil": "profile",
+                "profils": "profiles",
+                "ressource": "resource",
+                "ressources": "resources",
+                "media": "media",
+                "lien": "link",
+                "liens": "links",
+                "brassage": "stripe",
+                "brassages": "stripes",
+                "fabricant": "manufacturer",
+                "fabricants": "manufacturers",
+                "technologie": "technology",
+                "technologies": "technology",
+                "mutation": "mutation",
+                "mutations": "mutations",
+                "remplacement": "swap",
+                "remplacements": "swaps",
+                "distribution": "distributor",
+                "distributeurs": "distributors",
+                "dslam": "dslam",
+                "vlan": "vlan",
+                "acces": "access",
+                "accès": "access",
+            }
             
             potential_table_names = set()
             for pattern in table_patterns:
                 matches = re.findall(pattern, query_lower)
                 potential_table_names.update(matches)
-            
+
+            # Recherche fuzzy: extraire les mots-clés de la requête et chercher
+            # les tables dont le nom contient ces mots-clés (FR→EN inclus)
+            _fuzzy_keywords = set()
+            for word in re.findall(r'\b\w{4,}\b', query_lower):
+                _fuzzy_keywords.add(word)
+                en_word = _FR_TO_EN_TABLE_KEYWORDS.get(word)
+                if en_word:
+                    _fuzzy_keywords.add(en_word)
+
+            def _scroll_tables_by_keyword(keyword: str) -> list:
+                """Scroll Qdrant pour trouver les tables dont le nom contient le keyword."""
+                try:
+                    all_pts, _next = self.client.scroll(
+                        collection_name="code_knowledge",
+                        scroll_filter={'must': [{'key': 'type', 'match': {'value': 'database_table'}}]},
+                        limit=200,
+                        with_payload=True,
+                    )
+                    return [p for p in all_pts if keyword in (p.payload.get('table_name') or '').lower()]
+                except Exception:
+                    return []
+
             # Rechercher chaque nom de table potentiel directement
             for table_name in potential_table_names:
                 try:
@@ -300,6 +378,27 @@ class VectorService:
                         logger.info(f"[OK] Correspondance exacte trouvée: {table_name}")
                 except Exception as e:
                     logger.debug(f"Pas de correspondance exacte pour {table_name}: {e}")
+
+            # Recherche fuzzy si aucune correspondance exacte
+            if not exact_matches:
+                seen_ids = set()
+                for kw in _fuzzy_keywords:
+                    if len(exact_matches) >= top_k:
+                        break
+                    for point in _scroll_tables_by_keyword(kw):
+                        pid = str(point.id)
+                        if pid not in seen_ids:
+                            seen_ids.add(pid)
+                            exact_matches.append({
+                                'id': point.payload.get('snippet_id', pid),
+                                'code': point.payload.get('code', ''),
+                                'metadata': {k: v for k, v in point.payload.items() if k not in ['code', 'snippet_id']},
+                                'distance': 0.1,
+                                'original_score': 0.9,
+                                'boost_applied': 0.0,
+                                'match_type': 'fuzzy_keyword'
+                            })
+                            logger.info(f"[OK] Correspondance fuzzy trouvée: {point.payload.get('table_name')} (kw={kw})")
             
             # ÉTAPE 2: Recherche vectorielle sémantique
             query_embedding = self.embedding_model.encode(query).tolist()

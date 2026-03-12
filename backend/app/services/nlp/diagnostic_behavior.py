@@ -3,14 +3,18 @@ Diagnostic Behavior Module — Anti-hallucination, slot filling, structured diag
 Extends chatbot_service.py with structured diagnostic reasoning.
 
 Implements:
+  - ConversationPhase / ConversationState: explicit conversation state machine
   - SlotFiller: extracts missing context from conversation
   - DiagnosticReasoner: structures multi-step diagnostic conversations
   - AntiHallucinationGuard: ensures responses stay grounded in KB
   - ResponseFormatter: formats responses using the N3 support template
+  - Role-aware response generation (N3 engineer / colleague / depositor)
+  - Humanized style directives
 """
+import json
 import re
 from typing import List, Dict, Optional, Any, Tuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from enum import Enum
 
 from app.services.nlp.enricher import ticket_enricher, StructuredTicket
@@ -18,6 +22,448 @@ from app.services.nlp.taxonomy import INCIDENT_TAXONOMY
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+# ─────────────────────────────────────────────
+# Known application systems (used by context isolation)
+# ─────────────────────────────────────────────
+
+KNOWN_SYSTEMS: List[str] = [
+    "BRASIL", "ORRAHD", "SEBA", "42C", "ARTEMIS", "IPON",
+    "ADELIA", "SCA", "ORCHESTRA", "NECTAR", "TIGRE", "DSLAM",
+    "ONT", "OLT", "GPON",
+]
+
+# Liste complète des tables du schéma BRASIL (extraite de brasil_db.sql)
+# Utilisée pour guider le LLM quand la recherche vectorielle ne trouve pas de résultat exact
+BRASIL_SCHEMA_TABLES: List[str] = [
+    "encoding_correct",
+    "lst_presta_new_offres", "lst_presta_offres", "lst_presta_recap_detail",
+    "lst_presta_recap_graph_details", "lst_presta_recap_graph_total",
+    "lst_presta_recap_total", "lst_presta_techno", "lst_vlan_usage",
+    "t_application_configs", "t_application_parameter_values", "t_application_parameters",
+    "t_atm_profiles", "t_bays", "t_card_models", "t_card_national_profiles",
+    "t_card_soft_vers", "t_cardmodels_sfp", "t_cards",
+    "t_d_booked_ports", "t_d_controlable_rscs", "t_d_dslam_logical_shelfs",
+    "t_d_dslam_manelems", "t_d_dslam_xdsl_cards", "t_d_need_new_vcs",
+    "t_d_rsc_dslam_tsfs", "t_d_rsc_vcis", "t_d_xdsl_card_stripes",
+    "t_distributors", "t_dr", "t_dslam_access_constraints", "t_dslam_assignments",
+    "t_dslam_soft_vers", "t_epc_order_lines", "t_epc_vers", "t_epc_vers_comps",
+    "t_epc_vers_impacts", "t_epcs", "t_eqpt_shf_mdl_compatibilities",
+    "t_equipments", "t_es", "t_es_connexions", "t_es_habilitations",
+    "t_es_logs", "t_es_types", "t_ftth_lock_onts", "t_function_codes",
+    "t_group_localisation", "t_icc_updates", "t_interfaces", "t_line_profiles",
+    "t_link_dr_group_localisation", "t_local_areas", "t_logical_eqpt_models",
+    "t_making_files", "t_manufacturers", "t_media_links",
+    "t_mrt_access_dslam_vers", "t_mrt_access_dslams", "t_mrt_access_msan_usage",
+    "t_mrt_access_service_vers", "t_mrt_access_services", "t_mrt_types",
+    "t_mrt_vers_impacts", "t_mutations_requests", "t_net_port_models",
+    "t_net_resource_rels", "t_nip_server_assocs", "t_no_back_on_technos",
+    "t_nodes", "t_ont_profiles", "t_operators",
+    "t_p_intsiam_concat_offers", "t_p_intsiam_offers", "t_p_pcp_repos",
+    "t_p_slot_repos", "t_p_talia_logical_bays", "t_p_talia_service_ids",
+    "t_p_tech_service_filters", "t_p_tst_to_comp_servs",
+    "t_port_groups", "t_ports", "t_prestations", "t_res_prod_controlables",
+    "t_res_prod_controlers", "t_res_prod_roles", "t_resource_constraints",
+    "t_resource_usages", "t_roles", "t_rooms", "t_rows",
+    "t_server_constraints", "t_servers", "t_service_commit", "t_service_profiles",
+    "t_sfp_module_port_assocs", "t_sfp_modules", "t_shelf_models", "t_shelfs",
+    "t_sites", "t_slot_models", "t_slots", "t_st_components",
+    "t_stripe_models", "t_stripes", "t_swap_requests",
+    "t_tech_serv_functions", "t_tech_serv_types", "t_tech_services",
+    "t_techno_on_card_nat_profiles", "t_technology_types", "t_throughputs",
+    "t_tp_ccl_atms", "t_tp_initial_states", "t_tp_shelfs", "t_tps",
+    "t_tr_assignments", "t_tr_functions", "t_trs",
+    "t_tsf_family_assoc", "t_tsf_usage_assoc", "t_tst_closed_on_cards",
+    "t_tst_closed_on_shelfs", "t_tst_on_card_nat_profiles", "t_tst_on_dslams",
+    "t_tst_without_mrts", "t_usage_constraints", "t_vc_lock_ranges",
+]
+
+
+# ─────────────────────────────────────────────
+# Conversation Phase State Machine
+# ─────────────────────────────────────────────
+
+class ConversationPhase(str, Enum):
+    DIAGNOSTIC    = "diagnostic"
+    INVESTIGATION = "investigation"
+    RESOLUTION    = "resolution"
+    CLOSING       = "closing"
+
+
+@dataclass
+class ConversationState:
+    """
+    Tracks the full state of an ongoing support conversation.
+    Serialised as JSON in each ChatResponse and restored at the next turn.
+    """
+    phase: ConversationPhase = ConversationPhase.DIAGNOSTIC
+    application: str = ""
+    incident_summary: str = ""
+    confirmed_root_cause: Optional[str] = None    # locked once confirmed
+    confirmed_procedure_id: Optional[str] = None  # procedure that was applied
+    resolution_confirmed: bool = False
+    audience: str = "n3_engineer"                 # "n3_engineer" | "colleague" | "depositor"
+    locked_systems: List[str] = field(default_factory=list)   # systems in scope
+    excluded_systems: List[str] = field(default_factory=list) # systems to exclude from RAG
+    turn_count: int = 0
+    # Maps a normalised question fingerprint → how many times it was asked unanswered.
+    # Used to detect loops (same question repeated ≥ 2 times) and trigger escalation.
+    repeated_questions: Dict[str, int] = field(default_factory=dict)
+
+    def register_question(self, question: str) -> int:
+        """
+        Registers a question and returns the number of times it has been asked.
+        The key is a normalised fingerprint (lower-cased, stripped, truncated to 80 chars)
+        so minor reformulations of the same question count as one.
+        """
+        key = question.strip().lower()[:80]
+        # Strip common filler words so "c'est quoi t_es" and "dis moi c'est quoi t_es" map to the same key
+        key = re.sub(r"^(dis[- ]moi|c'est quoi|qu'est[- ]ce que|pouvez[- ]vous (m')?expliquer|explique[- ]moi)\s+", "", key)
+        self.repeated_questions[key] = self.repeated_questions.get(key, 0) + 1
+        return self.repeated_questions[key]
+
+    def to_json(self) -> str:
+        d = asdict(self)
+        d["phase"] = self.phase.value
+        return json.dumps(d, ensure_ascii=False)
+
+    @classmethod
+    def from_json(cls, s: str) -> "ConversationState":
+        try:
+            d = json.loads(s)
+            d["phase"] = ConversationPhase(d.get("phase", "diagnostic"))
+            d.setdefault("repeated_questions", {})
+            return cls(**d)
+        except Exception:
+            return cls()
+
+
+# ─────────────────────────────────────────────
+# Phase transition patterns
+# ─────────────────────────────────────────────
+
+_TRANSITION_TO_INVESTIGATION = re.compile(
+    r"\b(j'ai\s+v[eé]rifi[eé]|les\s+logs\s+montrent|j'ai\s+trouv[eé]|"
+    r"j'ai\s+constat[eé]|en\s+regardant|apr[eè]s\s+v[eé]rification|"
+    r"la\s+cause\s+semble|le\s+probl[eè]me\s+vient\s+de|j'ai\s+identifi[eé]|"
+    r"j'ai\s+remarqu[eé]|on\s+voit\s+que|j'observe)\b",
+    re.IGNORECASE,
+)
+
+_TRANSITION_TO_RESOLUTION = re.compile(
+    r"\b(comment\s+(r[eé]soudre|corriger|proc[eé]der)|quelle\s+(est\s+la\s+)?proc[eé]dure|"
+    r"quelles?\s+(sont\s+les\s+)?[eé]tapes|FR\s+pour|appliquer\s+la\s+proc[eé]dure|"
+    r"que\s+faire\s+maintenant|que\s+dois[- ]je\s+faire|comment\s+corriger|"
+    r"comment\s+r[eé]gler|proc[eé]dure\s+de\s+r[eé]solution)\b",
+    re.IGNORECASE,
+)
+
+_TRANSITION_TO_CLOSING = re.compile(
+    r"\b(message\s+de\s+cl[oô]ture|fermer\s+le\s+ticket|cl[oô]turer|"
+    r"informer\s+le\s+d[eé]positaire|[eé]crire\s+au\s+(client|d[eé]positaire|demandeur)|"
+    r"g[eé]n[eè]re\s+le\s+message|ticket\s+r[eé]solu|c'est\s+r[eé]solu|"
+    r"probl[eè]me\s+r[eé]gl[eé]|r[eé]solution\s+confirm[eé]e|"
+    r"notifier\s+(le\s+)?(client|d[eé]positaire)|communiquer\s+(la\s+)?r[eé]solution|"
+    r"cl[oô]ture\s+du\s+ticket|ticket\s+[àa]\s+fermer|on\s+peut\s+fermer)\b",
+    re.IGNORECASE,
+)
+
+_ROOT_CAUSE_CONFIRMATION = re.compile(
+    r"(?:"
+    r"la\s+cause\s+(racine\s+)?(est|[eé]tait|c'est|c'[eé]tait)|"
+    r"la\s+cause\s+[eé]tait|"
+    r"le\s+probl[eè]me\s+(vient|venait|est|[eé]tait)\s+(de|du|des|d'un|d'une)|"
+    r"j'ai\s+(identifi[eé]|confirm[eé]|trouv[eé])\s+(que|la\s+cause)|"
+    r"cause\s*[:\-]\s*.{5,}|"
+    r"root\s+cause\s*[:\-]\s*.{5,}|"
+    r"en\s+cause\s*[:\-]\s*.{5,}"
+    r")",
+    re.IGNORECASE,
+)
+
+
+# ─────────────────────────────────────────────
+# Intent Override Detection
+# Forces the correct intent pipeline for well-known signal patterns,
+# independently of the ML-based intent classifier confidence.
+# Designed to be general — covers all apps / all cases matching the pattern.
+# ─────────────────────────────────────────────
+
+# Signals that a script / batch / job is stuck in a running state.
+# Applies to any script, batch, job or service described as blocked/running.
+_SCRIPT_BLOCKED_PATTERNS: List = [
+    re.compile(r"script\s+bloqu[eé]", re.IGNORECASE),
+    re.compile(r"bloqu[eé]\s+en\s+cours", re.IGNORECASE),
+    re.compile(r"en\s+cours\s+d.ex[eé]cution.*bloqu[eé]", re.IGNORECASE),
+    re.compile(r"bloqu[eé].*en\s+cours\s+d.ex[eé]cution", re.IGNORECASE),
+    re.compile(r"(batch|traitement|job|processus|script)\s+(est\s+)?bloqu[eé]", re.IGNORECASE),
+    re.compile(r"statut.*en\s+cours.*depui[s]?", re.IGNORECASE),
+    re.compile(r"(IHM|lancement).*script.*bloqu[eé]", re.IGNORECASE),
+    re.compile(r"(d[eé]bloquer|d[eé]blocage).*script", re.IGNORECASE),
+    re.compile(r"script.*ne\s+(se\s+)?termin[e]?(pas|plus)", re.IGNORECASE),
+    re.compile(r"forcer\s+(la\s+)?fin\s+(du\s+)?script", re.IGNORECASE),
+    re.compile(r"remettre\s+(le\s+)?statut", re.IGNORECASE),
+    # ── Newly added patterns (from gap analysis) ──────────────────────────
+    # User explicitly asks to stop/kill the script (without saying 'bloqué')
+    re.compile(r"arr[eê]ter\s+(le\s+)?script", re.IGNORECASE),
+    re.compile(r"arr[eê]tez\s+(le\s+)?(script|traitement|batch|job|processus)", re.IGNORECASE),
+    re.compile(r"arr[eê]ter\s+(le\s+)?(traitement|batch|job|processus)", re.IGNORECASE),
+    # User asks to set the status to error (mettre en erreur)
+    re.compile(r"mettre.{0,20}en\s+erreur", re.IGNORECASE),
+    re.compile(r"passer.{0,20}en\s+erreur", re.IGNORECASE),
+    re.compile(r"forcer.{0,20}(statut|[eé]tat).{0,20}erreur", re.IGNORECASE),
+    re.compile(r"(statut|[eé]tat).{0,20}(erreur|en_erreur|error)", re.IGNORECASE),
+    # Script/process in a running state without explicitly saying 'bloqué'
+    re.compile(r"reste\s+en\s+cours\s+d.ex[eé]cution", re.IGNORECASE),
+    re.compile(r"toujours\s+en\s+cours\s+d.ex[eé]cution", re.IGNORECASE),
+    re.compile(r"encore\s+en\s+cours\s+d.ex[eé]cution", re.IGNORECASE),
+    re.compile(r"(script|traitement|batch|job)\s+.*\s+encore\s+bloqu[eé]", re.IGNORECASE),
+    re.compile(r"tuer\s+(le\s+)?(script|processus|batch|job)", re.IGNORECASE),
+    re.compile(r"interrompre\s+(le\s+)?(script|traitement|batch|job)", re.IGNORECASE),
+    re.compile(r"stopper\s+(le\s+)?(script|traitement|batch|job)", re.IGNORECASE),
+]
+
+# Signals that the user is asking about a database table entity.
+# Pattern: identifiers of the form t_<word> (BRASIL convention) or
+# explicit mentions of 'table' followed by a name.
+_DB_TABLE_PATTERN = re.compile(
+    r"\b(t_[a-z_]{2,40}\b|table\s+[a-z_]{2,40}|la\s+table\s+[\w_]+|expliqu[e]?\s+(la\s+)?table\s+[\w_]+|c'est\s+quoi\s+(la\s+)?table\s+[\w_]+|d[eé]cri[st]\s+(la\s+)?table\s+[\w_]+)",
+    re.IGNORECASE,
+)
+
+# Signals that the user is asking about a specific FR / procedure by number or keyword.
+_PROCEDURE_LOOKUP_PATTERN = re.compile(
+    r"(?:"
+    r"\bFR[\s\-_]?\d{2,6}\b"  # FR 164, FR-164, FR_164
+    r"|fiche\s+(de\s+)?r[eé]solution\s+\d+"  # fiche de résolution 164
+    r"|proc[eé]dure\s+\d+"  # procédure 164
+    r"|comment\s+(appliquer|utiliser)\s+(la\s+)?FR"  # comment appliquer la FR
+    r"|d[eé]tail[s]?\s+(de\s+(la\s+)?)?FR"  # détails de la FR
+    r"|plus\s+de\s+d[eé]tails\s+sur\s+(la\s+)?FR"  # plus de détails sur la FR
+    r"|\bsur\s+(la\s+)?FR[\s\-_]?\d{2,6}\b"  # sur FR 164
+    r"|d[eé]cri[st]\s+(la\s+)?FR"  # décris la FR
+    r"|explique[\s\-]?(la\s+)?FR[\s\-_]?\d{2,6}"  # explique FR 164
+    r")",
+    re.IGNORECASE,
+)
+
+
+# Signals that the user wants a summary of the ongoing conversation to report to management.
+_SUMMARIZE_FOR_SUPERIOR_PATTERN = re.compile(
+    r"(?:"
+    r"(que|quoi|qu')\s*(dire|rapporter|communiquer|r[eé]pondre|transmettre|envoyer)\s*.{0,20}(sup[eé]rieur|chef|manager|hi[eé]rarchie|n[+]?[12]|direction|responsable|encadrant)"
+    r"|je\s+dis\s+quoi"
+    r"|(que|quoi)\s+(dire|transmettre|communiquer|rapporter|r[eé]pondre|d[io]re)\s*(\w+\s+){0,3}(sup[eé]rieur|chef|manager|n[+]?[12]|hi[eé]rarchie|direction|responsable)"
+    r"|r[eé]sume\s+(moi|la|le|l'|ce|cet|cette|l'incident|la\s+situation|le\s+probl[eè]me)"
+    r"|(fais|g[eé]n[eè]re|donne|[eé]cri[st])\s+(moi\s+)?(un\s+)?r[eé]sum[eé]"
+    r"|comment\s+(r[eé]sumer|pr[eé]senter|expliquer)\s*(l'|la\s+)?(incident|situation|probl[eè]me)"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def detect_intent_override(message: str) -> Optional[str]:
+    """
+    Forces the correct intent when well-known signal patterns are present,
+    bypassing the ML classifier.
+
+    Returns one of:
+      'procedure_lookup_script_blocked'  — script/batch stuck in a running state
+      'tech_inference_schema'            — user is asking about a DB table entity
+      'procedure_lookup'                 — user is asking about a specific FR/procedure
+      'summarize'                        — user wants a summary to report to management
+      None                               — no override; let the classifier decide
+
+    This is intentionally generic: patterns match all apps and all cases,
+    not just the example that triggered the fix.
+    """
+    # Summarize for management — check before DB table (prevent false match on 'table résumée')
+    if _SUMMARIZE_FOR_SUPERIOR_PATTERN.search(message):
+        return "summarize"
+
+    # DB table query: must check first — a table question is never a script block
+    if _DB_TABLE_PATTERN.search(message):
+        return "tech_inference_schema"
+
+    # Script / batch / job blocked
+    for pattern in _SCRIPT_BLOCKED_PATTERNS:
+        if pattern.search(message):
+            return "procedure_lookup_script_blocked"
+
+    # Specific FR / procedure lookup
+    if _PROCEDURE_LOOKUP_PATTERN.search(message):
+        return "procedure_lookup"
+
+    return None
+
+
+def detect_phase_transition(
+    current_phase: ConversationPhase,
+    message: str,
+) -> Optional[ConversationPhase]:
+    """
+    Returns the new phase if a transition is detected, else None.
+    CLOSING can be triggered from any phase.
+    """
+    # Closing override — can come from any phase
+    if _TRANSITION_TO_CLOSING.search(message):
+        return ConversationPhase.CLOSING
+
+    if current_phase == ConversationPhase.DIAGNOSTIC:
+        if _TRANSITION_TO_INVESTIGATION.search(message):
+            return ConversationPhase.INVESTIGATION
+        if _TRANSITION_TO_RESOLUTION.search(message):
+            return ConversationPhase.RESOLUTION
+
+    if current_phase == ConversationPhase.INVESTIGATION:
+        if _TRANSITION_TO_RESOLUTION.search(message):
+            return ConversationPhase.RESOLUTION
+
+    return None
+
+
+def extract_root_cause(message: str) -> Optional[str]:
+    """
+    Extracts the root cause text from a user message.
+    Returns the cause string or None if not found.
+    """
+    m = _ROOT_CAUSE_CONFIRMATION.search(message)
+    if not m:
+        return None
+    start = m.end()
+    cause_text = message[start:start + 300].strip().split("\n")[0].strip()
+    # Fallback: if the pattern already contains the cause (e.g. "cause: text")
+    if len(cause_text) < 10:
+        # Try to grab the full sentence containing the match
+        sentence = message[max(0, m.start() - 10):m.start() + 300].strip()
+        return sentence if len(sentence) > 10 else None
+    return cause_text
+
+
+# ─────────────────────────────────────────────
+# Audience detection
+# ─────────────────────────────────────────────
+
+_DEPOSITOR_INDICATORS = re.compile(
+    r"(?:"
+    # Original: explicit N3-to-depositor communication signals
+    r"\b(message\s+(pour|au?)\s+d[eé]positaire|informer\s+le\s+(client|d[eé]positaire|demandeur)"
+    r"|[eé]crire\s+au\s+(client|d[eé]positaire|demandeur)|notification\s+(client|d[eé]positaire)"
+    r"|r[eé]pondre\s+au\s+(client|d[eé]positaire)|message\s+de\s+cl[oô]ture)\b"
+    # ── Newly added: end-user (depositor) messages ──────────────────────
+    # Polite request to perform an action (the depositor cannot do themselves)
+    r"|\b(pouvez[- ]vous\s+(arr[eê]ter|stopper|interrompre|tuer|relancer|red[eé]marrer|r[eé]initialiser|d[eé]bloquer))"
+    # First-person problem report (both apostrophe variants)
+    r"|\b(j[’']\s*ai\s+(de\s+nouveau\s+|encore\s+)?(demand[eé]|soumis|envoy[eé]|relac[eé]))"
+    r"|\b(ma\s+demande|mon\s+ticket|ma\s+requ[eê]te|mon\s+incident)\s+(est|reste|n[’']est\s+pas)"
+    r"|\b(je\s+pense\s+qu[’'](e\s+|il)|selon\s+moi|il\s+me\s+semble)\b"
+    # Explicit reference to 'le script' without N3 procedure vocabulary
+    r"|\b(mettre.{0,20}en\s+erreur|passer.{0,20}en\s+erreur)"
+    r")",
+    re.IGNORECASE,
+)
+
+_COLLEAGUE_INDICATORS = re.compile(
+    r"\b(expliquer?\s+[àa]\s+(mon|un)\s+coll[eè]gue|r[eé]sumer?\s+pour\s+(l'[eé]quipe|l'ing[eé]nieur)|"
+    r"note\s+(interne|d'[eé]quipe)|transmettre\s+[àa]\s+l'[eé]quipe)\b",
+    re.IGNORECASE,
+)
+
+
+def detect_audience(message: str, phase: ConversationPhase) -> str:
+    """
+    Returns "depositor", "colleague", or "n3_engineer" based on message + phase.
+    """
+    if _DEPOSITOR_INDICATORS.search(message) or phase == ConversationPhase.CLOSING:
+        return "depositor"
+    if _COLLEAGUE_INDICATORS.search(message):
+        return "colleague"
+    return "n3_engineer"
+
+
+# ─────────────────────────────────────────────
+# Role-aware system prompts
+# ─────────────────────────────────────────────
+
+ROLE_SYSTEM_PROMPTS: Dict[str, str] = {
+    "n3_engineer": (
+        "\n--- STYLE ET TON (Ingénieur N3) ---\n"
+        "Tu t'adresses à un ingénieur N3 expert. Ton communication est technique et précise.\n"
+        "- Utilise les codes d'erreur, procedure_id, FR et acronymes techniques sans les expliquer.\n"
+        "- Structure tes réponses : Incident → Cause → Procédure (étapes numérotées) → Escalade.\n"
+        "- Cite toujours les sources (snippet_id, procedure_id).\n"
+        "- Anticipe les points d'attention avant qu'ils surviennent.\n"
+        "- Ton : direct, factuel, professionnel.\n"
+    ),
+    "colleague": (
+        "\n--- STYLE ET TON (Collègue support) ---\n"
+        "Tu t'adresses à un collègue support N2. Sois pédagogue sans être condescendant.\n"
+        "- Explique les acronymes la première fois (ex: FR = Fiche de Résolution).\n"
+        "- Structure : Contexte → Symptôme → Ce que j'ai fait → Ce que tu peux faire.\n"
+        "- Ton : collaboratif, direct, 'je recommande', 'tu peux essayer'.\n"
+        "- Évite les détails bas niveau (SQL, stack trace brute).\n"
+    ),
+    "depositor": (
+        "\n--- STYLE ET TON (Dépositaire / Utilisateur final) ---\n"
+        "Tu t'adresses à un utilisateur final NON-TECHNIQUE.\n"
+        "RÈGLES STRICTES :\n"
+        "- AUCUN jargon technique : pas de code erreur, pas de FR, pas de SQL, pas d'acronyme.\n"
+        "- AUCUN détail d'implémentation interne (pas de noms de tables, pas de scripts, pas de logs).\n"
+        "- Vocabulaire simple, courant, compréhensible par tout le monde.\n"
+        "- La cause racine DOIT être mentionnée — mais exprimée en termes simples et non-techniques.\n"
+        "\n"
+        "STRUCTURE DE RÉPONSE OBLIGATOIRE (respecter cet ordre) :\n"
+        "  1. RÉSUMÉ BREF DU PROBLÈME\n"
+        "     → En une phrase simple : 'Suite à [description simple du problème]...'\n"
+        "  2. CAUSE RACINE CONFIRMÉE (reformulée simplement)\n"
+        "     → Exprimer la cause telle que fournie par l'ingénieur, sans jargon.\n"
+        "     → Exemple : 'Le problème était dû à un fichier dont le nom ne correspondait pas au format attendu.'\n"
+        "  3. IMPACT EN TERMES SIMPLES\n"
+        "     → Ce que cela a entraîné pour l'utilisateur, sans détails techniques.\n"
+        "     → Exemple : 'Cela a empêché le traitement automatique de se lancer correctement.'\n"
+        "  4. CONSEIL PRÉVENTIF CLAIR ET ACTIONNABLE\n"
+        "     → Une instruction simple pour éviter que le problème se reproduise.\n"
+        "     → Exemple : 'Veillez à nommer vos fichiers selon le format indiqué dans le guide utilisateur.'\n"
+        "\n"
+        "- Ton : bienveillant, professionnel, rassurant.\n"
+        "- Longueur : 5-9 phrases maximum.\n"
+        "- Terminer par une formule de courtoisie professionnelle.\n"
+    ),
+}
+
+HUMANIZED_STYLE_INSTRUCTIONS = (
+    "\n--- DIRECTIVES DE STYLE HUMANISÉ ---\n"
+    "1. ENGAGEMENT : Commence par reconnaître ce que l'ingénieur vient de faire ou de trouver.\n"
+    "   ✗ 'La cause racine est : [...]'\n"
+    "   ✓ 'Bien identifié — le problème vient effectivement de [...]'\n"
+    "2. PROGRESSION : Guide la conversation, ne te contente pas de lister des informations.\n"
+    "   ✓ 'Commence par [...], ensuite [...]. Une fois cela fait, vérifie que [...].'\n"
+    "3. ANTICIPATION : Mentionne les points d'attention avant qu'ils surviennent.\n"
+    "   ✓ 'Attention : avant l'étape 3, assure-toi que [...], sinon tu obtiendras [erreur].'\n"
+    "4. CONFIRMATION : Propose une vérification concrète en fin de réponse.\n"
+    "   ✓ 'Pour confirmer que c'est résolu, tu peux vérifier que [condition].'\n"
+    "5. ESCALADE : Quand tu proposes d'escalader, donne des détails actionnables.\n"
+    "   ✓ 'Si le problème persiste, ouvre un ticket avec : logs du [date], trace, ticket_id.'\n"
+)
+
+PERSONA_INSTRUCTION = (
+    "Tu es un ingénieur N3 senior chez Orange Telecom avec 8 ans d'expérience sur BRASIL. "
+    "Tu aides tes collègues à résoudre des incidents complexes sur les systèmes suivants : "
+    "BRASIL, ORRAHD, SEBA, 42C, ARTEMIS, IPON, ADELIA, SCA, ORCHESTRA. "
+    "Tu es direct, précis, et tu sais adapter ton discours à ton interlocuteur. "
+    "Avec les ingénieurs N3, tu parles technique et tu vas droit au but. "
+    "Avec les utilisateurs finaux (dépositaires), tu es pédagogue, rassurant, et tu évites tout jargon.\n"
+    "\n"
+    "PRINCIPES FONDAMENTAUX DE TON COMPORTEMENT :\n"
+    "1. Tu préserves TOUJOURS les faits fournis par l'ingénieur — tu ne réinventes jamais un diagnostic.\n"
+    "2. Tu respectes le contexte conversationnel — si la phase est CLÔTURE, tu génères un message de clôture, pas un diagnostic.\n"
+    "3. Tu utilises UNIQUEMENT des procédures métier télécom/BRASIL — jamais de conseils IT génériques.\n"
+    "4. Les opérations N3 standards (arrêt script, relance batch, mise à jour statut) sont dans ton périmètre — tu ne les refuses pas.\n"
+    "5. Tu ne supprimes JAMAIS les informations critiques fournies par l'utilisateur — elles doivent apparaître dans ta réponse.\n"
+    "6. Tu adaptes ton ton au destinataire : technique pour un ingénieur, simple et bienveillant pour un dépositaire.\n"
+    "Tu ne génères jamais d'informations que tu n'as pas vérifiées dans la base de connaissances.\n"
+)
 
 
 # ─────────────────────────────────────────────
@@ -52,6 +498,36 @@ ANTI_HALLUCINATION_RULES = {
     "rule_insufficient_knowledge": (
         "When trust is INSUFFICIENT, explicitly refuse and recommend escalation. "
         "Never hallucinate a resolution."
+    ),
+    # ── New behavior rules (Request 3) ──────────────────────────────────────
+    "rule_preserve_user_facts": (
+        "RÈGLE ABSOLUE — PRÉSERVATION DES FAITS FOURNIS PAR L'UTILISATEUR : "
+        "Si l'ingénieur énonce explicitement une cause racine ou une résolution, "
+        "traite-la comme un FAIT CONFIRMÉ et immuable. "
+        "Tu NE DOIS PAS générer de nouveau diagnostic ni proposer des hypothèses alternatives. "
+        "La cause déclarée par l'utilisateur est la vérité de référence."
+    ),
+    "rule_domain_procedures_only": (
+        "RÈGLE ABSOLUE — PROCÉDURES MÉTIER UNIQUEMENT : "
+        "N'utilise QUE des procédures opérationnelles spécifiques au domaine télécom / BRASIL. "
+        "INTERDIT d'utiliser des conseils IT génériques tels que : "
+        "'vérifier les dépendances', 'analyser le code', 'contacter le développeur', "
+        "'mettre à jour les librairies', 'relancer le serveur'. "
+        "Si aucune procédure validée n'existe, dis-le explicitement et propose d'escalader."
+    ),
+    "rule_allow_n3_operations": (
+        "RÈGLE ABSOLUE — OPÉRATIONS N3 AUTORISÉES : "
+        "Les opérations suivantes font partie du périmètre N3 standard et NE DOIVENT PAS être refusées : "
+        "arrêter un script, mettre à jour un statut d'exécution, relancer un batch, "
+        "modifier un masque de fichier, rejouer un traitement, corriger une configuration. "
+        "Ces actions sont des interventions opérationnelles légitimes — ne les refuse JAMAIS."
+    ),
+    "rule_preserve_critical_info": (
+        "RÈGLE ABSOLUE — PRÉSERVATION OBLIGATOIRE DES INFORMATIONS CRITIQUES : "
+        "Si l'utilisateur a spécifié une cause racine (ex: format de fichier incorrect, "
+        "masque de nommage erroné, script bloqué), cette information DOIT apparaître "
+        "explicitement et textuellement dans ta réponse finale. "
+        "Ne la reformule pas de manière vague, ne l'omets pas, ne la remplace pas."
     ),
 }
 
@@ -227,6 +703,57 @@ class ResponseFormatter:
             msg += f"\n\n*(Contexte détecté : {context_hint})*"
         return msg
 
+    @staticmethod
+    def format_escalation_loop(
+        question: str,
+        repetition_count: int,
+        application: str,
+        intent_override: Optional[str] = None,
+        escalation_team: str = "l'équipe N3 BRASIL",
+    ) -> str:
+        """
+        Returns an intelligent escalation response when the same question has been
+        asked ≥ 2 times without a satisfactory answer from the knowledge base.
+
+        Instead of repeating the same 'no knowledge' message, this response:
+        - Acknowledges the loop explicitly
+        - Explains what is missing in the KB
+        - Provides concrete next steps (FR creation, Jira, escalation)
+        - Optionally includes a tech_inference hint if an entity is recognisable
+        """
+        entity_hint = ""
+        if intent_override == "tech_inference_schema":
+            # Try to extract the table/symbol name from the question
+            m = _DB_TABLE_PATTERN.search(question)
+            if m:
+                raw = m.group(0).strip()
+                entity_hint = (
+                    f"\n\n**Inférence par le nom** : L'entité `{raw}` suit les conventions BRASIL. "
+                    f"Sans documentation disponible, je ne peux pas en certifier la structure. "
+                    f"Fournissez le DDL ou une description et je pourrai l'analyser."
+                )
+        elif intent_override == "procedure_lookup_script_blocked":
+            entity_hint = (
+                "\n\n**Conseil opérationnel** : Pour tout script/batch bloqué en statut \"En cours\", "
+                "la démarche N3 standard est : (1) identifier le PID du processus, "
+                "(2) forcer le passage du statut via l'IHM ou la procédure autorisée, "
+                "(3) vérifier les logs pour identifier la cause avant relance."
+            )
+
+        return (
+            f"⚠️ **Cette question a été posée {repetition_count} fois** sans qu'une réponse "
+            f"validée existe dans la base de connaissance.\n\n"
+            f"**Ce que je sais** : Aucune procédure documentée ne correspond à cette demande "
+            f"pour l'application **{application}**.{entity_hint}\n\n"
+            f"**Actions recommandées** :\n"
+            f"  1. 📄 **Créer une FR** : Ce cas n'est pas documenté — créez une Fiche de Résolution "
+            f"pour l'enrichissement futur de la base.\n"
+            f"  2. 🔍 **Jira** : Recherchez les tickets similaires avec les mots-clés de votre demande.\n"
+            f"  3. 📞 **Escalade** : Transmettez cette demande à {escalation_team} "
+            f"avec : description complète, logs applicatifs, contexte de l'incident.\n\n"
+            f"*Ce cas est enregistré pour enrichissement de la base de connaissances.*"
+        )
+
 
 # ─────────────────────────────────────────────
 # Diagnostic Reasoner
@@ -258,6 +785,81 @@ def is_contextual_intent(structured_ticket: Optional["StructuredTicket"]) -> boo
     if structured_ticket is None:
         return False
     return structured_ticket.incident_type in _CONTEXTUAL_INTENTS
+
+
+# Keywords that signal a follow-up/clarification on a previous answer.
+_FOLLOWUP_PATTERNS: tuple = (
+    "date",
+    "quand",
+    "source",
+    "la date",
+    "les dates",
+    "référence",
+    "précise",
+    "précision",
+    "détails",
+    "plus d’info",
+    "plus d'info",
+    "expliqu",
+    "peux-tu",
+    "pouvez-vous",
+    "peut-on",
+    "dis-moi",
+    "c'est quoi",
+    "c'est quoi",
+    "c'est quoi",
+    "qu'est-ce que",
+    "pourquoi",
+    "comment",
+    "et si",
+    "et le",
+    "et la",
+    "et les",
+    "et ce",
+    "et cet",
+    "et cette",
+    "tu peux",
+    "vous pouvez",
+    # ── Newly added: follow-up on correction / action results ────────────
+    "résultat",
+    "résultats",
+    "correction",
+    "corrections",
+    "dernières corrections",
+    "derniers résultats",
+    "suite à",
+    "après correction",
+    "après intervention",
+    "est-ce que c'est résolu",
+    "c'est toujours",
+    "toujours le même",
+    "encore le même",
+    "toujours pareil",
+    "même erreur",
+    "même problème",
+)
+
+
+def is_followup_question(query: str, history: list) -> bool:
+    """
+    Return True when the message looks like a follow-up / clarification on
+    the previous assistant answer, so the trust gate should be bypassed.
+
+    Conditions (all required):
+    - The conversation has at least one prior assistant turn
+    - The query is short (< 120 chars) OR matches a follow-up keyword
+    """
+    if not history:
+        return False
+    has_prior_assistant = any(
+        m.get("role") == "assistant" for m in history
+    )
+    if not has_prior_assistant:
+        return False
+    q = query.lower().strip()
+    if len(q) < 120:
+        return True
+    return any(p in q for p in _FOLLOWUP_PATTERNS)
 
 
 class DiagnosticReasoner:
@@ -305,6 +907,8 @@ class DiagnosticReasoner:
             "ticket_summary", "ticket_closing", "log_investigation",
             "find_similar_tickets", "find_jira", "explain_jira",
             "explain_data_model",
+            # intent overrides
+            "tech_inference_schema", "procedure_lookup_script_blocked",
             # legacy aliases
             "summarize", "write_ticket_message", "investigate_logs",
         ):
@@ -320,6 +924,15 @@ class DiagnosticReasoner:
         prompt_parts = [
             f"Tu es un assistant de support N3 expert pour l'application {app_id} (Orange Telecom).",
             "Tu aides les ingénieurs support à diagnostiquer et résoudre des incidents.",
+            "",
+            "DOMAINE MÉTIER BRASIL — VOCABULAIRE TECHNIQUE :",
+            "- 'carte' ou 'cartes' = carte électronique réseau (hardware card, table t_cards)",
+            "- 'port' = port physique/logique réseau (table t_ports)",
+            "- 'équipement' = équipement réseau DSLAM/NIP/OLT (table t_equipments)",
+            "- 'slot' = emplacement de carte dans un shelf (table t_slots)",
+            "- 'shelf/tiroir/logement' = tiroir physique d'un équipement (table t_shelfs)",
+            "- 'nœud/noeud' = nœud réseau NRA (table t_nodes)",
+            "- 'brassage/stripe' = ressource de brassage DSL (table t_stripes)",
             "",
             "RÈGLES ABSOLUES (anti-hallucination):",
         ]
@@ -358,14 +971,53 @@ class DiagnosticReasoner:
             elif intent_type in ("ticket_closing", "write_ticket_message"):
                 prompt_parts.extend([
                     "",
+                    "⛔ MODE CLÔTURE — AUCUN DIAGNOSTIC AUTORISÉ.",
                     "TÂCHE: Générer le MESSAGE DE CLÔTURE du ticket pour le dépositaire.",
-                    "INSTRUCTIONS:",
-                    "- Utilise UNIQUEMENT le contexte de la conversation fournie.",
-                    "- Produis DEUX sections distinctes:",
-                    "  SECTION 1 — Résumé technique N3: Incident | Cause | Action effectuée | Résultat.",
-                    "  SECTION 2 — Message pour le dépositaire: message professionnel confirmant la résolution.",
-                    "- Ton professionnel, neutre, en français.",
-                    "- Ne lance pas de nouvelle recherche KB.",
+                    "",
+                    "RÈGLES COMPORTEMENTALES IMPÉRATIVES :",
+                    "1. PRÉSERVATION DES FAITS : La cause racine fournie par l'ingénieur est un FAIT IMMUABLE.",
+                    "   → Ne la remplace pas, ne la reformule pas vaguement, ne l'omets pas.",
+                    "   → Elle DOIT apparaître dans ta réponse.",
+                    "2. CONTEXTE CONVERSATIONNEL : Tu es en phase CLÔTURE.",
+                    "   → Tu NE GÉNÈRES PAS de nouveau diagnostic ni d'hypothèses.",
+                    "   → Tu NE MENTIONNES PAS de systèmes hors périmètre de l'incident.",
+                    "3. PROCÉDURES MÉTIER UNIQUEMENT : Pas de conseils IT génériques.",
+                    "   → Si tu mentionnes un conseil préventif, il doit être spécifique au domaine BRASIL/Telecom.",
+                    "4. INFORMATIONS CRITIQUES : Si l'ingénieur a mentionné un détail clé",
+                    "   (ex: masque de fichier, script ORRAHD, format d'entrée), ce détail DOIT figurer",
+                    "   dans la réponse — reformulé simplement pour le dépositaire.",
+                    "",
+                    "INSTRUCTIONS :",
+                    "- Utilise UNIQUEMENT le contexte de la conversation fournie et la cause racine confirmée.",
+                    "- Tu NE LANCES PAS de nouvelle recherche dans la base de connaissances.",
+                    "- Tu NE MENTIONNES PAS de systèmes non liés à l'incident.",
+                    "- Produis DEUX sections distinctes :",
+                    "",
+                    "  ══════════════════════════════════════════════",
+                    "  SECTION 1 — Résumé technique N3 (archives internes) :",
+                    "  ══════════════════════════════════════════════",
+                    "  Format structuré (champs obligatoires) :",
+                    "  • Incident         : [type d'incident]",
+                    "  • Cause racine     : [cause confirmée, verbatim si possible]",
+                    "  • Action effectuée : [ce qui a été fait pour corriger]",
+                    "  • Résultat         : [état après correction]",
+                    "",
+                    "  ══════════════════════════════════════════════",
+                    "  SECTION 2 — Message pour le dépositaire (NON-TECHNIQUE) :",
+                    "  ══════════════════════════════════════════════",
+                    "  Structure OBLIGATOIRE (dans cet ordre) :",
+                    "  1. RÉSUMÉ BREF DU PROBLÈME",
+                    "     → Une phrase simple décrivant le contexte.",
+                    "  2. CAUSE RACINE (reformulée simplement, sans jargon)",
+                    "     → La cause telle que confirmée, exprimée en termes accessibles.",
+                    "     → Exemple : 'Le problème était dû à un fichier dont le nom ne correspondait pas au format attendu.'",
+                    "  3. IMPACT EN TERMES SIMPLES",
+                    "     → Ce que cela a entraîné pour l'utilisateur.",
+                    "  4. CONSEIL PRÉVENTIF CLAIR ET ACTIONNABLE",
+                    "     → Une instruction simple pour éviter que le problème se reproduise.",
+                    "  + Formule de courtoisie professionnelle en fin de message.",
+                    "  Ton : bienveillant, professionnel, rassurant. AUCUN jargon technique.",
+                    "- Réponds en français.",
                 ])
             elif intent_type in ("log_investigation", "investigate_logs"):
                 prompt_parts.extend([
@@ -417,7 +1069,55 @@ class DiagnosticReasoner:
 
         # ── Branch B: KB available ────────────────────────────────────────────────
         elif has_knowledge:
-            if intent_type == "procedure_lookup":
+            if intent_type == "procedure_lookup_script_blocked":
+                prompt_parts.extend([
+                    "",
+                    "TÂCHE: Un script / batch / job est bloqué en statut \"En cours d'exécution\".",
+                    "Tu dois fournir la PROCéDURE OPÉRATIONNELLE N3 pour débloquer ce type d'exécution.",
+                    "",
+                    "RÈGLES ABSOLUES :",
+                    "- Utilise UNIQUEMENT les procédures issues de la base de connaissances (procedure_id, FR).",
+                    "- AUCUN conseil générique IT (\"analyser le code\", \"vérifier les dépendances\").",
+                    "- Ces actions sont dans le périmètre N3 légitime : forcer un statut, arrêter un script,",
+                    "  relancer un batch. Tu NE les refuses PAS.",
+                    "",
+                    "FORMAT DE RÉPONSE OBLIGATOIRE :",
+                    "1. **Identification** : Confirme le type de blocage détecté (script en cours depuis trop longtemps).",
+                    "2. **Étapes de déblocage** (numérotées) : Issues de la procédure FR trouvée dans le contexte KB.",
+                    "3. **Vérification** : Comment confirmer que le script est effectivement débloqué.",
+                    "4. **Prévention** : Si documenté, comment éviter le blocage futur.",
+                    "5. **Source** : Cite le procedure_id / numéro FR en fin de réponse.",
+                    "- Termine par : 'Si le blocage persiste, escalader vers l'équipe N3 avec les logs d'exécution.'",
+                    "- Réponds en français.",
+                ])
+            elif intent_type == "tech_inference_schema":
+                prompt_parts.extend([
+                    "",
+                    "TÂCHE: L'ingénieur demande la DESCRIPTION D'UNE TABLE OU ENTITÉ TECHNIQUE.",
+                    "Tu dois répondre à partir du CONTEXTE KB (snippets db-table-*), PAS de l'historique.",
+                    "",
+                    "INTERDICTIONS ABSOLUES :",
+                    "- NE GÉNÈRE AUCUNE REQUÊTE SQL (SELECT, FROM, WHERE, JOIN, etc.).",
+                    "- N'INVENTE AUCUN nom de colonne, de table ou de relation.",
+                    "  Utilise UNIQUEMENT ce qui est présent dans le contexte KB.",
+                    "- NE CHERCHE PAS dans l'historique de conversation — c'est une entité KB, pas un sujet conversationnel.",
+                    "",
+                    "FORMAT DE RÉPONSE (si KB contient la table) :",
+                    "**Nom** : `<nom_table>`",
+                    "**Rôle** : [description en une phrase]",
+                    "**Colonnes principales** : [liste des colonnes documentées dans le KB]",
+                    "**Relations FK** : [FK sortantes et entrantes si documentées]",
+                    "**Observations N3** : [anomalies ou tickets connus liés à cette table]",
+                    "**Source** : [snippet_id]",
+                    "",
+                    "FORMAT DE RÉPONSE (si KB ne contient PAS la table) :",
+                    "- Indique explicitement que cette table n'est pas encore documentée dans la base.",
+                    "- Propose une inférence par le nom si possible (convention de nommage BRASIL t_<nom>).",
+                    "- Recommande la création d'une FR pour documenter cette table.",
+                    "- NE GÉNÈRE PAS de structure invariée ou fictive.",
+                    "- Réponds en français.",
+                ])
+            elif intent_type == "procedure_lookup":
                 prompt_parts.extend([
                     "",
                     "TÂCHE: L'ingénieur demande la PROCÉDURE DE RÉSOLUTION.",
@@ -488,16 +1188,83 @@ class DiagnosticReasoner:
                     "Présente les étapes de manière structurée et numérotée."
                 )
 
-        # ── Branch C: no KB, not contextual → knowledge_gap_detection ───────────────────
+        # ── Branch C: no KB, not contextual → knowledge_gap or intent-specific fallback ─
         else:
+            if intent_type == "tech_inference_schema":
+                # Lister les tables dont le nom contient des mots-clés de la requête
+                # pour guider le LLM vers la bonne table
+                _schema_list = ", ".join(BRASIL_SCHEMA_TABLES)
+                prompt_parts.extend([
+                    "",
+                    "CONTEXTE: Le schéma BRASIL contient les tables suivantes (liste exhaustive) :",
+                    _schema_list,
+                    "",
+                    "TÂCHE: La requête de l'ingénieur porte sur une table ou entité BRASIL.",
+                    "INSTRUCTIONS :",
+                    "1. Cherche dans la liste ci-dessus la table qui correspond le mieux à la demande.",
+                    "   Si la demande utilise un terme français (ex: 'équipements'), cherche la table",
+                    "   anglaise correspondante (ex: 't_equipments').",
+                    "2. Si tu identifies une correspondance probable, dis-le clairement :",
+                    "   'La table qui correspond à [terme] est probablement [t_nom_table] dans le schéma BRASIL.'",
+                    "3. Si aucune table ne correspond, déclare que tu ne peux pas identifier la table",
+                    "   et recommande de consulter le schéma complet.",
+                    "4. NE GÉNÈRE PAS de colonnes inventées. NE GÉNÈRE PAS d'IDs de procédure.",
+                    "5. Réponds en français.",
+                ])
+            elif intent_type == "procedure_lookup_script_blocked":
+                prompt_parts.extend([
+                    "",
+                    "TÂCHE: La procédure spécifique de déblocage de script N'EST PAS dans la base de connaissance.",
+                    "INSTRUCTIONS :",
+                    "- Déclare explicitement qu'aucune FR validée n'existe pour ce cas précis.",
+                    "- Fournis la démarche opérationnelle N3 générique pour un script bloqué :",
+                    "  (1) Identifier le statut du processus en base ou via l'IHM",
+                    "  (2) Forcer le passage du statut si la durée d'exécution est anormale",
+                    "  (3) Vérifier les logs pour identifier la cause avant relance",
+                    "  (4) Relancer le script après correction si nécessaire",
+                    "- Recommande de créer une FR pour ce cas.",
+                    "- NE REFUSE PAS l'opération : arrêter / relancer un script est une action N3 légitime.",
+                    "- Réponds en français.",
+                ])
+            else:
+                prompt_parts.extend([
+                    "",
+                    "TÂCHE: KNOWLEDGE GAP DETECTION — Aucune procédure validée n'existe pour cette demande.",
+                    "INSTRUCTIONS:",
+                    "- Explique clairement qu'aucune connaissance validée n'est disponible pour ce cas.",
+                    "- Propose des étapes d'investigation: (1) vérifier les FRs existantes, (2) consulter les tickets JIRA similaires, (3) collecter les logs applicatifs.",
+                    "- Recommande la création d'une FR si ce cas n'est pas encore documenté.",
+                    "- NE GÉNÈRE PAS de procédure inventoriée. Ne jamais halluciner une solution.",
+                ])
+
+        # ── Root Cause Lock — if confirmed, forbid new diagnostics ──────────
+        confirmed_root_cause = orch_result.get("confirmed_root_cause")
+        if confirmed_root_cause:
             prompt_parts.extend([
                 "",
-                "TÂCHE: KNOWLEDGE GAP DETECTION — Aucune procédure validée n'existe pour cette demande.",
-                "INSTRUCTIONS:",
-                "- Explique clairement qu'aucune connaissance validée n'est disponible pour ce cas.",
-                "- Propose des étapes d'investigation: (1) vérifier les FRs existantes, (2) consulter les tickets JIRA similaires, (3) collecter les logs applicatifs.",
-                "- Recommande la création d'une FR si ce cas n'est pas encore documenté.",
-                "- NE GÉNÈRE PAS de procédure inventoriée. Ne jamais halluciner une solution.",
+                "⛔ CAUSE RACINE VERROUILLÉE — FAIT ÉTABLI ET IMMUABLE :",
+                f'"{confirmed_root_cause}"',
+                "",
+                "RÈGLES ABSOLUES (Root Cause Lock) :",
+                "1. Tu NE PEUX PAS remettre en question cette cause racine.",
+                "2. Tu NE PEUX PAS proposer d'hypothèses alternatives ou un nouveau diagnostic.",
+                "3. Tu NE PEUX PAS mentionner des systèmes non liés à l'incident.",
+                "4. TOUTES tes réponses doivent partir de ce fait établi.",
+                "5. Si une question te demande de diagnostiquer, rappelle que la cause est déjà"
+                "   identifiée et redirige vers l'action appropriée (clôture, prévention, etc.).",
+            ])
+
+        # ── Context isolation — restrict to in-scope systems only ─────────
+        locked_systems = orch_result.get("locked_systems", [])
+        excluded_systems = orch_result.get("excluded_systems", [])
+        if locked_systems:
+            prompt_parts.extend([
+                "",
+                f"PÉRIMÈTRE DE L'INCIDENT (à respecter strictement) :",
+                f"- Systèmes concernés : {', '.join(locked_systems)}",
+                "- Tu NE DOIS PAS mentionner ni utiliser d'informations sur d'autres systèmes.",
+                "- Si un bloc de contexte mentionne un système hors périmètre, IGNORE CE BLOC.",
+                "- Ne génère AUCUNE hypothèse impliquant des systèmes non mentionnés dans le ticket.",
             ])
 
         prompt_parts.extend([
@@ -510,6 +1277,11 @@ class DiagnosticReasoner:
             "- Réponds TOUJOURS en français",
         ])
 
+        # ── Role-aware style + humanized tone ────────────────────────────
+        audience = orch_result.get("audience", "n3_engineer")
+        prompt_parts.append(ROLE_SYSTEM_PROMPTS.get(audience, ROLE_SYSTEM_PROMPTS["n3_engineer"]))
+        prompt_parts.append(HUMANIZED_STYLE_INSTRUCTIONS)
+
         return "\n".join(prompt_parts)
 
     def check_trust_gate(
@@ -517,6 +1289,8 @@ class DiagnosticReasoner:
         orch_result: Dict[str, Any],
         threshold: float = 40.0,
         structured_ticket: Optional[StructuredTicket] = None,
+        history: Optional[list] = None,
+        raw_query: str = "",
     ) -> Tuple[bool, str]:
         """
         Check if knowledge trust is sufficient to present a response.
@@ -525,10 +1299,17 @@ class DiagnosticReasoner:
         Contextual intents (summarize, write_ticket_message, investigate_logs)
         bypass the trust gate because they work from conversation history,
         not from KB retrieval.
+
+        Follow-up / clarification questions on a previous answer also bypass
+        the gate — they should be answered from conversation context.
         """
         # Bypass for intents that need no KB
         if is_contextual_intent(structured_ticket):
             return True, "contextual_bypass"
+
+        # Bypass for conversational follow-ups (clarification, date of source, etc.)
+        if is_followup_question(raw_query, history or []):
+            return True, "followup_bypass"
 
         trust_score = orch_result.get("trust_score")
 
@@ -632,3 +1413,30 @@ def extract_prior_procedure_from_history(
 slot_filler = SlotFiller()
 response_formatter = ResponseFormatter()
 diagnostic_reasoner = DiagnosticReasoner()
+
+__all__ = [
+    # State machine
+    "ConversationPhase",
+    "ConversationState",
+    "detect_phase_transition",
+    "extract_root_cause",
+    "detect_audience",
+    "KNOWN_SYSTEMS",
+    # Intent override detection
+    "detect_intent_override",
+    # Role/style
+    "ROLE_SYSTEM_PROMPTS",
+    "HUMANIZED_STYLE_INSTRUCTIONS",
+    "PERSONA_INSTRUCTION",
+    # Core components
+    "SlotFiller",
+    "ResponseFormatter",
+    "DiagnosticReasoner",
+    "slot_filler",
+    "response_formatter",
+    "diagnostic_reasoner",
+    # Helpers
+    "is_contextual_intent",
+    "is_followup_question",
+    "extract_prior_procedure_from_history",
+]
