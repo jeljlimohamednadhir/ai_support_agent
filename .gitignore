@@ -1,11 +1,14 @@
-# Scripts utilitaires
-scripts/
+# Scripts shell/powershell utilitaires (hors dossier scripts/ du projet)
 *.sh
 *.ps1
 
 # Logs
 logs/
 *.log
+uvicorn_out.txt
+uvicorn_err.txt
+backend/uvicorn.err
+backend/uvicorn.out
 
 # Environnement
 .env
@@ -75,3 +78,9 @@ secrets.yaml
 
 # Pipeline generated outputs
 data_pipeline/output/
+
+# Fichiers temporaires racine
+analyze_nd.py
+poll_training.py
+uvicorn_out.txt
+uvicorn_err.txt

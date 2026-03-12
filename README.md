@@ -1,8 +1,11 @@
-# 🤖 Genergy IA — Assistant Technique Intelligent
+# 🤖 Genergy IA — Assistant Technique Intelligent BRASIL
 
-**Version 1.0.0** | ✅ Production Ready
+**Version 1.2.0** | ✅ Production Ready
 
-Une plateforme complète d'assistance technique basée sur l'IA qui combine RAG (Retrieval-Augmented Generation), Knowledge Graph et Vector Store pour fournir des réponses expertes et traçables, avec **automatisation complète via Workers Celery**.
+Une plateforme complète d'assistance technique basée sur l'IA qui combine RAG (Retrieval-Augmented Generation), Knowledge Graph et Vector Store pour fournir des réponses expertes et traçables sur le système **BRASIL** (51 Fiches de Résolution indexées, 128 tables DB).
+
+> **Branche active** : `feature/multi-tenant-intelligence-platform`
+> **LLM** : Groq `qwen/qwen3-32b` | **Embedding** : `paraphrase-multilingual-MiniLM-L12-v2` (dim=384)
 
 ## 📋 Table des Matières
 
@@ -545,6 +548,67 @@ Le pipeline GitHub Actions :
 - [Migration Docker → Podman](PODMAN_MIGRATION.md)
 - [Setup Podman](PODMAN_SETUP.md)
 
+## 🧠 Base de Connaissance BRASIL
+
+### Collections Qdrant
+
+| Collection | Points | Contenu |
+|---|---|---|
+| `brasil_procedures` | **82** | 51 FRs indexées + procédures canoniques |
+| `code_knowledge` | **197** | 128 tables BRASIL + procédures schéma |
+| `brasil_log_patterns` | **12** | Patterns erreurs logs |
+
+### Injection des FRs
+
+Les 51 Fiches de Résolution BRASIL sont dans `backend/FR/` et indexées dans Qdrant :
+
+```powershell
+cd backend
+
+# Indexation incrémentale (nouvelles FRs uniquement)
+.venv/Scripts/python.exe scripts/knowledge/inject_all_fr.py
+
+# Ré-indexer tout
+.venv/Scripts/python.exe scripts/knowledge/inject_all_fr.py --force
+
+# Lister les FRs détectées sans indexer
+.venv/Scripts/python.exe scripts/knowledge/inject_all_fr.py --list
+```
+
+Le script `inject_all_fr.py` :
+- Auto-détecte le numéro FR depuis le nom du fichier
+- Parse les .docx : symptômes, causes racines, étapes de résolution, SQL, tables, exceptions Java
+- UUID déterministe → idempotent (ré-indexation safe)
+
+### Pipeline RAG hybride
+
+- **Mode 1 (FR_RICH)** : Requête avec correspondance directe dans la base de connaissance
+- **Mode 2 (FR_WEAK)** : Recherche hybride Qdrant + `_schema_priority`
+  - Si la requête contient `t_xxx`, `colonnes`, `schéma` → les tables DB ont la priorité
+  - Si la requête contient `impossible`, `comment faire`, `FR xxx` → les FRs ont la priorité
+
+---
+
+## 🔧 Correctifs importants (v1.1 → v1.2)
+
+### Bug 1 — Guard procédures dans `_extract_equipment_name`
+- **Symptôme** : "Suppression DSLAM impossible" déclenchait une recherche de logs d'équipement
+- **Fix** : `_PROC_CONTEXT_PATTERN` + `_JAVA_EXCEPTION_PATTERN` dans `chatbot_service.py`
+
+### Bug 2 — Summarize sans historique
+- **Symptôme** : Le mode summarize ne fonctionnait pas si l'historique était vide
+- **Fix** : Suppression de la condition `and history` dans le handler
+
+### Bug 3 — `_FOLLOWUP_PATTERNS` sur-déclenchement
+- **Symptôme** : "comment je peux extraire le schéma..." héritait du contexte VLAN précédent
+- **Fix** : `"comment"` seul retiré des triggers ; seulement `"comment ça"`, `"comment cela"` etc. déclenchent la reformulation
+
+### Bug 4 — Merge mode2 : tables DB prioritaires sur les FRs
+- **Symptôme** : "Suppression VLAN impossible" → `lst_vlan_usage` (table DB) dominait sur FR 190
+- **Fix** : `_schema_priority` flag dans `mode2_fr_weak.py` — merge conditionnel selon le type de requête
+
+---
+
 ## 🤝 Contribution
 
 Les contributions sont les bienvenues ! Voir [CONTRIBUTING.md](docs/CONTRIBUTING.md)
@@ -556,8 +620,7 @@ MIT License - voir [LICENSE](LICENSE)
 ## 👥 Support
 
 - Issues GitHub : [github.com/user/ai-support-agent/issues](https://github.com)
-- Email : support@example.com
-- Documentation : [docs.example.com](https://docs.example.com)
+- Documentation : [STRUCTURE.md](STRUCTURE.md)
 
 ---
 

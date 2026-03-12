@@ -1,233 +1,179 @@
-# 📁 Structure complète du projet AI Support Agent
+# ?? Structure du projet AI Support Agent
+
+> Derni�re mise � jour : Mars 2026
 
 ```
 ai-support-agent/
-│
-├── 📄 README.md                          # Documentation principale
-├── 📄 LICENSE                            # Licence MIT
-├── 📄 .gitignore                         # Fichiers à ignorer
-├── 📄 docker-compose.yml                 # Orchestration Docker
-│
-├── 📂 backend/                           # Backend API FastAPI
-│   ├── 📄 requirements.txt              # Dépendances Python
-│   ├── 📄 .env.example                  # Template variables d'environnement
-│   ├── 📄 .gitignore                    # Ignores spécifiques backend
-│   │
-│   ├── 📂 app/                          # Application principale
-│   │   ├── 📄 __init__.py
-│   │   ├── 📄 main.py                   # Point d'entrée FastAPI
-│   │   │
-│   │   ├── 📂 api/                      # Endpoints API
-│   │   │   ├── 📄 __init__.py
-│   │   │   └── 📂 v1/
-│   │   │       ├── 📄 __init__.py
-│   │   │       ├── 📄 api.py            # Routeur principal
-│   │   │       └── 📂 endpoints/
-│   │   │           ├── 📄 __init__.py
-│   │   │           ├── 📄 chatbot.py    # Endpoints chatbot
-│   │   │           ├── 📄 collector.py  # Endpoints collecte
-│   │   │           ├── 📄 analyzer.py   # Endpoints analyse
-│   │   │           ├── 📄 knowledge.py  # Endpoints knowledge graph
-│   │   │           ├── 📄 validation.py # Endpoints validation
-│   │   │           ├── 📄 diagnostics.py # Endpoints diagnostics
-│   │   │           └── 📄 users.py      # Endpoints utilisateurs
-│   │   │
-│   │   ├── 📂 core/                     # Configuration et utilitaires
-│   │   │   ├── 📄 __init__.py
-│   │   │   ├── 📄 config.py             # Configuration app
-│   │   │   ├── 📄 security.py           # Sécurité JWT
-│   │   │   └── 📄 logging.py            # Configuration logs
-│   │   │
-│   │   ├── 📂 models/                   # Modèles SQLAlchemy
-│   │   │   └── 📄 __init__.py
-│   │   │
-│   │   ├── 📂 schemas/                  # Schémas Pydantic
-│   │   │   ├── 📄 __init__.py
-│   │   │   ├── 📄 chatbot.py
-│   │   │   ├── 📄 collector.py
-│   │   │   ├── 📄 analyzer.py
-│   │   │   ├── 📄 knowledge.py
-│   │   │   ├── 📄 validation.py
-│   │   │   ├── 📄 diagnostics.py
-│   │   │   └── 📄 users.py
-│   │   │
-│   │   ├── 📂 services/                 # Logique métier
-│   │   │   ├── 📄 __init__.py
-│   │   │   │
-│   │   │   ├── 📂 chatbot/
-│   │   │   │   └── 📄 chatbot_service.py
-│   │   │   │
-│   │   │   ├── 📂 collector/
-│   │   │   │   ├── 📄 orchestrator.py
-│   │   │   │   ├── 📄 code_collector.py
-│   │   │   │   ├── 📄 log_collector.py
-│   │   │   │   └── 📄 db_collector.py
-│   │   │   │
-│   │   │   ├── 📂 analyzer/
-│   │   │   │   ├── 📄 analyzer_service.py
-│   │   │   │   └── 📄 diagnostics_engine.py
-│   │   │   │
-│   │   │   ├── 📂 knowledge_graph/
-│   │   │   │   ├── 📄 graph_service.py
-│   │   │   │   └── 📄 vector_store.py
-│   │   │   │
-│   │   │   └── 📂 validation/
-│   │   │       ├── 📄 validation_service.py
-│   │   │       └── 📄 user_service.py
-│   │   │
-│   │   ├── 📂 db/                       # Database setup
-│   │   │   └── 📄 __init__.py
-│   │   │
-│   │   └── 📂 utils/                    # Utilitaires
-│   │       └── 📄 __init__.py
-│   │
-│   └── 📂 tests/                        # Tests unitaires
-│       └── 📄 __init__.py
-│
-├── 📂 frontend/                         # Frontend React
-│   ├── 📄 package.json                  # Dépendances npm
-│   ├── 📄 tsconfig.json                 # Config TypeScript
-│   ├── 📄 vite.config.ts                # Config Vite
-│   ├── 📄 tailwind.config.js            # Config TailwindCSS
-│   ├── 📄 .env.example                  # Template env variables
-│   ├── 📄 index.html                    # HTML principal
-│   │
-│   ├── 📂 src/
-│   │   ├── 📄 main.tsx                  # Point d'entrée
-│   │   ├── 📄 App.tsx                   # Composant racine
-│   │   ├── 📄 index.css                 # Styles globaux
-│   │   │
-│   │   ├── 📂 components/               # Composants React
-│   │   │   ├── 📄 Layout.tsx            # Layout principal
-│   │   │   │
-│   │   │   ├── 📂 chatbot/
-│   │   │   │   ├── 📄 ChatInterface.tsx
-│   │   │   │   └── 📄 ChatHistory.tsx
-│   │   │   │
-│   │   │   ├── 📂 dashboard/
-│   │   │   │   ├── 📄 StatsCards.tsx
-│   │   │   │   ├── 📄 ActivityChart.tsx
-│   │   │   │   ├── 📄 RecentIssues.tsx
-│   │   │   │   ├── 📄 KnowledgeSearch.tsx
-│   │   │   │   └── 📄 KnowledgeGraph.tsx
-│   │   │   │
-│   │   │   └── 📂 validation/
-│   │   │       ├── 📄 ValidationQueue.tsx
-│   │   │       └── 📄 ValidationMetrics.tsx
-│   │   │
-│   │   ├── 📂 pages/                    # Pages
-│   │   │   ├── 📄 ChatPage.tsx
-│   │   │   ├── 📄 DashboardPage.tsx
-│   │   │   ├── 📄 ValidationPage.tsx
-│   │   │   ├── 📄 KnowledgePage.tsx
-│   │   │   └── 📄 SettingsPage.tsx
-│   │   │
-│   │   ├── 📂 services/                 # Services API
-│   │   │   └── 📄 api.ts                # Client API
-│   │   │
-│   │   └── 📂 utils/                    # Utilitaires
-│   │       └── 📄 __init__.py
-│   │
-│   └── 📂 public/                       # Assets statiques
-│
-├── 📂 workers/                          # Workers Celery
-│   ├── 📄 requirements.txt              # Dépendances workers
-│   ├── 📄 celery_app.py                 # Config Celery
-│   │
-│   ├── 📂 code_analyzer/
-│   │   └── 📄 tasks.py                  # Tâches analyse code
-│   │
-│   ├── 📂 log_analyzer/
-│   │   └── 📄 tasks.py                  # Tâches analyse logs
-│   │
-│   ├── 📂 db_analyzer/
-│   │   └── 📄 tasks.py                  # Tâches analyse DB
-│   │
-│   └── 📂 doc_analyzer/
-│       └── 📄 tasks.py                  # Tâches analyse docs
-│
-├── 📂 infrastructure/                   # Infrastructure
-│   │
-│   ├── 📂 docker/                       # Dockerfiles
-│   │   ├── 📄 backend.Dockerfile
-│   │   ├── 📄 frontend.Dockerfile
-│   │   └── 📄 worker.Dockerfile
-│   │
-│   ├── 📂 k8s/                          # Kubernetes manifests
-│   │   ├── 📄 backend-deployment.yaml
-│   │   ├── 📄 frontend-deployment.yaml
-│   │   └── 📄 worker-deployment.yaml
-│   │
-│   └── 📂 terraform/                    # Infrastructure as Code
-│
-├── 📂 .github/                          # GitHub Actions
-│   └── 📂 workflows/
-│       └── 📄 ci-cd.yml                 # Pipeline CI/CD
-│
-├── 📂 docs/                             # Documentation
-│   ├── 📄 ARCHITECTURE.md               # Architecture détaillée
-│   ├── 📄 QUICKSTART.md                 # Guide démarrage rapide
-│   ├── 📄 API.md                        # Documentation API
-│   ├── 📄 DATA_MODEL.md                 # Modèle de données
-│   ├── 📄 AI_WORKFLOW.md                # Workflow IA
-│   ├── 📄 SECURITY.md                   # Sécurité
-│   └── 📄 CONTRIBUTING.md               # Guide contribution
-│
-└── 📂 scripts/                          # Scripts utilitaires
-    ├── 📄 setup.sh                      # Setup initial
-    ├── 📄 deploy.sh                     # Déploiement
-    └── 📄 backup.sh                     # Backup databases
+�
++-- ?? README.md                          # Documentation principale
++-- ?? LICENSE                            # Licence MIT
++-- ?? .gitignore                         # Fichiers � ignorer
++-- ?? docker-compose.yml                 # Orchestration Docker/Podman
+�
++-- ?? backend/                           # Backend API FastAPI (Python 3.13)
+�   +-- ?? requirements.txt              # D�pendances Python
+�   +-- ?? .env.example                  # Template variables d'environnement
+�   �
+�   +-- ?? app/                          # Application principale
+�   �   +-- ?? main.py                   # Point d'entr�e FastAPI + lifespan
+�   �   �
+�   �   +-- ?? api/v1/endpoints/         # Endpoints REST
+�   �   �   +-- ?? chatbot.py            # POST /chatbot/chat
+�   �   �   +-- ?? chat.py               # Conversations & messages
+�   �   �   +-- ?? collector.py          # Collecte tickets Jira
+�   �   �   +-- ?? knowledge.py          # Knowledge graph
+�   �   �   +-- ?? validation.py         # Queue validation N3
+�   �   �   +-- ?? diagnostics.py        # Rapports diagnostics
+�   �   �   +-- ?? classification_ml.py  # Classification ML
+�   �   �   +-- ?? hierarchical_ml.py    # Classificateur hi�rarchique
+�   �   �   +-- ?? users.py              # Gestion utilisateurs
+�   �   �
+�   �   +-- ?? core/                     # Config & utilitaires
+�   �   �   +-- ?? config.py             # Settings Pydantic
+�   �   �   +-- ?? security.py           # JWT auth
+�   �   �   +-- ?? llm_client.py         # Client Groq (qwen/qwen3-32b)
+�   �   �
+�   �   +-- ?? models/                   # SQLAlchemy ORM
+�   �   �   +-- ?? user.py               # Utilisateurs & r�les
+�   �   �   +-- ?? canonical.py          # Proc�dures canoniques
+�   �   �   +-- ?? classification_ml.py  # Corrections ML
+�   �   �
+�   �   +-- ?? services/
+�   �   �   �
+�   �   �   +-- ?? chatbot/              # C�ur du chatbot
+�   �   �   �   +-- ?? chatbot_service.py         # Orchestration principale
+�   �   �   �   �                                   # intent routing, _FOLLOWUP_PATTERNS
+�   �   �   �   �                                   # _PROC_CONTEXT_PATTERN (guard FR)
+�   �   �   �   �                                   # _extract_equipment_name (DSLAM/NRO)
+�   �   �   �   +-- ?? incident_context_guard.py   # ContextGuard (lock/exclude systems)
+�   �   �   �
+�   �   �   +-- ?? pipeline/             # Pipeline RAG
+�   �   �   �   +-- ?? mode1_fr_rich.py  # Mode riche (base de connaissances compl�te)
+�   �   �   �   +-- ?? mode2_fr_weak.py  # Mode faible (FR docs + Qdrant hybrid)
+�   �   �   �                             # _schema_priority, _search_brasil_procedures
+�   �   �   �                             # merge conditionnel incident/schema
+�   �   �   �
+�   �   �   +-- ?? knowledge/            # Base de connaissance
+�   �   �   �   +-- ?? vector_service.py          # Qdrant client
+�   �   �   �   �                                   # search_similar_code, _scroll_tables
+�   �   �   �   +-- ?? graph_service.py            # Neo4j graph (lazy)
+�   �   �   �   +-- ?? orchestrator.py             # Pipeline orchestrator
+�   �   �   �
+�   �   �   +-- ?? nlp/                  # Traitement du langage
+�   �   �   �   +-- ?? diagnostic_behavior.py      # Intent detection + trust gate
+�   �   �   �   �                                   # BRASIL_SCHEMA_TABLES (128 tables)
+�   �   �   �   +-- ?? smart_n3_parser.py          # Parser N3 tickets
+�   �   �   �
+�   �   �   +-- ?? collector/            # Collecte Jira
+�   �   �   �   +-- ?? jira_collector.py
+�   �   �   �
+�   �   �   +-- ?? diagnostic/
+�   �   �   �   +-- ?? diagnostic_engine.py
+�   �   �   �
+�   �   �   +-- ?? ml_classifier.py      # Classificateur ML (TF-IDF + ST)
+�   �   �   +-- ?? hierarchical_classifier.py  # KNN L1 + LR L2 + Groq fallback
+�   �   �
+�   �   +-- ?? db/                       # Database (PostgreSQL + SQLAlchemy)
+�   �       +-- ?? session.py
+�   �
+�   +-- ?? apps/brasil/                  # Config applicative BRASIL
+�   �   +-- ?? context.json              # Tables, glossaire, prompts
+�   �
+�   +-- ?? FR/                           # 51 Fiches de Resolution BRASIL (docx)
+�   �   +-- FR 001 CalculerToc.docx
+�   �   +-- FR 188 Suppression BAS ou ROUTEUR impossible.docx
+�   �   +-- FR 189 Suppression DSLAM impossible.docx
+�   �   +-- FR 190 Suppression VLAN IMPOSSIBLE.docx
+�   �   +-- FR 191 Suppression en masse de cartes.docx
+�   �   +-- ... (47 autres FRs)
+�   �
+�   +-- ?? scripts/                      # Scripts maintenance & injection
+�   �   +-- ?? knowledge/               # Injection base de connaissance
+�   �       +-- ?? inject_all_fr.py      # Indexe TOUTES les FRs (--force, --list)
+�   �       +-- ?? inject_fr_batch.py    # Injection par lot (FR 188/190/191)
+�   �       +-- ?? inject_fr189.py       # Injection initiale FR 189
+�   �
+�   +-- ?? data/                         # Donnees persistantes
+�       +-- ?? model_card.json           # Metriques ML classifier
+�       +-- ?? ml_corrections.jsonl      # Corrections RLHF
+�
++-- ?? frontend/                         # Frontend React + TypeScript + Vite
+�   +-- ?? package.json
+�   +-- ?? tsconfig.json
+�   +-- ?? vite.config.ts
+�   +-- ?? src/
+�       +-- ?? components/chatbot/
+�       �   +-- ?? ChatInterface.tsx     # Interface chat principale
+�       +-- ?? pages/
+�       �   +-- ?? DashboardPage.tsx
+�       �   +-- ?? KnowledgePage.tsx
+�       �   +-- ?? ValidationPage.tsx
+�       �   +-- ?? ClassificationMLPage.tsx
+�       +-- ?? services/
+�           +-- ?? classificationMLService.ts
+�
++-- ?? data_pipeline/                    # Pipeline donnees Jira -> training
+�   +-- ?? fr_parser.py                  # Parser FRs .docx
+�   +-- ?? build_labeled_dataset.py      # Construction dataset ML
+�
++-- ?? docs/                             # Documentation
+�   +-- ?? chatbot_reference.html        # Reference API chatbot
+�   +-- ?? documentation.html           # Documentation complete
+�
++-- ?? infrastructure/                   # Docker/Podman
+    +-- ?? docker/
 ```
 
-## 📊 Statistiques du projet
+---
 
-- **Total fichiers** : ~100+
-- **Langages** : Python, TypeScript, YAML, SQL
-- **Services** : 8 (Backend, Frontend, 4 Workers, Flower, Databases)
-- **Endpoints API** : 30+
-- **Composants React** : 20+
-- **Workers Celery** : 4 types d'analyseurs
+## Collections Qdrant
 
-## 🔑 Fichiers clés
+| Collection | Points | Contenu |
+|---|---|---|
+| `brasil_procedures` | **82** | 51 FRs indexees + procedures canoniques |
+| `code_knowledge` | **197** | 128 tables BRASIL + procedures schema |
+| `brasil_log_patterns` | **12** | Patterns erreurs logs |
 
-| Fichier | Rôle | Importance |
-|---------|------|------------|
-| `backend/app/main.py` | Point d'entrée API | ⭐⭐⭐ |
-| `backend/app/core/config.py` | Configuration | ⭐⭐⭐ |
-| `frontend/src/App.tsx` | Application React | ⭐⭐⭐ |
-| `docker-compose.yml` | Orchestration services | ⭐⭐⭐ |
-| `workers/celery_app.py` | Configuration workers | ⭐⭐⭐ |
-| `.github/workflows/ci-cd.yml` | Pipeline CI/CD | ⭐⭐ |
+---
 
-## 🎯 Points d'entrée
+## Fichiers cles
 
-1. **Développement local** : `podman-compose up -d` ou `.\podman.ps1 up -Detached`
-2. **Backend seul** : `cd backend && uvicorn app.main:app --reload`
-3. **Frontend seul** : `cd frontend && npm run dev`
-4. **Worker seul** : `cd workers && celery -A celery_app worker`
+| Fichier | Role | Statut |
+|---|---|---|
+| `backend/app/services/chatbot/chatbot_service.py` | Orchestration chatbot, intent routing | ? actif |
+| `backend/app/services/chatbot/incident_context_guard.py` | Lock/exclude systemes incidents | ? actif |
+| `backend/app/services/pipeline/mode2_fr_weak.py` | Pipeline RAG hybride (merge conditionnel) | ? actif |
+| `backend/app/services/knowledge/vector_service.py` | Qdrant + fuzzy keyword search | ? actif |
+| `backend/app/services/nlp/diagnostic_behavior.py` | Intent detection + trust gate + 128 tables | ? actif |
+| `backend/scripts/knowledge/inject_all_fr.py` | Indexation batch des 51 FRs | ? actif |
 
-## 📦 Dépendances principales
+---
 
-### Backend
-- FastAPI 0.109
-- SQLAlchemy 2.0
-- Celery 5.3
-- OpenAI 1.10
-- Neo4j 5.16
+## Demarrage rapide
 
-### Frontend
-- React 18
-- TypeScript 5
-- TailwindCSS 3
-- React Query 5
-- Axios 1.6
+```powershell
+# Backend
+cd backend
+.venv/Scripts/python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-## 🚀 Prochaines étapes
+# Frontend
+cd frontend
+npm run dev
 
-Après avoir créé l'arborescence :
+# Re-indexer toutes les FRs
+cd backend
+.venv/Scripts/python.exe scripts/knowledge/inject_all_fr.py          # incremental
+.venv/Scripts/python.exe scripts/knowledge/inject_all_fr.py --force  # tout re-indexer
+.venv/Scripts/python.exe scripts/knowledge/inject_all_fr.py --list   # lister sans indexer
+```
 
-1. ✅ Installer les dépendances : `cd backend && pip install -r requirements.txt`
-2. ✅ Configurer les env : Copier `.env.example` vers `.env`
-3. ✅ Lancer les services : `podman-compose up -d` (ou `.\podman.ps1 up -Detached`)
-4. ✅ Accéder à l'app : http://localhost:3000
-5. ✅ Tester l'API : http://localhost:8000/docs
+---
+
+## Statistiques
+
+- **FRs indexees** : 51 (FR 001 a FR 999)
+- **Tables BRASIL indexees** : 128
+- **Endpoints API** : 25+
+- **Pipeline modes** : 2 (FR_RICH / FR_WEAK)
+- **LLM** : Groq `qwen/qwen3-32b`
+- **Embedding** : `paraphrase-multilingual-MiniLM-L12-v2` (dim=384)
