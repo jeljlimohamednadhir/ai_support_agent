@@ -11,7 +11,6 @@ import {
   FileDown,
   AlertCircle,
   TrendingUp,
-  TrendingDown,
   CheckCircle,
   Clock,
   BarChart3,
@@ -23,44 +22,60 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   RefreshCw,
-  BookOpen
+  BookOpen,
+  History,
+  FolderOpen
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { classificationMLService, type UploadResponse, type TrainResponse, type ModelInfo, type PredictResponse, type ExecSummary, type CriticalityScore, type TemporalAnomaly, type AIRecommendation } from '../services/classificationMLService';
+import { usePageStateStore } from '../stores/pageStateStore';
+import { classificationMLService, type UploadResponse, type TrainResponse, type ModelInfo, type PredictResponse, type ExecSummary, type CriticalityScore, type TemporalAnomaly, type AIRecommendation, type SavedFileInfo } from '../services/classificationMLService';
 import { MetricCard } from '../components/ml/MetricCard';
 import { ParetoChart } from '../components/ml/ParetoChart';
 import { TimelineChart } from '../components/ml/TimelineChart';
 import { ConfusionMatrixDisplay } from '../components/ml/ConfusionMatrixDisplay';
-import { DataTable } from '../components/ml/DataTable';
 import { KeywordsConfigEditor } from '../components/ml/KeywordsConfigEditor';
-import { LowConfidenceTable } from '../components/ml/LowConfidenceTable';
 import { TopList } from '../components/ml/TopList';
 
 type Tab = 'resume' | 'synthese' | 'analyse' | 'training' | 'correction' | 'config' | 'export';
 
 export const ClassificationMLPage: React.FC = () => {
   const { canCorrectML } = useAuth(); // Get permission to correct ML
-  const [activeTab, setActiveTab] = useState<Tab>('resume');
-  const [uploadedData, setUploadedData] = useState<UploadResponse | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null); // Persister session
+
+  // Persisted state via pageStateStore (survives navigation)
+  const { ml, setMLUploadedData, setMLSessionId, setMLActiveTab, setMLThreshold } = usePageStateStore();
+  const activeTab = ml.activeTab as Tab;
+  const setActiveTab = (tab: Tab) => setMLActiveTab(tab);
+  const uploadedData = ml.uploadedData as UploadResponse | null;
+  const setUploadedData = (data: UploadResponse | null) => setMLUploadedData(data);
+  const sessionId = ml.sessionId;
+  const setSessionId = (id: string | null) => setMLSessionId(id);
+  const threshold = ml.threshold;
+  const setThreshold = (v: number) => setMLThreshold(v);
+
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
   const [predictions, setPredictions] = useState<PredictResponse | null>(null);
   const [execSummary, setExecSummary] = useState<ExecSummary | null>(null);
   const [trainingResult, setTrainingResult] = useState<TrainResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [threshold, setThreshold] = useState<number>(0.5);
   const [indexingStatus, setIndexingStatus] = useState<'idle' | 'indexing' | 'done'>('idle');
+  const [savedFiles, setSavedFiles] = useState<SavedFileInfo[]>([]);
+  const [showFileHistory, setShowFileHistory] = useState(false);
 
-  // Load model info on mount
+  // Load model info on mount — uploadedData/sessionId/tab/threshold are auto-restored from store
   useEffect(() => {
     loadModelInfo();
-    // Restaurer session depuis localStorage
-    const savedSessionId = localStorage.getItem('ml_session_id');
-    if (savedSessionId) {
-      setSessionId(savedSessionId);
-    }
+    loadSavedFiles();
   }, []);
+
+  const loadSavedFiles = async () => {
+    try {
+      const files = await classificationMLService.listFiles();
+      setSavedFiles(files);
+    } catch (err) {
+      console.error('Failed to load saved files:', err);
+    }
+  };
 
   const loadModelInfo = async () => {
     try {
@@ -84,11 +99,8 @@ export const ClassificationMLPage: React.FC = () => {
     try {
       const response = await classificationMLService.uploadCSV(file);
       setUploadedData(response);
-      
-      // Sauvegarder session_id dans localStorage
       if (response.session_id) {
         setSessionId(response.session_id);
-        localStorage.setItem('ml_session_id', response.session_id);
       }
 
       // Auto-prepare data
@@ -102,6 +114,8 @@ export const ClassificationMLPage: React.FC = () => {
         const summary = await classificationMLService.getExecSummary();
         setExecSummary(summary);
       }
+      // Refresh saved files list
+      await loadSavedFiles();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Upload failed');
     } finally {
@@ -109,8 +123,31 @@ export const ClassificationMLPage: React.FC = () => {
     }
   };
 
+  const handleLoadSavedFile = async (fileInfo: SavedFileInfo) => {
+    setLoading(true);
+    setError(null);
+    setShowFileHistory(false);
+    try {
+      const response = await classificationMLService.loadSavedFile(fileInfo.session_id);
+      setUploadedData(response);
+      if (response.session_id) {
+        setSessionId(response.session_id);
+      }
+      // Refresh exec summary
+      if (response.n_rows > 0) {
+        const summary = await classificationMLService.getExecSummary();
+        setExecSummary(summary);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to load saved file');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleTrainModel = async (params: {
     labelCol: string;
+    textCol?: string;
     maxFeatures: number;
     useCauseHint: boolean;
   }) => {
@@ -120,6 +157,7 @@ export const ClassificationMLPage: React.FC = () => {
     try {
       const result = await classificationMLService.trainModel({
         label_col: params.labelCol,
+        text_col: params.textCol || undefined,
         max_features: params.maxFeatures,
         use_cause_hint: params.useCauseHint,
         session_id: sessionId || undefined, // Envoyer session_id pour restaurer données
@@ -156,8 +194,12 @@ export const ClassificationMLPage: React.FC = () => {
   };
 
   const handlePredict = async () => {
-    if (!uploadedData || !modelInfo?.exists) {
-      setError('Upload data and train model first');
+    if (!uploadedData && !sessionId) {
+      setError('Veuillez d\'abord importer un fichier CSV');
+      return;
+    }
+    if (!sessionId) {
+      setError('Session introuvable — veuillez réimporter le fichier CSV');
       return;
     }
 
@@ -165,14 +207,21 @@ export const ClassificationMLPage: React.FC = () => {
     setError(null);
 
     try {
-      // Prepare tickets for prediction
-      const tickets = uploadedData.preview.map(row => ({
-        ticket_id: row.ticket_id || String(row.id || Math.random()),
-        text: row.texte_complet || row.resume || ''
-      }));
-
-      const result = await classificationMLService.predict({ tickets, threshold });
+      const result = await classificationMLService.predictSession(sessionId, threshold);
       setPredictions(result);
+
+      // Update uploadedData with full classified data
+      if (result.updated_preview && result.updated_preview.length > 0) {
+        const updatedCols = Object.keys(result.updated_preview[0]);
+        setUploadedData({
+          ...uploadedData,
+          columns: updatedCols,
+          preview: result.updated_preview,
+          stats: uploadedData?.stats ?? {},
+          n_rows: uploadedData?.n_rows ?? result.updated_preview.length,
+          detected_columns: uploadedData?.detected_columns ?? {},
+        });
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Prediction failed');
     } finally {
@@ -277,21 +326,81 @@ export const ClassificationMLPage: React.FC = () => {
               {indexingStatus === 'indexing' ? (
                 <>
                   <Loader className="w-4 h-4 animate-spin" />
-                  Indexation...
+                  Entraînement...
                 </>
               ) : indexingStatus === 'done' ? (
                 <>
                   <CheckCircle className="w-4 h-4" />
-                  Indexé ✓
+                  Entraîné ✓
                 </>
               ) : (
                 <>
                   <Database className="w-4 h-4" />
-                  Indexer pour RAG
+                  Entraîner
                 </>
               )}
             </button>
           )}
+
+          <div className="relative">
+            <button
+              onClick={() => setShowFileHistory(!showFileHistory)}
+              className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+              title="Fichiers précédemment chargés"
+            >
+              <History className="w-5 h-5" />
+              Historique
+              {savedFiles.length > 0 && (
+                <span className="ml-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {savedFiles.length}
+                </span>
+              )}
+            </button>
+
+            {showFileHistory && (
+              <div className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <FolderOpen className="w-4 h-4" />
+                    Fichiers sauvegardés
+                  </h3>
+                  <button onClick={() => setShowFileHistory(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg leading-none">&times;</button>
+                </div>
+                {savedFiles.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-gray-500 dark:text-gray-400 text-sm">
+                    Aucun fichier sauvegardé
+                  </div>
+                ) : (
+                  <ul className="max-h-72 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                    {savedFiles.map(f => (
+                      <li
+                        key={f.session_id}
+                        className="px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors"
+                        onClick={() => handleLoadSavedFile(f)}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{f.filename}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              {f.n_rows.toLocaleString()} lignes · {new Date(f.uploaded_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            {f.columns.includes('categorie_intelligente') && (
+                              <span className="inline-flex items-center gap-1 text-xs text-green-700 dark:text-green-400 mt-1">
+                                <CheckCircle className="w-3 h-3" /> Prédit
+                              </span>
+                            )}
+                          </div>
+                          <button className="text-blue-600 dark:text-blue-400 text-xs whitespace-nowrap hover:underline">
+                            Charger
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
 
           <label className="px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors flex items-center gap-2">
             <Upload className="w-5 h-5" />
@@ -366,6 +475,8 @@ export const ClassificationMLPage: React.FC = () => {
             onPredict={handlePredict}
             onCorrection={handleCorrection}
             loading={loading}
+            modelInfo={modelInfo}
+            uploadedData={uploadedData}
           />
         )}
 
@@ -628,32 +739,177 @@ const SyntheseTab: React.FC<{ uploadedData: UploadResponse | null }> = ({ upload
 };
 
 const AnalyseInteractiveTab: React.FC<{ uploadedData: UploadResponse | null }> = ({ uploadedData }) => {
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [searchText, setSearchText] = useState('');
+  const [sortCol, setSortCol] = useState<string>('');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [timeseriesData, setTimeseriesData] = useState<any>(null);
-  const [topValues, setTopValues] = useState<any>(null);
 
   useEffect(() => {
     if (uploadedData) {
-      classificationMLService.getTimeseries('date', 'cause_canonique').then(setTimeseriesData);
-      classificationMLService.getTopValues('cause_canonique', 10).then(setTopValues);
+      classificationMLService.getTimeseries('date', 'cause_canonique').then(setTimeseriesData).catch(() => {});
     }
   }, [uploadedData]);
 
   if (!uploadedData) return <div className="text-center py-12 text-gray-500">Uploadez un fichier CSV d'abord</div>;
 
+  const rows = uploadedData.preview || [];
+  const hasCategorie = uploadedData.columns.includes('categorie_intelligente');
+
+  // Unique categories for filter
+  const categories = hasCategorie
+    ? Array.from(new Set(rows.map((r: any) => r.categorie_intelligente).filter(Boolean))).sort() as string[]
+    : [];
+
+  // Filtered + searched rows
+  const filtered = rows.filter((r: any) => {
+    const matchCat = categoryFilter === 'all' || r.categorie_intelligente === categoryFilter;
+    const matchSearch = !searchText || Object.values(r).some(v =>
+      String(v).toLowerCase().includes(searchText.toLowerCase())
+    );
+    return matchCat && matchSearch;
+  });
+
+  // Sort
+  const sorted = sortCol
+    ? [...filtered].sort((a: any, b: any) => {
+        const av = String(a[sortCol] ?? '');
+        const bv = String(b[sortCol] ?? '');
+        return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      })
+    : filtered;
+
+  const handleSort = (col: string) => {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  };
+
+  // Category distribution stats
+  const catStats = categories.map(cat => ({
+    cat,
+    count: rows.filter((r: any) => r.categorie_intelligente === cat).length
+  })).sort((a, b) => b.count - a.count);
+
+  // Show key columns: prioritize categorie_intelligente, then a few useful ones
+  const priorityCols = ['categorie_intelligente', 'inc_cause', 'cause_canonique', 'resume', 'texte_complet', 'application', 'groupe'];
+  const displayCols = [
+    ...priorityCols.filter(c => uploadedData.columns.includes(c)),
+    ...uploadedData.columns.filter(c => !priorityCols.includes(c))
+  ].slice(0, 8);
+
   return (
     <div className="space-y-6">
-      {timeseriesData && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold mb-4">Évolution Temporelle</h3>
-          <TimelineChart data={timeseriesData.data} />
+      {/* Category distribution cards */}
+      {hasCategorie && catStats.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+          <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
+            <PieChart className="w-4 h-4 text-blue-500" />
+            Distribution par Catégorie Intelligente
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setCategoryFilter('all')}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                categoryFilter === 'all'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Tout ({rows.length})
+            </button>
+            {catStats.map(({ cat, count }) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat === categoryFilter ? 'all' : cat)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  categoryFilter === cat
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {cat} <span className="ml-1 opacity-75">({count})</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {topValues && (
-        <TopList
-          title="Top 10 Causes"
-          items={topValues.items.map((v: any) => ({ name: v.name, value: v.volume }))}
-        />
+      {!hasCategorie && (
+        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg text-sm text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          Lancez la prédiction dans l'onglet <strong>Correction Tickets</strong> pour voir les catégories intelligentes.
+        </div>
+      )}
+
+      {/* Ticket table with filters */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+          <h3 className="font-semibold text-sm">
+            Tickets ({sorted.length}{rows.length !== sorted.length ? ` / ${rows.length}` : ''})
+          </h3>
+          <input
+            type="text"
+            placeholder="Rechercher..."
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            className="ml-auto w-56 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-700/50">
+              <tr>
+                {displayCols.map(col => (
+                  <th
+                    key={col}
+                    onClick={() => handleSort(col)}
+                    className={`px-4 py-2.5 text-left font-medium cursor-pointer select-none whitespace-nowrap ${
+                      col === 'categorie_intelligente'
+                        ? 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20'
+                        : 'text-gray-600 dark:text-gray-300'
+                    }`}
+                  >
+                    {col}
+                    {sortCol === col && (
+                      <span className="ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {sorted.length === 0 ? (
+                <tr><td colSpan={displayCols.length} className="px-4 py-8 text-center text-gray-400">Aucun résultat</td></tr>
+              ) : (
+                sorted.map((row: any, i: number) => (
+                  <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    {displayCols.map(col => (
+                      <td
+                        key={col}
+                        className={`px-4 py-2 max-w-xs truncate ${
+                          col === 'categorie_intelligente'
+                            ? 'font-medium text-blue-700 dark:text-blue-300 bg-blue-50/50 dark:bg-blue-900/10'
+                            : 'text-gray-700 dark:text-gray-200'
+                        }`}
+                        title={String(row[col] ?? '')}
+                      >
+                        {String(row[col] ?? '—')}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      {timeseriesData && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+          <h3 className="text-base font-semibold mb-4">Évolution Temporelle</h3>
+          <TimelineChart data={timeseriesData.data} />
+        </div>
       )}
     </div>
   );
@@ -667,6 +923,7 @@ const TrainingTab: React.FC<{
   loading: boolean;
 }> = ({ uploadedData, trainingResult, modelInfo, onTrain, loading }) => {
   const [labelCol, setLabelCol] = useState('cause');
+  const [textCol, setTextCol] = useState('');
   const [maxFeatures, setMaxFeatures] = useState(5000);
   const [useCauseHint, setUseCauseHint] = useState(false);
   const [retraining, setRetraining] = React.useState(false);
@@ -689,18 +946,12 @@ const TrainingTab: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onTrain({ labelCol, maxFeatures, useCauseHint });
+    onTrain({ labelCol, textCol: textCol || undefined, maxFeatures, useCauseHint });
   };
 
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 space-y-4">
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4 border border-blue-200 dark:border-blue-800">
-          <p className="text-sm text-blue-800 dark:text-blue-200">
-            ℹ️ La colonne de texte sera automatiquement détectée (text_ml_postmortem, texte_complet, ou resume).
-          </p>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Colonne à prédire (label)</label>
@@ -716,13 +967,39 @@ const TrainingTab: React.FC<{
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Max Features</label>
+            <label className="block text-sm font-medium mb-2">
+              Colonne texte source
+              <span className="ml-1 text-xs font-normal text-gray-500">(auto si vide)</span>
+            </label>
+            <select
+              value={textCol}
+              onChange={(e) => setTextCol(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
+            >
+              <option value="">— Auto-détection —</option>
+              {uploadedData?.columns.map(col => (
+                <option key={col} value={col}>{col}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Max Features (TF-IDF)
+              <span className="ml-1 text-xs font-normal text-gray-500">1 000 – 20 000</span>
+            </label>
             <input
               type="number"
+              min={1000}
+              max={20000}
+              step={1000}
               value={maxFeatures}
               onChange={(e) => setMaxFeatures(Number(e.target.value))}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              {maxFeatures <= 2000 ? '⚡ Rapide, moins précis' : maxFeatures <= 7000 ? '✅ Recommandé pour &lt;500 tickets' : '🎯 Optimal pour grands datasets'}
+            </p>
           </div>
 
           <div className="flex items-center col-span-2">
@@ -829,47 +1106,298 @@ const CorrectionTab: React.FC<{
   onPredict: () => void;
   onCorrection: (ticketId: string, correctedLabel: string, originalLabel: string) => void;
   loading: boolean;
-}> = ({ predictions, threshold, onThresholdChange, onPredict, onCorrection, loading }) => {
+  modelInfo: ModelInfo | null;
+  uploadedData: UploadResponse | null;
+}> = ({ predictions, threshold, onThresholdChange, onPredict, onCorrection, loading, modelInfo, uploadedData }) => {
+  const [corrections, setCorrections] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [filterAccepted, setFilterAccepted] = useState<'all' | 'accepted' | 'rejected'>('all');
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  // All known classes from modelInfo (preferred) or from predictions
+  const allClasses: string[] = modelInfo?.classes?.length
+    ? [...modelInfo.classes].sort()
+    : predictions
+      ? Array.from(new Set(predictions.predictions.map(p => p.predicted_label))).sort()
+      : [];
+
+  // Build a lookup: index -> original row data from updated_preview
+  const previewByIndex: Record<string, Record<string, any>> = {};
+  const preview = predictions?.updated_preview ?? uploadedData?.preview ?? [];
+  preview.forEach((row, i) => { previewByIndex[String(i)] = row; });
+
+  // Key columns to display as ticket context (shown in expanded row)
+  const CONTEXT_COLS = [
+    'user_sig', 'resume', 'description', 'inc_description',
+    'inc_cause', 'cause_canonique', 'inc_solution', 'categorie',
+    'inc_date_creation', 'date', 'inc_numero', 'id',
+    'composant', 'inc_composant', 'application',
+  ];
+
+  const displayed = predictions
+    ? predictions.predictions.filter(p =>
+        filterAccepted === 'all' ? true :
+        filterAccepted === 'accepted' ? p.accepted :
+        !p.accepted
+      )
+    : [];
+
+  const allRejected = predictions && predictions.stats.accepted === 0;
+
+  const handleSave = async (p: any) => {
+    const corrected = corrections[p.ticket_id];
+    if (!corrected) return;
+    await onCorrection(p.ticket_id, corrected, p.predicted_label);
+    setSaved(s => ({ ...s, [p.ticket_id]: true }));
+  };
+
+  // Get a short summary of a ticket row for the table
+  const getTicketSummary = (rowData: Record<string, any> | undefined): string => {
+    if (!rowData) return '—';
+    const resumeKey = ['user_sig', 'resume', 'description', 'inc_description']
+      .find(k => rowData[k] && String(rowData[k]).trim());
+    if (!resumeKey) return '—';
+    const text = String(rowData[resumeKey]);
+    return text.length > 80 ? text.slice(0, 80) + '…' : text;
+  };
+
+  const getTicketId = (rowData: Record<string, any> | undefined): string => {
+    if (!rowData) return '—';
+    const idKey = ['inc_numero', 'id', 'ticket_id', 'numero']
+      .find(k => rowData[k] && String(rowData[k]).trim());
+    return idKey ? String(rowData[idKey]) : '—';
+  };
+
+  const getRealLabel = (rowData: Record<string, any> | undefined): string => {
+    if (!rowData) return '—';
+    const labelKey = ['inc_cause', 'cause_canonique', 'categorie', 'inc_categorie', 'label']
+      .find(k => rowData[k] && String(rowData[k]).trim());
+    return labelKey ? String(rowData[labelKey]) : '—';
+  };
+
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 space-y-4">
+      {/* Controls */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 space-y-4">
         <div className="flex items-center gap-4">
-          <label className="font-medium">Seuil de confiance:</label>
+          <label className="font-medium text-sm whitespace-nowrap">Seuil de confiance :</label>
           <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
+            type="range" min="0.3" max="0.95" step="0.01"
             value={threshold}
             onChange={(e) => onThresholdChange(Number(e.target.value))}
             className="flex-1"
           />
-          <span className="font-mono font-bold">{threshold.toFixed(2)}</span>
+          <span className="font-mono font-bold text-blue-600 w-12 text-right">{threshold.toFixed(2)}</span>
         </div>
-
         <button
           onClick={onPredict}
           disabled={loading}
-          className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
         >
           <Brain className="w-5 h-5" />
-          {loading ? 'Prédiction en cours...' : 'Lancer la prédiction'}
+          {loading ? 'Classification en cours...' : 'Classifier tous les tickets'}
         </button>
       </div>
 
+      {!predictions && !loading && (
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+          <Brain className="w-10 h-10 mx-auto mb-3 opacity-30" />
+          <p>Cliquez sur <strong>Classifier tous les tickets</strong> pour lancer la prédiction.</p>
+        </div>
+      )}
+
       {predictions && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Warning: all rejected */}
+          {allRejected && (
+            <div className="flex items-start gap-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-xl p-4">
+              <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                <strong>Tous les tickets sont rejetés</strong> — le modèle prédit avec une confiance inférieure au seuil ({threshold.toFixed(2)}).
+                Essayez de <strong>baisser le seuil</strong> (ex : 0.10–0.30) pour voir les prédictions, ou relancez l'entraînement avec plus de données.
+              </div>
+            </div>
+          )}
+
+          {/* Stats row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <MetricCard title="Total" value={predictions.stats.total.toString()} icon={BarChart3} color="blue" />
             <MetricCard title="Acceptés" value={predictions.stats.accepted.toString()} icon={CheckCircle} color="green" />
             <MetricCard title="Rejetés" value={predictions.stats.rejected.toString()} icon={AlertCircle} color="red" />
             <MetricCard title="Couverture" value={`${(predictions.stats.coverage * 100).toFixed(1)}%`} icon={TrendingUp} color="purple" />
           </div>
 
-          <LowConfidenceTable
-            predictions={predictions.predictions.filter(p => !p.accepted)}
-            onCorrection={onCorrection}
-          />
+          {/* Filter bar */}
+          <div className="flex items-center gap-2">
+            {(['all', 'accepted', 'rejected'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilterAccepted(f)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  filterAccepted === f
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                {f === 'all' ? 'Tous' : f === 'accepted' ? '✓ Acceptés' : '✗ Rejetés'}
+              </button>
+            ))}
+            <span className="ml-auto text-xs text-gray-400">
+              Cliquez sur <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">▶</kbd> pour voir le détail du ticket
+            </span>
+            <span className="text-sm text-gray-500">{displayed.length} tickets</span>
+          </div>
+
+          {/* Prediction table */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-700/50 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-3 py-3 w-8"></th>
+                    <th className="px-3 py-3 text-left font-medium text-gray-600 dark:text-gray-300 w-24">N° Ticket</th>
+                    <th className="px-3 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Résumé</th>
+                    <th className="px-3 py-3 text-left font-medium text-gray-600 dark:text-gray-300 w-48">Catégorie réelle</th>
+                    <th className="px-3 py-3 text-left font-medium text-gray-600 dark:text-gray-300 w-52">Prédiction ML</th>
+                    <th className="px-3 py-3 text-left font-medium text-gray-600 dark:text-gray-300 w-24">Confiance</th>
+                    <th className="px-3 py-3 text-left font-medium text-gray-600 dark:text-gray-300 w-20">Statut</th>
+                    <th className="px-3 py-3 text-left font-medium text-gray-600 dark:text-gray-300 w-52">Correction</th>
+                    <th className="px-3 py-3 w-16"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {displayed.map((p, i) => {
+                    const rowData = previewByIndex[p.ticket_id];
+                    const isExpanded = expandedRow === p.ticket_id;
+                    const ticketNum = getTicketId(rowData);
+                    const summary = getTicketSummary(rowData);
+                    const realLabel = getRealLabel(rowData);
+                    const predMatchesReal = realLabel !== '—' && realLabel.trim().toLowerCase() === p.predicted_label.trim().toLowerCase();
+
+                    // Context fields for expanded view
+                    const contextFields = CONTEXT_COLS
+                      .filter(k => rowData?.[k] && String(rowData[k]).trim() && String(rowData[k]) !== 'nan')
+                      .map(k => ({ key: k, value: String(rowData[k]) }));
+
+                    return (
+                      <>
+                        <tr
+                          key={p.ticket_id}
+                          className={`transition-colors cursor-pointer ${
+                            saved[p.ticket_id] ? 'bg-green-50 dark:bg-green-900/10' :
+                            isExpanded ? 'bg-blue-50 dark:bg-blue-900/10' :
+                            !p.accepted ? 'bg-red-50/40 dark:bg-red-900/5' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                          }`}
+                          onClick={() => setExpandedRow(isExpanded ? null : p.ticket_id)}
+                        >
+                          <td className="px-3 py-2.5 text-gray-400 text-center">
+                            <span className="text-xs">{isExpanded ? '▼' : '▶'}</span>
+                          </td>
+                          <td className="px-3 py-2.5 text-gray-500 font-mono text-xs">{ticketNum}</td>
+                          <td className="px-3 py-2.5 text-gray-700 dark:text-gray-200 max-w-xs">
+                            <span className="line-clamp-2 text-xs">{summary}</span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className="text-xs text-gray-600 dark:text-gray-300">{realLabel}</span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                              predMatchesReal
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                                : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                            }`}>{p.predicted_label}</span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                                <div
+                                  className={`h-1.5 rounded-full ${
+                                    p.confidence >= 0.6 ? 'bg-green-500' :
+                                    p.confidence >= 0.35 ? 'bg-yellow-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${Math.min(p.confidence * 100, 100)}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-mono text-gray-500">{(p.confidence * 100).toFixed(0)}%</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                              p.accepted
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                                : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+                            }`}>
+                              {p.accepted ? '✓' : '✗'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                            {saved[p.ticket_id] ? (
+                              <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ Sauvegardé</span>
+                            ) : (
+                              <select
+                                value={corrections[p.ticket_id] || ''}
+                                onChange={e => setCorrections(c => ({ ...c, [p.ticket_id]: e.target.value }))}
+                                className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white w-full max-w-[200px]"
+                              >
+                                <option value="">— corriger —</option>
+                                {allClasses.map(cls => (
+                                  <option key={cls} value={cls}>{cls}</option>
+                                ))}
+                              </select>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                            {!saved[p.ticket_id] && corrections[p.ticket_id] && (
+                              <button
+                                onClick={() => handleSave(p)}
+                                className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                              >
+                                Sauver
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                        {/* Expanded ticket detail row */}
+                        {isExpanded && (
+                          <tr key={`${p.ticket_id}-detail`} className="bg-blue-50 dark:bg-blue-900/10">
+                            <td colSpan={9} className="px-6 py-4">
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {contextFields.length > 0 ? contextFields.map(({ key, value }) => (
+                                  <div key={key} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-100 dark:border-blue-800">
+                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{key}</p>
+                                    <p className="text-sm text-gray-800 dark:text-gray-100 break-words">{value}</p>
+                                  </div>
+                                )) : (
+                                  <p className="text-sm text-gray-500 col-span-3">Aucun détail disponible pour ce ticket.</p>
+                                )}
+                                {/* Top-3 probabilities if available */}
+                                {p.all_probabilities && (
+                                  <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-100 dark:border-blue-800 col-span-full">
+                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Top probabilités ML</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {Object.entries(p.all_probabilities)
+                                        .sort(([,a],[,b]) => b - a)
+                                        .slice(0, 5)
+                                        .map(([cls, prob]) => (
+                                          <span key={cls} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-full text-xs">
+                                            <span className="font-medium text-blue-800 dark:text-blue-200">{cls}</span>
+                                            <span className="text-blue-600 dark:text-blue-400">{(prob * 100).toFixed(1)}%</span>
+                                          </span>
+                                        ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </>
       )}
     </div>

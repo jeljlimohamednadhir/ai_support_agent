@@ -10,9 +10,9 @@ const BASE_URL = `${API_URL}/classification-ml`;
 export interface UploadResponse {
   columns: string[];
   preview: Record<string, any>[];
-  stats: Record<string, any>;
+  stats?: Record<string, any>;
   n_rows: number;
-  detected_columns: Record<string, string | null>;
+  detected_columns?: Record<string, string | null>;
   session_id?: string;
 }
 
@@ -41,6 +41,7 @@ export interface TrainResponse {
 export interface PredictRequest {
   tickets: Array<{ ticket_id: string; text: string }>;
   threshold?: number;
+  session_id?: string;
 }
 
 export interface PredictionResult {
@@ -59,6 +60,15 @@ export interface PredictResponse {
     rejected: number;
     coverage: number;
   };
+  updated_preview?: Record<string, any>[];
+}
+
+export interface SavedFileInfo {
+  session_id: string;
+  filename: string;
+  n_rows: number;
+  columns: string[];
+  uploaded_at: string;
 }
 
 export interface CorrectionRequest {
@@ -144,6 +154,21 @@ export interface ModelInfo {
   weak_points: Array<{ type: string; detail: string; severity: string }>;
 }
 
+export interface IndexRAGLaunched {
+  source: string;
+  count?: number;
+  collection?: string;
+  parser?: string;
+  note?: string;
+}
+
+export interface IndexRAGResult {
+  source: string;
+  message: string;
+  launched: IndexRAGLaunched[];
+  errors: string[];
+}
+
 export const classificationMLService = {
   /**
    * Upload CSV file
@@ -206,10 +231,22 @@ export const classificationMLService = {
   },
 
   /**
-   * Predict labels
+   * Predict labels for a small list of tickets (pass tickets array)
    */
   async predict(request: PredictRequest): Promise<PredictResponse> {
     const { data } = await axios.post<PredictResponse>(`${BASE_URL}/predict`, request);
+    return data;
+  },
+
+  /**
+   * Predict ALL tickets from the stored session (no ticket list needed)
+   */
+  async predictSession(sessionId: string, threshold: number): Promise<PredictResponse> {
+    const { data } = await axios.post<PredictResponse>(`${BASE_URL}/predict-session`, {
+      tickets: [],
+      threshold,
+      session_id: sessionId
+    });
     return data;
   },
 
@@ -306,10 +343,40 @@ export const classificationMLService = {
   },
 
   /**
-   * Index tickets for RAG chatbot
+   * List all previously saved CSV uploads
+   */
+  async listFiles(): Promise<SavedFileInfo[]> {
+    const { data } = await axios.get<SavedFileInfo[]>(`${BASE_URL}/files`);
+    return data;
+  },
+
+  /**
+   * Load a previously saved file from disk into active session
+   */
+  async loadSavedFile(sessionId: string): Promise<UploadResponse> {
+    const { data } = await axios.post<UploadResponse>(`${BASE_URL}/files/${sessionId}/load`);
+    return data;
+  },
+
+  /**
+   * Index tickets for RAG chatbot (legacy single-source)
    */
   async indexTickets(): Promise<{ message: string; ticket_count: number; text_columns: string[] }> {
     const { data } = await axios.post(`${BASE_URL}/index-tickets`);
+    return data;
+  },
+
+  /**
+   * RAG multi-source indexation : tickets (SmartN3Parser) | fr | logs | all
+   */
+  async indexRAG(
+    source: 'tickets' | 'fr' | 'logs' | 'all',
+    options?: { fr_dir?: string; log_file?: string },
+  ): Promise<IndexRAGResult> {
+    const { data } = await axios.post<IndexRAGResult>(`${BASE_URL}/index-rag`, {
+      source,
+      ...options,
+    });
     return data;
   },
 

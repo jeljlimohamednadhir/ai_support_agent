@@ -12,10 +12,10 @@ export default function ValidationPage() {
   })
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-6">
+    <div className="p-8 max-w-6xl mx-auto space-y-6 min-h-screen dark:bg-gray-900">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">🛡️ Validation N3</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">🛡️ Validation N3</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Validez les réponses du chatbot pour enrichir la base de connaissances
         </p>
       </div>

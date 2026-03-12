@@ -39,6 +39,11 @@ export const UserManagementPage: React.FC = () => {
   const [updateData, setUpdateData] = useState<UserUpdate>({});
 
   useEffect(() => {
+    // Set token on authService from localStorage before fetching
+    const storedToken = localStorage.getItem('auth_token')
+    if (storedToken) {
+      authService.setToken(storedToken)
+    }
     loadUsers();
   }, []);
 
@@ -130,21 +135,21 @@ export const UserManagementPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen dark:bg-gray-900">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-6 space-y-6 min-h-screen dark:bg-gray-900">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Users className="w-8 h-8 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestion des utilisateurs</h1>
-            <p className="text-gray-600">{users.length} utilisateur(s)</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Gestion des utilisateurs</h1>
+            <p className="text-gray-600 dark:text-gray-400">{users.length} utilisateur(s)</p>
           </div>
         </div>
         <button
@@ -158,8 +163,8 @@ export const UserManagementPage: React.FC = () => {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">{error}</p>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-red-800 dark:text-red-300">{error}</p>
           <button
             onClick={() => setError('')}
             className="text-red-600 underline text-sm mt-1"
@@ -171,9 +176,9 @@ export const UserManagementPage: React.FC = () => {
 
       {/* Create User Form */}
       {isCreating && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Créer un nouvel utilisateur</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Créer un nouvel utilisateur</h2>
             <button
               onClick={() => setIsCreating(false)}
               className="text-gray-400 hover:text-gray-600"
@@ -274,47 +279,47 @@ export const UserManagementPage: React.FC = () => {
       )}
 
       {/* Users Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Utilisateur
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Email
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Rôle
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Statut
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Dernière connexion
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {users.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50">
+              <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 dark:bg-gray-800">
                 {editingUser?.id === user.id ? (
                   <>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <UserIcon className="w-5 h-5 text-gray-400" />
                         <div>
-                          <div className="font-medium text-gray-900">{user.username}</div>
+                          <div className="font-medium text-gray-900 dark:text-white">{user.username}</div>
                           <input
                             type="text"
                             value={updateData.full_name || ''}
                             onChange={(e) =>
                               setUpdateData({ ...updateData, full_name: e.target.value })
                             }
-                            className="text-sm px-2 py-1 border border-gray-300 rounded mt-1"
+                            className="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded mt-1"
                             placeholder="Nom complet"
                           />
                         </div>
@@ -386,13 +391,13 @@ export const UserManagementPage: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <UserIcon className="w-5 h-5 text-gray-400" />
                         <div>
-                          <div className="font-medium text-gray-900">{user.username}</div>
-                          <div className="text-sm text-gray-500">{user.full_name}</div>
+                          <div className="font-medium text-gray-900 dark:text-white">{user.username}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{user.full_name}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-gray-700">
+                      <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                         <Mail className="w-4 h-4 text-gray-400" />
                         {user.email}
                       </div>
@@ -416,7 +421,7 @@ export const UserManagementPage: React.FC = () => {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                       {user.last_login
                         ? new Date(user.last_login).toLocaleDateString('fr-FR')
                         : 'Jamais'}

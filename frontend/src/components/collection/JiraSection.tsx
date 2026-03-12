@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Activity, AlertCircle, CheckCircle2, RefreshCw, Loader2, Settings, Download, ExternalLink, Search, X, Calendar, User, Tag, Clock, FileText, TrendingUp, BarChart3 } from 'lucide-react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { Activity, AlertCircle, CheckCircle2, RefreshCw, Loader2, Settings, Download, ExternalLink, Search, X, Calendar, User, Tag, Clock, FileText, TrendingUp, BarChart3, Sparkles } from 'lucide-react'
+import { usePageStateStore } from '../../stores/pageStateStore'
 
 interface JiraStats {
   total_issues: number
@@ -51,19 +52,54 @@ export default function JiraSection() {
   
   const [usePAT, setUsePAT] = useState(true) // Personal Access Token par défaut
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]) // Projets sélectionnés pour la sync
-  const [searchQuery, setSearchQuery] = useState('') // Recherche de projets
-  const [selectedProject, setSelectedProject] = useState<JiraProject | null>(null) // Projet sélectionné pour voir les tickets
+
+  // Persisted state — survives navigation
+  const { jira, setJiraSearchQuery, setJiraSelectedProject, setJiraPage } = usePageStateStore()
+  const searchQuery = jira.searchQuery
+  const setSearchQuery = setJiraSearchQuery
+  const currentPage = jira.currentPage
+  const [selectedProject, setSelectedProjectLocal] = useState<JiraProject | null>(null) // Projet sélectionné pour voir les tickets
   const [projectTickets, setProjectTickets] = useState<JiraTicket[]>([]) // Tickets du projet sélectionné
   const [loadingTickets, setLoadingTickets] = useState(false) // Chargement des tickets
-  const [currentPage, setCurrentPage] = useState(0) // Page actuelle (0-indexed)
   const [totalTickets, setTotalTickets] = useState(0) // Total de tickets
   const ticketsPerPage = 20 // Tickets par page
   const [selectedTicket, setSelectedTicket] = useState<JiraTicket | null>(null) // Ticket sélectionné pour les détails
   const [showTicketModal, setShowTicketModal] = useState(false) // Modal de détails du ticket
+  const [aiPopupTicketId, setAiPopupTicketId] = useState<string | null>(null) // AI popup ticket id
+  const [aiText, setAiText] = useState('') // Full AI response text
+  const [aiDisplayed, setAiDisplayed] = useState('') // Typewriter displayed text
+  const [aiLoading, setAiLoading] = useState(false) // AI loading state
+  const [aiPopupTicket, setAiPopupTicket] = useState<JiraTicket | null>(null) // Ticket being analysed
+  const aiAbortRef = useRef<AbortController | null>(null)
+  const aiTypewriterRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     loadJiraData()
   }, [])
+
+  // Typewriter effect: animate aiDisplayed char-by-char as aiText grows
+  useEffect(() => {
+    if (!aiText) { setAiDisplayed(''); return }
+    if (aiTypewriterRef.current) clearTimeout(aiTypewriterRef.current)
+    let i = aiDisplayed.length
+    const type = () => {
+      if (i < aiText.length) {
+        setAiDisplayed(aiText.slice(0, i + 1))
+        i++
+        aiTypewriterRef.current = setTimeout(type, 12)
+      }
+    }
+    type()
+    return () => { if (aiTypewriterRef.current) clearTimeout(aiTypewriterRef.current) }
+  }, [aiText])
+
+  // Restore selected project when projects list loads
+  useEffect(() => {
+    if (jira.selectedProjectKey && projects.length > 0 && !selectedProject) {
+      const found = projects.find(p => p.key === jira.selectedProjectKey)
+      if (found) loadProjectTickets(found, jira.currentPage)
+    }
+  }, [projects])
 
   // Filtrer les projets selon la recherche
   const filteredProjects = useMemo(() => {
@@ -211,8 +247,9 @@ export default function JiraSection() {
   }
 
   const loadProjectTickets = async (project: JiraProject, page: number = 0) => {
-    setSelectedProject(project)
-    setCurrentPage(page)
+    setSelectedProjectLocal(project)
+    setJiraSelectedProject(project.key)
+    setJiraPage(page)
     setLoadingTickets(true)
     
     try {
@@ -245,9 +282,10 @@ export default function JiraSection() {
   }
 
   const closeProjectView = () => {
-    setSelectedProject(null)
+    setSelectedProjectLocal(null)
+    setJiraSelectedProject(null)
     setProjectTickets([])
-    setCurrentPage(0)
+    setJiraPage(0)
     setTotalTickets(0)
   }
 
@@ -280,6 +318,76 @@ export default function JiraSection() {
     if (s.includes('todo') || s.includes('open') || s.includes('new')) return 'gray'
     return 'purple'
   }
+
+  const analyzeTicketWithAI = async (ticket: JiraTicket, e: React.MouseEvent) => {
+    e.stopPropagation() // Don't open ticket modal
+    if (aiPopupTicketId === ticket.id) {
+      // Close popup if already open for this ticket
+      aiAbortRef.current?.abort()
+      setAiPopupTicketId(null)
+      setAiPopupTicket(null)
+      setAiText('')
+      setAiDisplayed('')
+      return
+    }
+    // Abort any previous request
+    aiAbortRef.current?.abort()
+    const controller = new AbortController()
+    aiAbortRef.current = controller
+
+    setAiPopupTicketId(ticket.id)
+    setAiPopupTicket(ticket)
+    setAiText('')
+    setAiDisplayed('')
+    setAiLoading(true)
+
+    const prompt = `Analyse ce ticket Jira et donne une synthèse concise en 3-4 phrases (causes probables, impact, suggestions de résolution):\n\nTicket: ${ticket.key}\nTitre: ${ticket.summary}\nStatut: ${ticket.status}\nPriorité: ${ticket.priority || 'Non définie'}\nType: ${ticket.issue_type}\nDescription: ${ticket.description || 'Aucune description'}`
+
+    try {
+      const token = localStorage.getItem('auth_token')
+      const response = await fetch('http://localhost:8000/api/v1/chatbot/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ content: prompt }),
+        signal: controller.signal
+      })
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null)
+        setAiText(`❌ Impossible d'obtenir une analyse IA. (${response.status}${errData?.detail ? ': ' + errData.detail : ''})`)
+        setAiLoading(false)
+        return
+      }
+
+      const data = await response.json()
+      const text = data.message || data.response || data.content || 'Réponse reçue.'
+      setAiDisplayed('')
+      setAiText(text)
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        setAiText('❌ Erreur lors de l\'analyse IA.')
+      }
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  // Compute status distribution from actual ticket data
+  const statusDistribution = useMemo(() => {
+    const allTickets = [...recentTickets, ...projectTickets]
+    if (allTickets.length === 0) return []
+    const counts: Record<string, number> = {}
+    for (const t of allTickets) {
+      const s = t.status || 'Unknown'
+      counts[s] = (counts[s] || 0) + 1
+    }
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+  }, [recentTickets, projectTickets])
 
   if (loading && !stats) {
     return (
@@ -475,29 +583,51 @@ export default function JiraSection() {
           </div>
           
           <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Ouverts</p>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.open_issues}</p>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-yellow-600 dark:text-yellow-400 mb-1">En cours</p>
-            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.in_progress_issues}</p>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-green-600 dark:text-green-400 mb-1">Résolus</p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.resolved_issues}</p>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Fermés</p>
-            <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.closed_issues}</p>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
             <p className="text-xs text-purple-600 dark:text-purple-400 mb-1">Projets</p>
             <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.total_projects}</p>
           </div>
+
+          {/* Dynamic status cards from real ticket data */}
+          {statusDistribution.length > 0 ? (
+            statusDistribution.map(([status, count]) => {
+              const color = getStatusColor(status)
+              const colorMap: Record<string, string> = {
+                green: 'text-green-600 dark:text-green-400',
+                blue: 'text-blue-600 dark:text-blue-400',
+                gray: 'text-gray-600 dark:text-gray-400',
+                yellow: 'text-yellow-600 dark:text-yellow-400',
+                orange: 'text-orange-600 dark:text-orange-400',
+                red: 'text-red-600 dark:text-red-400',
+                purple: 'text-purple-600 dark:text-purple-400',
+              }
+              const textColor = colorMap[color] ?? 'text-gray-600 dark:text-gray-400'
+              return (
+                <div key={status} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                  <p className={`text-xs mb-1 ${textColor}`}>{status}</p>
+                  <p className={`text-2xl font-bold ${textColor}`}>{count}</p>
+                </div>
+              )
+            })
+          ) : (
+            <>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Ouverts</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.open_issues}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-yellow-600 dark:text-yellow-400 mb-1">En cours</p>
+                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.in_progress_issues}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-green-600 dark:text-green-400 mb-1">Résolus</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.resolved_issues}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Fermés</p>
+                <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.closed_issues}</p>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -612,8 +742,8 @@ export default function JiraSection() {
           ) : (
             <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-[600px] overflow-y-auto">
               {projectTickets.map((ticket) => (
+                <div key={ticket.id}>
                 <div
-                  key={ticket.id}
                   onClick={() => {
                     setSelectedTicket(ticket)
                     setShowTicketModal(true)
@@ -673,8 +803,23 @@ export default function JiraSection() {
                         )}
                       </div>
                     </div>
-                    <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-500 flex-shrink-0 mt-1 transition-colors" />
+                    <div className="flex items-center gap-1 flex-shrink-0 mt-1">
+                      <button
+                        onClick={(e) => analyzeTicketWithAI(ticket, e)}
+                        title="Analyse IA de ce ticket"
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          aiPopupTicketId === ticket.id
+                            ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400'
+                            : 'text-gray-400 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+                        }`}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                      </button>
+                      <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                    </div>
                   </div>
+                </div>
+                {/* AI analysis modal — rendered once globally below */}
                 </div>
               ))}
             </div>
@@ -731,6 +876,87 @@ export default function JiraSection() {
                 <li>Corrélation avec les tables et fiches FR</li>
                 <li>Historique des résolutions de problèmes</li>
               </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── AI Analysis Modal ── */}
+      {aiPopupTicketId && aiPopupTicket && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => { aiAbortRef.current?.abort(); setAiPopupTicketId(null); setAiPopupTicket(null); setAiText(''); setAiDisplayed('') }}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+          {/* Panel */}
+          <div
+            className="relative bg-gray-900 dark:bg-gray-950 border border-purple-500/40 rounded-2xl shadow-2xl w-full max-w-xl flex flex-col overflow-hidden"
+            style={{ maxHeight: '80vh' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header bar */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-purple-500/30 bg-gradient-to-r from-purple-900/60 to-indigo-900/60">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-purple-500/20 rounded-lg">
+                  <Sparkles className="w-4 h-4 text-purple-300" />
+                </div>
+                <div>
+                  <span className="text-xs font-mono font-bold text-purple-300 tracking-widest uppercase">Analyse IA</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="px-2 py-0.5 bg-blue-600/80 text-white text-xs font-mono rounded font-bold">{aiPopupTicket.key}</span>
+                    <span className="text-gray-400 text-xs truncate max-w-[200px]">{aiPopupTicket.summary}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => { aiAbortRef.current?.abort(); setAiPopupTicketId(null); setAiPopupTicket(null); setAiText(''); setAiDisplayed('') }}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-5 min-h-[120px]">
+              {aiLoading ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-3">
+                  <div className="flex gap-1.5">
+                    {[0, 1, 2].map(i => (
+                      <div
+                        key={i}
+                        className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-bounce"
+                        style={{ animationDelay: `${i * 0.2}s` }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm text-purple-300 font-mono tracking-wide">Analyse en cours...</span>
+                </div>
+              ) : (
+                <div className="font-mono text-sm leading-relaxed">
+                  <p className="text-green-300 whitespace-pre-wrap break-words">
+                    {aiDisplayed}
+                    {aiDisplayed.length < aiText.length && (
+                      <span className="inline-block w-2 h-4 bg-green-400 ml-0.5 align-middle animate-pulse" />
+                    )}
+                  </p>
+                  {!aiText && !aiLoading && (
+                    <span className="text-gray-500 italic text-xs">En attente de réponse...</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer status bar */}
+            <div className="px-5 py-2 border-t border-purple-500/20 bg-black/30 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${aiLoading ? 'bg-yellow-400 animate-pulse' : aiText ? 'bg-green-400' : 'bg-gray-500'}`} />
+                <span className="text-xs text-gray-500 font-mono">
+                  {aiLoading ? 'Requête en cours...' : aiText ? `${aiText.length} car.` : 'En attente'}
+                </span>
+              </div>
+              <span className="text-xs text-gray-600 font-mono">BRASIL AI · Groq</span>
             </div>
           </div>
         </div>

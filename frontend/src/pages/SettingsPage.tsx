@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
+import { usePageStateStore } from '../stores/pageStateStore'
 
 interface LLMConfig {
   provider: string
@@ -55,7 +56,11 @@ export default function SettingsPage() {
   
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState<'llm' | 'database' | 'ui'>('llm')
+
+  // Persisted tab state — survives navigation
+  const { settings, setSettingsActiveTab } = usePageStateStore()
+  const activeTab = settings.activeTab
+  const setActiveTab = setSettingsActiveTab
 
   useEffect(() => {
     loadConfig()
@@ -159,21 +164,21 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-8 min-h-screen dark:bg-gray-900">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Paramètres</h1>
-        <p className="text-gray-600 mt-2">Gérez la configuration du système</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Paramètres</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Gérez la configuration du système</p>
       </div>
       
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('llm')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'llm'
                 ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300'
             }`}
           >
             LLM & IA
@@ -204,23 +209,23 @@ export default function SettingsPage() {
       <div className="max-w-3xl">
         {/* LLM Configuration */}
         {activeTab === 'llm' && (
-          <div className="bg-white rounded-lg shadow p-6 space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
             <div>
-              <h2 className="text-xl font-semibold mb-4">Configuration LLM</h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <h2 className="text-xl font-semibold dark:text-white mb-4">Configuration LLM</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                 Configurez le fournisseur et le modèle de langage utilisé par l'assistant IA
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Fournisseur LLM
                 </label>
                 <select
                   value={config.llm.provider}
                   onChange={(e) => updateLLMConfig('provider', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="groq">Groq</option>
                   <option value="openai">OpenAI</option>
@@ -229,13 +234,13 @@ export default function SettingsPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Modèle
                 </label>
                 <select
                   value={config.llm.model}
                   onChange={(e) => updateLLMConfig('model', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   {config.llm.provider === 'groq' && (
                     <>
@@ -259,7 +264,7 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Clé API (optionnel)
                 </label>
                 <input
@@ -267,12 +272,12 @@ export default function SettingsPage() {
                   value={config.llm.api_key || ''}
                   onChange={(e) => updateLLMConfig('api_key', e.target.value)}
                   placeholder="Laisser vide pour utiliser les variables d'environnement"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Température: {config.llm.temperature}
                 </label>
                 <input
@@ -284,14 +289,14 @@ export default function SettingsPage() {
                   onChange={(e) => updateLLMConfig('temperature', parseFloat(e.target.value))}
                   className="w-full"
                 />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
                   <span>Précis (0)</span>
                   <span>Créatif (2)</span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Tokens maximum
                 </label>
                 <input
@@ -300,7 +305,7 @@ export default function SettingsPage() {
                   max="32000"
                   value={config.llm.max_tokens}
                   onChange={(e) => updateLLMConfig('max_tokens', parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
             </div>
@@ -309,10 +314,10 @@ export default function SettingsPage() {
 
         {/* Database Configuration */}
         {activeTab === 'database' && (
-          <div className="bg-white rounded-lg shadow p-6 space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
             <div>
-              <h2 className="text-xl font-semibold mb-4">Configuration des bases de données</h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <h2 className="text-xl font-semibold dark:text-white mb-4">Configuration des bases de données</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                 Configurez les connexions à Neo4j, Qdrant et PostgreSQL
               </p>
             </div>
@@ -320,34 +325,34 @@ export default function SettingsPage() {
             <div className="space-y-6">
               {/* Neo4j */}
               <div className="border-l-4 border-primary-500 pl-4">
-                <h3 className="font-medium text-gray-900 mb-3">Neo4j (Knowledge Graph)</h3>
+                <h3 className="font-medium text-gray-900 dark:text-white mb-3">Neo4j (Knowledge Graph)</h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">URI</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URI</label>
                     <input
                       type="text"
                       value={config.database.neo4j_uri}
                       onChange={(e) => updateDatabaseConfig('neo4j_uri', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Utilisateur</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Utilisateur</label>
                     <input
                       type="text"
                       value={config.database.neo4j_user}
                       onChange={(e) => updateDatabaseConfig('neo4j_user', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mot de passe</label>
                     <input
                       type="password"
                       value={config.database.neo4j_password || ''}
                       onChange={(e) => updateDatabaseConfig('neo4j_password', e.target.value)}
                       placeholder="••••••••"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                 </div>
@@ -355,24 +360,24 @@ export default function SettingsPage() {
 
               {/* Qdrant */}
               <div className="border-l-4 border-green-500 pl-4">
-                <h3 className="font-medium text-gray-900 mb-3">Qdrant (Vector Store)</h3>
+                <h3 className="font-medium text-gray-900 dark:text-white mb-3">Qdrant (Vector Store)</h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hôte</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hôte</label>
                     <input
                       type="text"
                       value={config.database.qdrant_host}
                       onChange={(e) => updateDatabaseConfig('qdrant_host', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Port</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Port</label>
                     <input
                       type="number"
                       value={config.database.qdrant_port}
                       onChange={(e) => updateDatabaseConfig('qdrant_port', parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                 </div>
@@ -380,15 +385,15 @@ export default function SettingsPage() {
 
               {/* PostgreSQL */}
               <div className="border-l-4 border-blue-500 pl-4">
-                <h3 className="font-medium text-gray-900 mb-3">PostgreSQL (Optionnel)</h3>
+                <h3 className="font-medium text-gray-900 dark:text-white mb-3">PostgreSQL (Optionnel)</h3>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">URI de connexion</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URI de connexion</label>
                   <input
                     type="text"
                     value={config.database.postgres_uri || ''}
                     onChange={(e) => updateDatabaseConfig('postgres_uri', e.target.value)}
                     placeholder="postgresql://user:password@localhost:5432/dbname"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
               </div>
@@ -398,23 +403,23 @@ export default function SettingsPage() {
 
         {/* UI Preferences */}
         {activeTab === 'ui' && (
-          <div className="bg-white rounded-lg shadow p-6 space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
             <div>
-              <h2 className="text-xl font-semibold mb-4">Préférences d'interface</h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <h2 className="text-xl font-semibold dark:text-white mb-4">Préférences d'interface</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                 Personnalisez l'apparence et le comportement de l'interface
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Thème
                 </label>
                 <select
                   value={config.ui_preferences.theme}
                   onChange={(e) => updateUIPreferences('theme', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="light">Clair</option>
                   <option value="dark">Sombre</option>
@@ -423,13 +428,13 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Langue
                 </label>
                 <select
                   value={config.ui_preferences.language}
                   onChange={(e) => updateUIPreferences('language', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="fr">Français</option>
                   <option value="en">English</option>
@@ -437,7 +442,7 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Éléments par page
                 </label>
                 <input
@@ -446,7 +451,7 @@ export default function SettingsPage() {
                   max="100"
                   value={config.ui_preferences.items_per_page}
                   onChange={(e) => updateUIPreferences('items_per_page', parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
 
@@ -458,7 +463,7 @@ export default function SettingsPage() {
                   onChange={(e) => updateUIPreferences('enable_notifications', e.target.checked)}
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                 />
-                <label htmlFor="notifications" className="ml-2 block text-sm text-gray-700">
+                <label htmlFor="notifications" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
                   Activer les notifications
                 </label>
               </div>
@@ -478,7 +483,7 @@ export default function SettingsPage() {
           <button
             onClick={resetConfig}
             disabled={saving}
-            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             Réinitialiser
           </button>

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, BookOpen, X, Sparkles, Bot, User, FileText, Database, Clock, ThumbsDown, Quote } from 'lucide-react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { Send, Sparkles, Bot, User, FileText, Database, Clock, ThumbsDown, Quote, Brain, ChevronDown, ChevronUp } from 'lucide-react'
+import { useMutation } from '@tanstack/react-query'
 import { sendMessage } from '@/services/api'
 import { chatService } from '@/services/chatService'
 import { useChatStore } from '@/stores/chatStore'
@@ -15,11 +15,14 @@ interface ChatInterfaceProps {
 export default function ChatInterface({ conversationId, onToggleHistory, historyVisible }: ChatInterfaceProps) {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<any[]>([])
-  const [selectedSources, setSelectedSources] = useState<any[]>([])
-  const [sourcesQuestion, setSourcesQuestion] = useState<string>('')
-  const [showSources, setShowSources] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  // stub states kept for the disabled sidebar block
+  const [selectedSources] = useState<any[]>([])
+  const [showSources] = useState(false)
+  // Track whether the current send is the very first message (for title generation)
+  const isFirstMessageRef = useRef(false)
   const [dismissedSources, setDismissedSources] = useState<Set<string>>(new Set())
+  const [expandedThinking, setExpandedThinking] = useState<Set<number>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const { activeConversationId, updateConversation } = useChatStore()
@@ -92,6 +95,7 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
         role: 'assistant', 
         content: data.message, 
         sources: data.sources || [], 
+        thinking: data.thinking_content || null,
         timestamp: new Date() 
       }
       setMessages(prev => [...prev, assistantMsg])
@@ -101,15 +105,16 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
         try {
           await chatService.addMessage(activeConversationId, {
             role: 'user',
-            content: message
+            content: sentMessageRef.current
           })
           await chatService.addMessage(activeConversationId, {
             role: 'assistant',
             content: data.message
           })
 
-          // Generate AI title after the very first exchange (messages was empty before user sent)
-          if (messages.length === 0) {
+          // Generate AI title after the very first exchange — use ref to capture before state updates
+          if (isFirstMessageRef.current) {
+            isFirstMessageRef.current = false
             try {
               const updatedConv = await chatService.generateTitle(activeConversationId)
               updateConversation(activeConversationId, { title: updatedConv.title, updated_at: new Date().toISOString() })
@@ -125,21 +130,20 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
         }
       }
       
-      if (data.sources && data.sources.length > 0) {
-        setSelectedSources(data.sources)
-        setSourcesQuestion(message)
-        setShowSources(true)
-      }
       setMessage('')
     },
   })
   
+  const sentMessageRef = useRef('')
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!message.trim() || mutation.isPending) return
     
     const userMsg = { role: 'user', content: message, timestamp: new Date() }
-    const isFirstMessage = messages.length === 0
+    // Capture whether this is the first message BEFORE state updates
+    isFirstMessageRef.current = messages.length === 0
+    sentMessageRef.current = message
     setMessages(prev => [...prev, userMsg])
 
     // Construire l'historique local pour la mémoire conversationnelle (6 derniers échanges)
@@ -254,41 +258,60 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
                     </div>
                   </div>
                   
-                  {/* Sources Pills */}
+                  {/* Thinking toggle button */}
+                  {msg.role === 'assistant' && msg.thinking && (
+                    <div className="mt-1">
+                      <button
+                        onClick={() => setExpandedThinking(prev => {
+                          const next = new Set(prev)
+                          next.has(idx) ? next.delete(idx) : next.add(idx)
+                          return next
+                        })}
+                        className="flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors px-2 py-1 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                      >
+                        <Brain className="w-3.5 h-3.5" />
+                        <span>Raisonnement</span>
+                        {expandedThinking.has(idx) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </button>
+                      {expandedThinking.has(idx) && (
+                        <div className="mt-2 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-xl text-xs text-purple-800 dark:text-purple-200 font-mono whitespace-pre-wrap max-h-96 overflow-y-auto">
+                          <div className="flex items-center gap-1.5 mb-2 text-purple-500 font-sans font-semibold">
+                            <Brain className="w-3.5 h-3.5" />
+                            Raisonnement interne du modèle
+                          </div>
+                          {msg.thinking}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sources Pills — inline in conversation only */}
                   {msg.sources && msg.sources.length > 0 && msg.role === 'assistant' && (
                     <div className="flex flex-wrap gap-2 mt-1">
-                      {msg.sources.slice(0, 4).map((source: any, i: number) => {
+                      {msg.sources.map((source: any, i: number) => {
                         const isTable = source.type === 'database_table'
                         const isFiche = source.type === 'resolution_fiche' || source.type === 'procedure' || source.source_fr_numbers?.length > 0
-                        // Resolve display name — backend now always sends source.name
                         const sName = source.name || source.title || source.file_path?.split('/').pop() || `Source ${i + 1}`
-                        // Find the last user message before this assistant message
                         const lastUserMsg = messages.slice(0, messages.indexOf(msg)).filter((m: any) => m.role === 'user').slice(-1)[0]
                         const question = lastUserMsg?.content || ''
                         const isDismissed = dismissedSources.has(sourceKey(source.name || source.title || '', question))
                         
                         return (
                           <div key={i} className="flex items-center gap-0 group/pill rounded-full overflow-hidden">
-                            {/* Main pill — opens sources sidebar */}
-                            <button
-                              onClick={() => {
-                                setSelectedSources(msg.sources)
-                                setSourcesQuestion(question)
-                                setShowSources(true)
-                              }}
-                              className={`text-xs px-3 py-1.5 font-medium transition-all duration-200 flex items-center gap-1.5 ${
+                            <span
+                              className={`text-xs px-3 py-1.5 font-medium flex items-center gap-1.5 rounded-full ${
                                 isDismissed
                                   ? 'bg-gray-100 text-gray-400 line-through'
                                   : isTable
-                                  ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                                  ? 'bg-blue-50 text-blue-700'
                                   : isFiche
-                                  ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
-                                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                                  ? 'bg-purple-50 text-purple-700'
+                                  : 'bg-gray-50 text-gray-700'
                               }`}
                             >
                               {isTable ? <Database className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
                               {sName}
-                            </button>
+                            </span>
                             {/* Cite button — appears on hover */}
                             {!isDismissed && (
                               <button
@@ -303,7 +326,7 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
                                 <Quote className="w-3 h-3" />
                               </button>
                             )}
-                            {/* Dismiss button — appears on hover */}
+                            {/* Dismiss button */}
                             {!isDismissed && (
                               <button
                                 onClick={() => handleDismissSource(source, question)}
@@ -320,20 +343,6 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
                           </div>
                         )
                       })}
-                      {msg.sources.length > 4 && (
-                        <button
-                          onClick={() => {
-                            setSelectedSources(msg.sources)
-                            setSourcesQuestion(
-                              messages.slice(0, messages.indexOf(msg)).filter((m: any) => m.role === 'user').slice(-1)[0]?.content || ''
-                            )
-                            setShowSources(true)
-                          }}
-                          className="text-xs px-3 py-1.5 bg-gray-50 text-gray-600 hover:bg-gray-100 rounded-full font-medium transition-colors"
-                        >
-                          +{msg.sources.length - 4} autres
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
@@ -399,121 +408,6 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
           </form>
         </div>
       </div>
-      
-      {/* Sources Sidebar */}
-      {showSources && selectedSources.length > 0 && (
-        <div className="w-96 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col shadow-xl">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20">
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-primary-600" />
-              <h3 className="font-semibold text-gray-900 dark:text-white">Sources ({selectedSources.length})</h3>
-            </div>
-            <button
-              onClick={() => setShowSources(false)}
-              className="text-gray-400 hover:text-gray-600 p-1 hover:bg-white rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {selectedSources.map((source: any, idx: number) => {
-              const isTable = source.type === 'database_table'
-              const isFiche = source.type === 'resolution_fiche' || source.type === 'procedure' || source.source_fr_numbers?.length > 0
-              // Always show a meaningful name
-              const sName = source.name || source.title || source.source_id || `Source ${idx + 1}`
-              const frNums: string[] = source.source_fr_numbers || []
-              const isDismissed = dismissedSources.has(sourceKey(sName, sourcesQuestion))
-              
-              return (
-                <div 
-                  key={idx} 
-                  className={`p-4 rounded-xl border-2 transition-all duration-200 ${
-                    isDismissed
-                      ? 'bg-gray-50 border-gray-200 opacity-50'
-                      : isTable
-                      ? 'bg-blue-50 border-blue-200 hover:border-blue-400 hover:shadow-md'
-                      : isFiche
-                      ? 'bg-purple-50 border-purple-200 hover:border-purple-400 hover:shadow-md'
-                      : 'bg-gray-50 border-gray-200 hover:border-gray-400 hover:shadow-md'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    {isTable ? (
-                      <Database className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                    ) : (
-                      <FileText className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      {/* Name row + action buttons */}
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-semibold ${isDismissed ? 'line-through text-gray-400' : 'text-gray-900'}`}>
-                            {sName}
-                          </p>
-                          {frNums.length > 0 && (
-                            <p className="text-xs text-purple-600 font-medium mt-0.5">
-                              {frNums.map(f => `FR ${f}`).join(' · ')}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          {!isDismissed && (
-                            <button
-                              onClick={() => { handleCiteSource(source); setShowSources(false) }}
-                              className={`p-1.5 rounded-md transition-colors text-xs flex items-center gap-1 font-medium ${
-                                isFiche ? 'text-purple-500 hover:bg-purple-100' : isTable ? 'text-blue-500 hover:bg-blue-100' : 'text-gray-500 hover:bg-gray-100'
-                              }`}
-                              title="Poser une question sur cette source"
-                            >
-                              <Quote className="w-3.5 h-3.5" />
-                              <span className="hidden group-hover:inline text-xs">Citer</span>
-                            </button>
-                          )}
-                          {!isDismissed && (
-                            <button
-                              onClick={() => handleDismissSource(source, sourcesQuestion)}
-                              className="p-1.5 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                              title="Marquer comme non pertinent"
-                            >
-                              <ThumbsDown className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {isDismissed && (
-                            <span className="text-xs text-orange-500 font-medium">Signalé</span>
-                          )}
-                        </div>
-                      </div>
-                      {/* Content snippet if available */}
-                      {source.content_snippet && (
-                        <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-                          {source.content_snippet}
-                        </p>
-                      )}
-                      {/* Relevance bar */}
-                      {source.relevance !== undefined && source.relevance > 0 && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full ${
-                                isTable ? 'bg-blue-500' : isFiche ? 'bg-purple-500' : 'bg-gray-500'
-                              }`}
-                              style={{ width: `${Math.min(source.relevance * 100, 100)}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-gray-500 font-medium">
-                            {(source.relevance * 100).toFixed(0)}%
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

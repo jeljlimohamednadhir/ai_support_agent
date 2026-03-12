@@ -38,6 +38,7 @@ export default function Layout() {
     { path: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord', roles: ['USER', 'EXPERT', 'ADMIN'] },
     { path: '/jira', icon: Activity, label: 'Jira', roles: ['USER', 'EXPERT', 'ADMIN'] },
     { path: '/classification-ml', icon: Sparkles, label: 'Classification ML', roles: ['USER', 'EXPERT', 'ADMIN'] },
+    { path: '/knowledge', icon: BookOpen, label: 'Connaissances', roles: ['USER', 'EXPERT', 'ADMIN'] },
     { path: '/collection', icon: Database, label: 'Collection de données', roles: ['ADMIN'] },
     { path: '/validation', icon: CheckSquare, label: 'Validation', roles: ['EXPERT', 'ADMIN'] },
     { path: '/users', icon: Users, label: 'Utilisateurs', roles: ['ADMIN'] },
@@ -78,7 +79,7 @@ export default function Layout() {
         </div>
         
         {/* Navigation */}
-        <nav className="mt-4 px-3">
+        <nav className="mt-4 px-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 260px)' }}>
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = location.pathname === item.path

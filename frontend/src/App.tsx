@@ -11,6 +11,7 @@ import CollectionPage from './pages/CollectionPage'
 import JiraPage from './pages/JiraPage'
 import ValidationPage from './pages/ValidationPage'
 import { ClassificationMLPage } from './pages/ClassificationMLPage'
+import KnowledgePage from './pages/KnowledgePage'
 import { ProfilePage } from './pages/ProfilePage'
 import { UserManagementPage } from './pages/UserManagementPage'
 import SettingsPage from './pages/SettingsPage'
@@ -63,6 +64,7 @@ function App() {
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="jira" element={<JiraPage />} />
             <Route path="classification-ml" element={<ClassificationMLPage />} />
+            <Route path="knowledge" element={<KnowledgePage />} />
             <Route path="profile" element={<ProfilePage />} />
             
             {/* Admin only routes */}
