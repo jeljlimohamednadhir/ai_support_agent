@@ -14,7 +14,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 import pandas as pd
 
-from app.services.hierarchical_classifier import HierarchicalClassifier
+from app.services.hierarchical_classifier import HierarchicalClassifier, prepare_text
 from app.services.data_processor import DataProcessor
 from app.core.logging import get_logger
 
@@ -39,15 +39,20 @@ _data_processor = DataProcessor()
 # Text column candidates (BRASIL schema)
 # ─────────────────────────────────────────────────────────────────────────────
 _TEXT_CANDIDATES = [
-    "text_ml_postmortem", "texte_complet",
-    "inc_resume",         "resume",
-    "inc_cause",          "cause",
-    "inc_commentaire",    "commentaire",
-    "inc_solution",       "solution",
-    "description",        "text",
+    "text_ml",              # pre-built by build_labeled_dataset.py
+    "user_sig",             # BRASIL: user description (primary)
+    "inc_solution",         # BRASIL: engineer resolution (primary)
+    "text_ml_postmortem",   "texte_complet",
+    "inc_resume",           "resume",
+    "inc_cause",            "cause",
+    "inc_commentaire",      "commentaire",
+    "solution",
+    "description",          "text",
 ]
 
 _LABEL_CANDIDATES = [
+    "level_1",           # pre-mapped output of build_labeled_dataset.py
+    "inc_cause",         # BRASIL raw label (mapped via taxonomy)
     "qualification",     "inc_qualification",
     "label",             "categorie",
     "category",          "classe",
@@ -155,14 +160,32 @@ def _resolve_label_col(df: pd.DataFrame, hint: Optional[str]) -> str:
 
 
 def _build_combined_text(row: pd.Series) -> str:
-    """Combine inc_resume + inc_cause + inc_solution into one string."""
+    """
+    Build an ML-ready text from a BRASIL ticket row.
+
+    Priority strategy (mirrors the designed classifier architecture):
+      1. If both user_sig + inc_solution are present → use prepare_text()
+         which gives inc_solution 2× weight.
+      2. If only one is present → use it alone (normalized).
+      3. Fallback: concatenate all text-like columns.
+    """
+    user_sig  = str(row.get("user_sig",    row.get("description",      "")) or "").strip()
+    inc_sol   = str(row.get("inc_solution", row.get("solution",         "")) or "").strip()
+    # Filter sentinel values pandas injects
+    if user_sig  in ("nan", "None", "NaN"): user_sig  = ""
+    if inc_sol   in ("nan", "None", "NaN"): inc_sol   = ""
+
+    if user_sig or inc_sol:
+        return prepare_text(user_sig, inc_sol)
+
+    # Generic fallback: join all non-empty string-like columns
     parts = []
-    for col in ["inc_resume", "resume", "inc_cause", "cause", "inc_solution", "solution",
-                "inc_commentaire", "description", "text_ml_postmortem", "texte_complet"]:
-        val = row.get(col, None)
-        if val and str(val).strip() not in ("", "nan", "None"):
-            parts.append(str(val).strip())
-    return " | ".join(parts) if parts else ""
+    for col in ["inc_resume", "resume", "inc_cause", "cause",
+                "inc_commentaire", "text_ml_postmortem", "texte_complet"]:
+        val = str(row.get(col, "") or "").strip()
+        if val and val not in ("nan", "None", "NaN"):
+            parts.append(val)
+    return " | ".join(parts)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -234,12 +257,12 @@ async def train_hierarchical(request: HierarchicalTrainRequest):
                        f"l1_col='{l1_col}', l2_col='{l2_col}' — "
                        f"available: {', '.join(df.columns)}"
             )
-        labels_l1 = df[l1_col].fillna("CAUSE_INDETERMINEE").astype(str).tolist()
-        labels_l2 = df[l2_col].fillna("CAUSE_INDETERMINEE").astype(str).tolist()
+        labels_l1 = df[l1_col].fillna("UNKNOWN").astype(str).tolist()
+        labels_l2 = df[l2_col].fillna("UNDETERMINED").astype(str).tolist()
         labels_original = [""] * len(texts)
     else:
         label_col = _resolve_label_col(df, request.label_col)
-        labels_original = df[label_col].fillna("CAUSE INDETERMINEE").astype(str).tolist()
+        labels_original = df[label_col].fillna("UNKNOWN").astype(str).tolist()
         labels_l1 = None
         labels_l2 = None
 

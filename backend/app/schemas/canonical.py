@@ -85,8 +85,8 @@ class CanonicalProcedureRead(BaseModel):
     success_count: int
     is_active: bool
     extra_metadata: Optional[Dict[str, Any]]
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     last_validated_at: Optional[datetime]
 
     model_config = {"from_attributes": True}

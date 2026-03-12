@@ -38,8 +38,9 @@ class TrainResponse(BaseModel):
 
 class PredictRequest(BaseModel):
     """Request for predictions"""
-    tickets: List[Dict[str, str]] = Field(..., description="List of tickets to classify")
-    threshold: float = Field(default=0.7, ge=0.5, le=0.95, description="Confidence threshold")
+    tickets: List[Dict[str, str]] = Field(default=[], description="List of tickets to classify (optional for predict-session which uses stored session)")
+    threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Confidence threshold")
+    session_id: Optional[str] = Field(None, description="Session ID for df write-back")
 
 
 class PredictionResult(BaseModel):
@@ -55,6 +56,7 @@ class PredictResponse(BaseModel):
     """Response with predictions"""
     predictions: List[PredictionResult]
     stats: Dict[str, Any] = Field(..., description="Prediction statistics")
+    updated_preview: Optional[List[Dict[str, Any]]] = Field(None, description="Updated data preview with categorie_intelligente column")
 
 
 class CorrectionRequest(BaseModel):

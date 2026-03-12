@@ -88,7 +88,7 @@ class ApplicationContextRead(BaseModel):
     qdrant_collection_prefix: Optional[str]
     is_active: bool
     extra_config: Optional[Dict[str, Any]]
-    created_at: datetime
+    created_at: Optional[datetime] = None
     updated_at: datetime
 
     model_config = {"from_attributes": True}

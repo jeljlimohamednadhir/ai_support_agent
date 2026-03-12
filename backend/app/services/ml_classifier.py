@@ -238,22 +238,31 @@ class MLClassifier:
         if not _ensure_sklearn():
             raise RuntimeError("scikit-learn not available")
         
-        texts = df[text_col].fillna("").astype(str)
-        y_all = df[label_col].astype(str).fillna("Autre").values
+        # Force plain numpy/pandas objects — parquet loads PyArrow-backed columns
+        # which cause "only integer scalar arrays" in train_test_split/_safe_indexing
+        texts = pd.Series(df[text_col].fillna("").astype(str).tolist())
+        # Force plain numpy array — parquet files load with PyArrow-backed columns
+        # which cause "only integer scalar arrays" error in train_test_split
+        y_all = np.array(df[label_col].astype(str).fillna("Autre").tolist())
         
         # Build vectorizers
         vec_dict = self._build_vectorizers(max_features=max_features)
         X_all = self._build_hybrid_features_fit(vec_dict, texts)
         
         # Filter rare classes (< 2 samples)
-        y_series = pd.Series(y_all)
+        # Use object dtype explicitly to prevent ArrowExtensionArray backing
+        y_series = pd.Series(y_all, dtype=object)
         vc_all = y_series.value_counts()
         rare_labels = vc_all[vc_all < 2].index.tolist()
         
         if rare_labels:
             mask_keep = ~y_series.isin(rare_labels)
-            X_use = X_all[mask_keep.values]
-            y_use = y_series[mask_keep].values
+            keep_idx = np.where(mask_keep.to_numpy(dtype=bool))[0]
+            from scipy import sparse as _sp
+            X_use = X_all[keep_idx]
+            # Force plain numpy str array — .values on ArrowExtensionArray
+            # returns ArrowExtensionArray which breaks sklearn _safe_indexing
+            y_use = np.array(y_series.iloc[keep_idx].tolist(), dtype=str)
             logger.warning(f"Filtered {len(rare_labels)} rare classes for validation")
         else:
             X_use = X_all
@@ -326,7 +335,7 @@ class MLClassifier:
             "recommended_threshold": float(round(recommended, 2)),
             "training_count": self._get_training_count() + 1,
             "rare_labels": rare_labels,
-            "label_distribution": dict(pd.Series(y_all).value_counts()),
+            "label_distribution": {k: int(v) for k, v in pd.Series(y_all).value_counts().items()},
         }
         
         # Save model card
@@ -423,6 +432,9 @@ class MLClassifier:
     
     def get_info(self) -> Dict[str, Any]:
         """Get model information"""
+        # Auto-load from disk if not in memory (e.g. after server restart)
+        if self.model is None and self.model_path.exists():
+            self.load()
         if self.model_card_path.exists():
             try:
                 with open(self.model_card_path, "r", encoding="utf-8") as f:
@@ -441,4 +453,18 @@ class MLClassifier:
                 }
             except:
                 pass
+        # Model pkl loaded but no card yet — return minimal exists:True
+        if self.model is not None:
+            classes = list(getattr(self.model, "classes_", []))
+            return {
+                "exists": True,
+                "trained_at": None,
+                "training_count": 0,
+                "label_col": None,
+                "n_samples": None,
+                "classes": [str(c) for c in classes],
+                "macro_f1": None,
+                "recommended_threshold": 0.7,
+                "weak_points": [],
+            }
         return {"exists": False}

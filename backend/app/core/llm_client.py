@@ -2,6 +2,7 @@
 LLM Client - Groq Integration
 Gère les appels au LLM (Groq avec Llama 3.3)
 """
+import re
 from typing import Optional, List, Dict, Any
 from groq import Groq
 from app.core.config import settings
@@ -27,7 +28,26 @@ class LLMClient:
             logger.info(f"[OK] Client Groq initialise avec modele: {settings.GROQ_MODEL}")
         else:
             raise ValueError(f"Provider {self.provider} non supporté")
-    
+
+    @staticmethod
+    def _strip_thinking_tags(text: str) -> str:
+        """Supprime les balises <think>...</think> des modèles reasoning (Qwen3, DeepSeek-R1...)."""
+        text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+        text = re.sub(r"</?think>", "", text)
+        return text.strip()
+
+    @staticmethod
+    def _extract_thinking(text: str) -> tuple[str, str]:
+        """
+        Sépare le contenu <think>...</think> de la réponse finale.
+        Retourne (thinking_content, clean_response).
+        """
+        thinking_parts = re.findall(r"<think>(.*?)</think>", text, flags=re.DOTALL)
+        thinking = "\n\n".join(t.strip() for t in thinking_parts) if thinking_parts else ""
+        clean = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+        clean = re.sub(r"</?think>", "", clean).strip()
+        return thinking, clean
+
     async def generate(
         self,
         prompt: str,
@@ -36,20 +56,12 @@ class LLMClient:
         max_tokens: Optional[int] = None,
         stream: bool = False,
         conversation_history: Optional[List[Dict]] = None,
-    ) -> str:
+        with_thinking: bool = False,
+    ):
         """
-        Génère une réponse du LLM
-
-        Args:
-            prompt: Le prompt utilisateur
-            system_prompt: Instructions système (optionnel)
-            temperature: Contrôle la créativité (0-1)
-            max_tokens: Nombre max de tokens
-            stream: Streaming de la réponse
-            conversation_history: Historique [{"role": "user"|"assistant", "content": "..."}]
-
-        Returns:
-            La réponse générée
+        Génère une réponse du LLM.
+        Si with_thinking=True, retourne (answer: str, thinking: str).
+        Sinon retourne answer: str.
         """
         try:
             messages = []
@@ -83,7 +95,21 @@ class LLMClient:
                 if stream:
                     return response  # Retourne le stream
                 else:
-                    return response.choices[0].message.content
+                    raw = response.choices[0].message.content or ""
+                    # Groq SDK >= 0.9 exposes reasoning_content separately for reasoning models
+                    # (Qwen3, DeepSeek-R1). Use it if available so the clean content is guaranteed.
+                    msg_obj = response.choices[0].message
+                    reasoning_content = getattr(msg_obj, "reasoning_content", None) or ""
+                    if reasoning_content:
+                        # Groq returned thinking separately — clean is already without <think>
+                        thinking = reasoning_content.strip()
+                        clean = self._strip_thinking_tags(raw)
+                    else:
+                        # Inline <think>...</think> — extract manually
+                        thinking, clean = self._extract_thinking(raw)
+                    if with_thinking:
+                        return clean, thinking
+                    return clean
             
         except Exception as e:
             logger.error(f"❌ Erreur lors de l'appel LLM: {e}")
@@ -138,7 +164,9 @@ Réponds à la question en te basant UNIQUEMENT sur le contexte fourni. Si le co
                     temperature=settings.GROQ_TEMPERATURE,
                     max_tokens=settings.GROQ_MAX_TOKENS
                 )
-                return response.choices[0].message.content
+                raw = response.choices[0].message.content or ""
+                _, clean = self._extract_thinking(raw)
+                return clean
         except Exception as e:
             logger.error(f"❌ Erreur generate_with_context: {e}")
             raise
@@ -146,7 +174,7 @@ Réponds à la question en te basant UNIQUEMENT sur le contexte fourni. Si le co
     def _get_default_system_prompt(self) -> str:
         """Prompt système N3 production — couvre les 4 familles d'intention."""
         return (
-            "Tu es un assistant de support N3 expert pour les applications Orange Telecom (BRASIL / STARHUB / LIBRA).\n"
+            "Tu es un assistant de support N3 expert pour les applications Orange Telecom (BRASIL).\n"
             "Tu travailles avec des ingénieurs support de niveau 2 et 3.\n"
             "\n"
             "## FAMILLES D'INTENTION ET COMPORTEMENT ATTENDU\n"
@@ -174,8 +202,12 @@ Réponds à la question en te basant UNIQUEMENT sur le contexte fourni. Si le co
             "- Pour un message ticket : structure [Contexte] [Symptômes] [Diagnostic]\n"
             "  [Actions déjà effectuées] [Prochaines étapes]. Ton professionnel.\n"
             "\n"
-            "## RÈGLES ANTI-HALLUCINATION\n"
+            "## RÈGLES ANTI-HALLUCINATION (IMPÉRATIVES)\n"
             "- Ne cite JAMAIS une procédure, commande ou chemin de fichier que tu n'as pas reçu dans le contexte.\n"
+            "- Ne mentionne JAMAIS un système informatique (ex: STARHUB, LIBRA, ORRAHD) si\n"
+            "  ce système n'est pas explicitement cité dans le contexte fourni ou dans la conversation.\n"
+            "- Ne génère JAMAIS d'identifiant de procédure (ex: BRASIL-PROC-XXXX, BRASIL-BATCH-XXXX)\n"
+            "  qui n'existe pas dans la base de connaissances fournie.\n"
             "- Si la base de connaissances est vide ET que l'intention n'est pas contextuelle,\n"
             "  réponds : \"Je n'ai pas de procédure documentée pour ce cas. Je recommande l'escalade N3.\"\n"
             "- Indique toujours le niveau de confiance si la procédure est partielle.\n"

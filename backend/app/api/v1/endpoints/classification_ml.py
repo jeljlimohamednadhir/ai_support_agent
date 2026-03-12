@@ -45,6 +45,27 @@ DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
 CORRECTIONS_LOG = DATA_DIR / "ml_corrections.jsonl"
 
+# Persistent uploads directory
+UPLOADS_DIR = DATA_DIR / "uploads"
+UPLOADS_DIR.mkdir(exist_ok=True)
+
+
+def _reload_session_from_disk(session_id: str) -> Optional[pd.DataFrame]:
+    """Try to reload a session dataframe from persisted parquet (after server restart)."""
+    parquet_path = UPLOADS_DIR / f"{session_id}.parquet"
+    if parquet_path.exists():
+        try:
+            df = pd.read_parquet(parquet_path, dtype_backend="numpy_nullable")
+            # Convert to plain numpy dtypes to avoid PyArrow-backed columns
+            # that break sklearn's train_test_split (_safe_indexing / ChunkedArray)
+            df = df.astype({col: "object" for col in df.select_dtypes("string").columns})
+            _uploaded_sessions[session_id] = df
+            logger.info(f"Reloaded session {session_id} from disk ({len(df)} rows)")
+            return df
+        except Exception as e:
+            logger.error(f"Failed to reload session {session_id}: {e}")
+    return None
+
 
 @router.post("/upload", response_model=UploadResponse)
 async def upload_csv(file: UploadFile = File(...)):
@@ -63,22 +84,43 @@ async def upload_csv(file: UploadFile = File(...)):
             content = await file.read()
             f.write(content)
         
-        # Load and process
-        df = _data_processor.load_csv_robust(str(temp_path))
+        try:
+            # Load and process
+            df = _data_processor.load_csv_robust(str(temp_path))
+        finally:
+            # Always clean up temp file, even on error
+            if temp_path.exists():
+                temp_path.unlink()
+        
+        # Auto-drop unwanted column
+        if "user_nom_complet" in df.columns:
+            df = df.drop(columns=["user_nom_complet"])
+            logger.info("Auto-dropped column: user_nom_complet")
+        
         detected = _data_processor.detect_columns(df)
         
         # Store in memory with session ID
         _uploaded_data = df
         _uploaded_sessions[session_id] = df
         
+        # Persist to disk (parquet + metadata JSON)
+        parquet_path = UPLOADS_DIR / f"{session_id}.parquet"
+        df.to_parquet(parquet_path, index=False)
+        meta = {
+            "session_id": session_id,
+            "filename": file.filename,
+            "n_rows": len(df),
+            "columns": list(df.columns),
+            "uploaded_at": pd.Timestamp.now().isoformat()
+        }
+        (UPLOADS_DIR / f"{session_id}.json").write_text(json.dumps(meta, ensure_ascii=False))
+        logger.info(f"Persisted upload to disk: {parquet_path}")
+        
         # Get preview
         preview = df.head(20).fillna("").to_dict("records")
         
         # Get stats
         stats = _data_processor.compute_stats(df)
-        
-        # Clean up
-        temp_path.unlink()
         
         return UploadResponse(
             columns=list(df.columns),
@@ -100,7 +142,13 @@ async def prepare_data(request: DataPreparationRequest):
     Prepare uploaded data (compute features, causes, categories)
     """
     global _uploaded_data
-    
+
+    # Reload from disk if session_id provided and memory is empty (server restart)
+    if _uploaded_data is None and hasattr(request, 'session_id') and request.session_id:
+        df_reload = _reload_session_from_disk(request.session_id)
+        if df_reload is not None:
+            _uploaded_data = df_reload
+
     if _uploaded_data is None:
         raise HTTPException(status_code=400, detail="No data uploaded")
     
@@ -165,13 +213,18 @@ async def train_model(request: TrainRequest):
     """
     global _uploaded_data, _uploaded_sessions
     
-    # Restore from session if provided
+    # Restore from session — check memory first, then disk (handles server restart)
     if hasattr(request, 'session_id') and request.session_id:
-        if request.session_id in _uploaded_sessions:
-            _uploaded_data = _uploaded_sessions[request.session_id]
-    
+        sid = request.session_id
+        if sid in _uploaded_sessions:
+            _uploaded_data = _uploaded_sessions[sid]
+        else:
+            df_reload = _reload_session_from_disk(sid)
+            if df_reload is not None:
+                _uploaded_data = df_reload
+
     if _uploaded_data is None:
-        raise HTTPException(status_code=400, detail="No data uploaded")
+        raise HTTPException(status_code=400, detail="No data uploaded — please re-upload your CSV")
     
     try:
         df = _uploaded_data
@@ -242,7 +295,8 @@ async def train_model(request: TrainRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Training failed: {e}")
+        import traceback
+        logger.error(f"Training failed: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -253,12 +307,117 @@ async def get_model_info():
     return ModelInfo(**info)
 
 
+@router.post("/predict-session", response_model=PredictResponse)
+async def predict_session(request: PredictRequest):
+    """
+    Predict ALL tickets from the stored session df (no need to send ticket list).
+    Uses session_id to reload data from memory or disk, then returns all predictions
+    plus updated_preview of the full dataframe with categorie_intelligente column.
+    """
+    global _uploaded_data, _uploaded_sessions
+
+    # Load model
+    if _ml_classifier.model is None:
+        loaded = _ml_classifier.load()
+        if not loaded:
+            raise HTTPException(status_code=400, detail="No trained model available")
+
+    # Resolve the dataframe
+    session_id = getattr(request, 'session_id', None)
+    target_df = None
+    if session_id:
+        if session_id in _uploaded_sessions:
+            target_df = _uploaded_sessions[session_id]
+        else:
+            target_df = _reload_session_from_disk(session_id)
+    if target_df is None:
+        target_df = _uploaded_data
+    if target_df is None:
+        raise HTTPException(status_code=400, detail="No data uploaded — please upload a CSV first")
+
+    try:
+        # Find text column — prefer the prepared ML columns, then BRASIL raw fields
+        text_col_priority = [
+            "text_ml_postmortem", "texte_complet",
+            "user_sig", "inc_solution", "inc_resume",
+            "resume", "description",
+        ]
+        text_col = next((c for c in text_col_priority if c in target_df.columns), None)
+        if text_col is None:
+            # fallback to first string column
+            text_col = next((c for c in target_df.columns if target_df[c].dtype == object), None)
+        if text_col is None:
+            raise HTTPException(status_code=400, detail="No text column found in data")
+
+        texts = pd.Series(target_df[text_col].fillna("").astype(str).tolist())
+
+        # Predict all rows
+        preds, confidences, all_probs = _ml_classifier.predict(texts, request.threshold)
+
+        results = []
+        accepted_count = 0
+        classes = _ml_classifier.model.classes_ if _ml_classifier.model else []
+
+        for i, (pred, conf) in enumerate(zip(preds, confidences)):
+            accepted = conf >= request.threshold
+            if accepted:
+                accepted_count += 1
+            prob_dict = None
+            if all_probs is not None:
+                prob_dict = {str(c): float(p) for c, p in zip(classes, all_probs[i])}
+            results.append(PredictionResult(
+                ticket_id=str(i),
+                predicted_label=str(pred),
+                confidence=float(conf),
+                all_probabilities=prob_dict,
+                accepted=accepted
+            ))
+
+        # Write categorie_intelligente back to df
+        target_df = target_df.copy()
+        target_df["categorie_intelligente"] = [str(p) for p in preds]
+
+        if session_id:
+            _uploaded_sessions[session_id] = target_df
+        _uploaded_data = target_df
+
+        # Persist to parquet + update metadata
+        if session_id:
+            parquet_path = UPLOADS_DIR / f"{session_id}.parquet"
+            target_df.to_parquet(parquet_path, index=False)
+            meta_path = UPLOADS_DIR / f"{session_id}.json"
+            if meta_path.exists():
+                meta = json.loads(meta_path.read_text())
+                meta["columns"] = list(target_df.columns)
+                meta_path.write_text(json.dumps(meta, ensure_ascii=False))
+
+        stats = {
+            "total": len(results),
+            "accepted": accepted_count,
+            "rejected": len(results) - accepted_count,
+            "coverage": round(accepted_count / len(results), 3) if results else 0
+        }
+
+        # Return full dataframe preview (all rows, not just head 20)
+        updated_preview = target_df.fillna("").to_dict("records")
+        response = PredictResponse(predictions=results, stats=stats)
+        response.updated_preview = updated_preview
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        logger.error(f"predict-session failed: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/predict", response_model=PredictResponse)
 async def predict(request: PredictRequest):
     """
-    Predict labels for tickets
+    Predict labels for tickets and write categorie_intelligente back to stored df
     """
-    global _uploaded_data
+    global _uploaded_data, _uploaded_sessions
     
     # Load model if not loaded
     if _ml_classifier.model is None:
@@ -296,6 +455,49 @@ async def predict(request: PredictRequest):
                 accepted=accepted
             ))
         
+        # Write categorie_intelligente back to stored df
+        session_id = getattr(request, 'session_id', None)
+        pred_map = {ticket_ids[i]: str(preds[i]) for i in range(len(preds))}
+
+        # Update in-memory session df — reload from disk if needed
+        target_df = None
+        if session_id:
+            if session_id in _uploaded_sessions:
+                target_df = _uploaded_sessions[session_id]
+            else:
+                target_df = _reload_session_from_disk(session_id)
+        if target_df is None and _uploaded_data is not None:
+            target_df = _uploaded_data
+        
+        updated_preview = None
+        if target_df is not None:
+            target_df = target_df.copy()
+            # Map predictions back using index-based ticket_ids
+            categorie_col = []
+            for idx in range(len(target_df)):
+                tid = ticket_ids[idx] if idx < len(ticket_ids) else f"ticket_{idx}"
+                categorie_col.append(pred_map.get(tid, ""))
+            target_df["categorie_intelligente"] = categorie_col
+            
+            # Update memory
+            if session_id and session_id in _uploaded_sessions:
+                _uploaded_sessions[session_id] = target_df
+            _uploaded_data = target_df
+            
+            # Persist updated parquet to disk
+            if session_id:
+                parquet_path = UPLOADS_DIR / f"{session_id}.parquet"
+                if parquet_path.exists():
+                    target_df.to_parquet(parquet_path, index=False)
+                    # Update metadata to reflect new column
+                    meta_path = UPLOADS_DIR / f"{session_id}.json"
+                    if meta_path.exists():
+                        meta = json.loads(meta_path.read_text())
+                        meta["columns"] = list(target_df.columns)
+                        meta_path.write_text(json.dumps(meta, ensure_ascii=False))
+            
+            updated_preview = target_df.head(20).fillna("").to_dict("records")
+        
         stats = {
             "total": len(results),
             "accepted": accepted_count,
@@ -303,10 +505,68 @@ async def predict(request: PredictRequest):
             "coverage": round(accepted_count / len(results), 3) if len(results) > 0 else 0
         }
         
-        return PredictResponse(predictions=results, stats=stats)
+        response = PredictResponse(predictions=results, stats=stats)
+        if updated_preview is not None:
+            response.updated_preview = updated_preview
+        return response
     
     except Exception as e:
         logger.error(f"Prediction failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/files")
+async def list_uploaded_files():
+    """
+    List all persistently saved CSV uploads with metadata
+    """
+    files = []
+    try:
+        for json_path in sorted(UPLOADS_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+            try:
+                meta = json.loads(json_path.read_text(encoding="utf-8"))
+                files.append(meta)
+            except Exception:
+                pass
+    except Exception as e:
+        logger.error(f"Failed to list uploaded files: {e}")
+    return files
+
+
+@router.post("/files/{session_id}/load", response_model=UploadResponse)
+async def load_saved_file(session_id: str):
+    """
+    Reload a previously saved file from disk into the active session
+    """
+    global _uploaded_data, _uploaded_sessions
+    
+    parquet_path = UPLOADS_DIR / f"{session_id}.parquet"
+    meta_path = UPLOADS_DIR / f"{session_id}.json"
+    
+    if not parquet_path.exists():
+        raise HTTPException(status_code=404, detail="Saved file not found")
+    
+    try:
+        df = pd.read_parquet(parquet_path, dtype_backend="numpy_nullable")
+        # Convert to plain numpy dtypes to avoid PyArrow-backed columns
+        df = df.astype({col: "object" for col in df.select_dtypes("string").columns})
+        _uploaded_sessions[session_id] = df
+        _uploaded_data = df
+        
+        preview = df.head(20).fillna("").to_dict("records")
+        stats = _data_processor.compute_stats(df)
+        detected = _data_processor.detect_columns(df)
+        
+        return UploadResponse(
+            columns=list(df.columns),
+            preview=preview,
+            stats=stats,
+            n_rows=len(df),
+            detected_columns=detected,
+            session_id=session_id
+        )
+    except Exception as e:
+        logger.error(f"Failed to load saved file {session_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1090,10 +1350,21 @@ async def index_tickets_for_rag(background_tasks: BackgroundTasks):
 
 
 def _index_tickets_background(df: pd.DataFrame, vector_service):
-    """Tâche arrière-plan: indexer tickets dans Qdrant avec labels ML enrichis"""
+    """Tâche arrière-plan: indexer tickets dans Qdrant — enrichis par SmartN3Parser + labels ML"""
     try:
         from qdrant_client.models import PointStruct
         import uuid as uuid_lib
+
+        # ── Smart N3 Parser (nouveau parseur) ────────────────────────────────
+        try:
+            from app.services.nlp.smart_n3_parser import SmartN3Parser
+            smart_parser = SmartN3Parser()
+            _smart_parser_ok = True
+            logger.info("[RAG-Tickets] SmartN3Parser chargé")
+        except Exception as e_parser:
+            smart_parser = None
+            _smart_parser_ok = False
+            logger.warning(f"[RAG-Tickets] SmartN3Parser indisponible: {e_parser} — mode legacy")
 
         # ── Pré-classification ML pour enrichir le payload ───────────────────
         ml_labels: dict = {}
@@ -1113,25 +1384,50 @@ def _index_tickets_background(df: pd.DataFrame, vector_service):
                 if text_col:
                     preds, confs, _ = _ml_classifier.predict(
                         df[text_col].fillna("").astype(str),
-                        threshold=0.0  # all tickets regardless of confidence
+                        threshold=0.0
                     )
                     for idx_pos, idx_label in enumerate(df.index):
                         ml_labels[idx_label] = str(preds[idx_pos])
                         ml_confidences[idx_label] = float(confs[idx_pos])
             except Exception as ml_err:
-                logger.warning(f"[RAG] ML pre-labeling failed: {ml_err}")
+                logger.warning(f"[RAG-Tickets] ML pre-labeling failed: {ml_err}")
 
         points = []
+        smart_enriched = 0
         for idx, row in df.iterrows():
-            # Générer embedding
-            text = row['text_for_rag']
+            text = str(row.get('text_for_rag', ''))
             embedding = vector_service.embedding_model.encode(text).tolist()
 
-            # Extraire mois depuis date_debut si disponible
             date_str = str(row.get('date_debut', ''))
             mois = date_str[:7] if len(date_str) >= 7 else ""
 
-            # Construire point Qdrant avec payload enrichi ML
+            # ── Enrichissement SmartN3Parser ──────────────────────────────
+            n3_payload: dict = {}
+            if _smart_parser_ok and smart_parser and text.strip():
+                try:
+                    ctx = smart_parser.parse(text)
+                    n3_payload = {
+                        "n3_intent":             ctx.intent.value if ctx.intent else "",
+                        "n3_intent_confidence":  round(ctx.intent_confidence, 3),
+                        "n3_error_codes":        ctx.error_codes,
+                        "n3_primary_error":      ctx.primary_error_code or "",
+                        "n3_system":             ctx.primary_system or "",
+                        "n3_nd_number":          ctx.nd_number or "",
+                        "n3_nro":                ctx.nro_name or "",
+                        "n3_dslam":              ctx.dslam_name or "",
+                        "n3_entities":           {k: v for k, v in (ctx.entities or {}).items()},
+                        "n3_confidence":         round(ctx.confidence, 3),
+                        "n3_trust_score":        round(ctx.trust_score, 3),
+                        "n3_completeness":       round(ctx.completeness_score, 3),
+                        "n3_encoding_fixed":     ctx.encoding_fixed,
+                        "n3_requires_review":    ctx.requires_human_review,
+                        "n3_rag_query":          ctx.rag_query_primary or "",
+                        "n3_suggested_fr_ids":   ctx.suggested_fr_ids or [],
+                    }
+                    smart_enriched += 1
+                except Exception as pe:
+                    logger.debug(f"[RAG-Tickets] parse error idx={idx}: {pe}")
+
             point = PointStruct(
                 id=str(uuid_lib.uuid4()),
                 vector=embedding,
@@ -1145,35 +1441,289 @@ def _index_tickets_background(df: pd.DataFrame, vector_service):
                     "date":            date_str,
                     "mois":            mois,
                     "groupe":          str(row.get('groupe', '')),
-                    # ML enrichment fields
                     "predicted_label": ml_labels.get(idx, ""),
                     "confidence":      round(ml_confidences.get(idx, 0.0), 3),
                     "mttr":            float(row.get('mttr', 0)) if pd.notna(row.get('mttr', None)) else None,
                     "indexed_at":      pd.Timestamp.now().isoformat(),
+                    "source_type":     "ticket",
+                    **n3_payload,
                 }
             )
             points.append(point)
 
-            # Batch upsert every 100 tickets
             if len(points) >= 100:
-                vector_service.client.upsert(
-                    collection_name="tickets_rag",
-                    points=points
-                )
-                logger.info(f"[RAG] Indexed {len(points)} tickets batch")
+                vector_service.client.upsert(collection_name="tickets_rag", points=points)
+                logger.info(f"[RAG-Tickets] Batch upsert: {len(points)} tickets")
                 points = []
 
-        # Upsert remaining
         if points:
-            vector_service.client.upsert(
-                collection_name="tickets_rag",
-                points=points
-            )
+            vector_service.client.upsert(collection_name="tickets_rag", points=points)
 
-        logger.info(f"[RAG] Indexation complete: {len(df)} tickets (ML labels: {len(ml_labels)})")
+        logger.info(
+            f"[RAG-Tickets] Indexation terminée: {len(df)} tickets "
+            f"({smart_enriched} enrichis N3, {len(ml_labels)} labels ML)"
+        )
 
     except Exception as e:
-        logger.error(f"[RAG] Indexation failed: {e}")
+        logger.error(f"[RAG-Tickets] Indexation failed: {e}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Endpoint — RAG multi-source : Tickets + FR + Logs
+# ─────────────────────────────────────────────────────────────────────────────
+
+class IndexRAGRequest(BaseModel):
+    source: str = "all"          # "tickets" | "fr" | "logs" | "all"
+    fr_dir: Optional[str] = None  # override FR directory path
+    log_file: Optional[str] = None  # override log file path
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Endpoint — Upload source files (FR .docx / Logs .log)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post("/upload-source")
+async def upload_source_files(
+    source: str = Query(..., description="fr | logs"),
+    files: List[UploadFile] = File(...),
+):
+    """
+    Sauvegarde les fichiers uploadés dans le bon dossier serveur :
+      - source=fr   → backend/FR/ (.docx / .pdf)
+      - source=logs → data_pipeline/input/ (.log / .txt / .gz)
+    Retourne les chemins des fichiers sauvegardés.
+    """
+    from pathlib import Path as _Path
+    base = _Path(__file__).parents[5]
+
+    if source == "fr":
+        dest_dir = base / "backend" / "FR"
+        allowed = {".docx", ".doc", ".pdf"}
+    elif source == "logs":
+        dest_dir = base / "data_pipeline" / "input"
+        allowed = {".log", ".txt", ".gz"}
+    else:
+        raise HTTPException(status_code=400, detail="source doit être : fr | logs")
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    saved: list = []
+    errors: list = []
+
+    for f in files:
+        suffix = _Path(f.filename or "").suffix.lower()
+        if suffix not in allowed:
+            errors.append(f"{f.filename}: extension non autorisée ({suffix})")
+            continue
+        dest = dest_dir / (f.filename or f"file_{uuid.uuid4().hex}{suffix}")
+        try:
+            content = await f.read()
+            dest.write_bytes(content)
+            saved.append(str(dest))
+            logger.info(f"[upload-source] Sauvegardé: {dest}")
+        except Exception as e:
+            errors.append(f"{f.filename}: {e}")
+
+    return {
+        "source": source,
+        "saved": len(saved),
+        "paths": saved,
+        "errors": errors,
+        "dest_dir": str(dest_dir),
+        "message": f"{len(saved)} fichier(s) sauvegardé(s) dans {dest_dir.name}/",
+    }
+
+
+@router.post("/index-rag")
+async def index_rag_multi_source(
+    background_tasks: BackgroundTasks,
+    source_param: Optional[str] = Query(None, alias="source"),
+    request: Optional[IndexRAGRequest] = None,
+):
+    # Accept source from query param (?source=logs) OR JSON body
+    if request is not None:
+        source = request.source.lower()
+        fr_dir = request.fr_dir
+        log_file_path = request.log_file
+    else:
+        source = (source_param or "all").lower()
+        fr_dir = None
+        log_file_path = None
+    """
+    Lance l'indexation RAG pour une ou toutes les sources de données :
+      - tickets : CSV uploadé → SmartN3Parser → Qdrant collection tickets_rag
+      - fr      : fichiers .docx FR → fr_parser → fr_normalizer → Qdrant brasil_canonical
+      - logs    : log_events.json → log_knowledge_extractor → Qdrant brasil_log_patterns
+      - all     : les 3 sources en séquence
+    Accepte source en query param (?source=logs) OU en body JSON.
+    """
+    if source not in ("tickets", "fr", "logs", "all"):
+        raise HTTPException(status_code=400, detail="source doit être : tickets | fr | logs | all")
+
+    results: dict = {"source": source, "launched": [], "errors": []}
+
+    # ── Tickets ──────────────────────────────────────────────────────────────
+    if source in ("tickets", "all"):
+        if _uploaded_data is None:
+            if source == "tickets":
+                raise HTTPException(status_code=400, detail="Aucun CSV chargé — importez un fichier CSV d'abord")
+            results["errors"].append("tickets: aucun CSV chargé")
+        else:
+            try:
+                from app.services.knowledge.vector_service import VectorService
+                from qdrant_client.models import Distance, VectorParams
+                vs = VectorService()
+                if vs.is_available():
+                    try:
+                        vs.client.get_collection("tickets_rag")
+                    except Exception:
+                        vs.client.create_collection(
+                            collection_name="tickets_rag",
+                            vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+                        )
+
+                    df = _uploaded_data.copy()
+                    text_cols = [c for c in ['inc_resume', 'resume', 'inc_cause', 'cause',
+                                              'inc_solution', 'solution', 'inc_commentaire',
+                                              'commentaire', 'signalement', 'description', 'text']
+                                 if c in df.columns]
+                    if text_cols:
+                        df['text_for_rag'] = df[text_cols].fillna('').agg(' | '.join, axis=1)
+                        background_tasks.add_task(_index_tickets_background, df, vs)
+                        results["launched"].append({
+                            "source": "tickets",
+                            "count": len(df),
+                            "collection": "tickets_rag",
+                            "parser": "SmartN3Parser",
+                        })
+                    else:
+                        results["errors"].append("tickets: aucune colonne texte détectée")
+                else:
+                    results["errors"].append("tickets: VectorService Qdrant non disponible")
+            except Exception as e:
+                results["errors"].append(f"tickets: {e}")
+
+    # ── FR (.docx) ───────────────────────────────────────────────────────────
+    if source in ("fr", "all"):
+        background_tasks.add_task(_index_fr_background, fr_dir)
+        results["launched"].append({
+            "source": "fr",
+            "collection": "brasil_canonical",
+            "note": "pipeline fr_parser → fr_normalizer → Qdrant",
+        })
+
+    # ── Logs ─────────────────────────────────────────────────────────────────
+    if source in ("logs", "all"):
+        background_tasks.add_task(_index_logs_background, log_file_path)
+        results["launched"].append({
+            "source": "logs",
+            "collection": "brasil_log_patterns",
+            "note": "pipeline log_ingester → log_knowledge_extractor → Qdrant",
+        })
+
+    results["message"] = (
+        f"{len(results['launched'])} source(s) lancée(s) en arrière-plan"
+        + (f" | {len(results['errors'])} erreur(s)" if results["errors"] else "")
+    )
+    return results
+
+
+def _index_fr_background(fr_dir_override: Optional[str] = None):
+    """Arrière-plan: parse les FR .docx et les indexe dans brasil_canonical."""
+    import subprocess, sys, os
+    from pathlib import Path as _Path
+    pipeline_dir = _Path(__file__).parents[5] / "data_pipeline"
+    # FR dir: use override if provided, otherwise default backend/FR/
+    fr_dir = fr_dir_override or str(_Path(__file__).parents[4] / "FR")
+    env = {**os.environ, "FR_DIR_OVERRIDE": fr_dir}
+    try:
+        scripts = [
+            (pipeline_dir / "fr_parser.py",    "FR Parser"),
+            (pipeline_dir / "fr_quality_scorer.py", "FR Quality Scorer"),
+            (pipeline_dir / "fr_normalizer.py", "FR Normalizer"),
+            (pipeline_dir / "rag_indexer.py",   "RAG Indexer (FR)"),
+        ]
+        for script, label in scripts:
+            if not script.exists():
+                logger.warning(f"[RAG-FR] Script introuvable: {script}")
+                continue
+            r = subprocess.run(
+                [sys.executable, str(script)],
+                cwd=str(pipeline_dir.parent),
+                capture_output=True, text=True, encoding="utf-8", timeout=300,
+                env={**env, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"},
+            )
+            if r.returncode != 0:
+                logger.error(f"[RAG-FR] {label} failed: {r.stderr[-500:]}")
+                return
+            logger.info(f"[RAG-FR] {label} OK")
+        logger.info("[RAG-FR] Pipeline FR terminé → brasil_canonical")
+    except Exception as e:
+        logger.error(f"[RAG-FR] Pipeline failed: {e}")
+
+
+def _index_logs_background(log_file_override: Optional[str] = None):
+    """Arrière-plan: ingère les logs et les indexe dans brasil_log_patterns."""
+    import subprocess, sys, os
+    from pathlib import Path as _Path
+    pipeline_dir = _Path(__file__).parents[5] / "data_pipeline"
+    # Upload-source saves to backend/data_pipeline/input/
+    input_dirs = [
+        pipeline_dir / "input",                                    # data_pipeline/input/
+        _Path(__file__).parents[4] / "data_pipeline" / "input",   # backend/data_pipeline/input/
+    ]
+    try:
+        scripts: list = []
+
+        # Determine log file(s) to ingest
+        if log_file_override:
+            log_files = [_Path(log_file_override)]
+        else:
+            # Pick any .log / .txt in both input dirs
+            log_files = []
+            for input_dir in input_dirs:
+                if input_dir.exists():
+                    log_files += [f for f in input_dir.glob("*.log") if f.stat().st_size > 0]
+                    log_files += [f for f in input_dir.glob("*.txt") if f.stat().st_size > 0]
+            # Deduplicate by name
+            seen = set()
+            log_files = [f for f in log_files if f.name not in seen and not seen.add(f.name)]
+
+        if log_files:
+            for lf in log_files:
+                scripts.append((
+                    pipeline_dir / "log_ingester.py",
+                    ["--log-file", str(lf)],
+                    f"Log Ingester ({lf.name})",
+                ))
+        else:
+            # Fallback: use pre-existing log_events.json if available
+            log_events = pipeline_dir / "output" / "log_events.json"
+            if log_events.exists():
+                scripts.append((pipeline_dir / "log_ingester.py", [], "Log Ingester (log_events)"))
+            else:
+                logger.warning("[RAG-Logs] Aucun fichier log trouvé — skip log_ingester")
+
+        scripts.append((pipeline_dir / "log_knowledge_extractor.py", [], "Log Knowledge Extractor"))
+        scripts.append((pipeline_dir / "knowledge_indexer.py", ["--collection", "logs"], "Knowledge Indexer (logs)"))
+
+        for script, args, label in scripts:
+            if not script.exists():
+                logger.warning(f"[RAG-Logs] Script introuvable: {script}")
+                continue
+            env_utf8 = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+            r = subprocess.run(
+                [sys.executable, str(script)] + args,
+                cwd=str(pipeline_dir.parent),
+                capture_output=True, text=True, encoding="utf-8", timeout=600,
+                env=env_utf8,
+            )
+            if r.returncode != 0:
+                logger.error(f"[RAG-Logs] {label} failed: {r.stderr[-500:]}")
+                return
+            logger.info(f"[RAG-Logs] {label} OK")
+        logger.info("[RAG-Logs] Pipeline Logs terminé → brasil_log_patterns")
+    except Exception as e:
+        logger.error(f"[RAG-Logs] Pipeline failed: {e}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

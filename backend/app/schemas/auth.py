@@ -71,8 +71,8 @@ class UserResponse(UserBase):
     id: int
     role: UserRole
     is_active: bool
-    created_at: datetime
-    last_login: Optional[datetime]
+    created_at: Optional[datetime] = None
+    last_login: Optional[datetime] = None
 
     class Config:
         from_attributes = True

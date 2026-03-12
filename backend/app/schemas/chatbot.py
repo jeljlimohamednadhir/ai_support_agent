@@ -56,6 +56,7 @@ class ChatResponse(BaseModel):
     # Diagnostic Engine N3 enrichment
     procedure_id: Optional[str] = None           # matched N3 procedure ID (e.g. PROC-BRASIL-PROV-0001)
     exceptions_detected: Optional[List[str]] = None  # list of detected exception class names
+    thinking_content: Optional[str] = None       # <think>...</think> extrait du LLM (Qwen3, DeepSeek-R1...)
 
 
 class ConversationHistory(BaseModel):
