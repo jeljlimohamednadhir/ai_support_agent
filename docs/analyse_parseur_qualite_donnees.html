@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analyse Parseur & Qualité des Données — Chatbot BRASIL N3</title>
+  <style>
+    :root {
+      --orange:    #f16e00;
+      --orange-lt: #fff4e8;
+      --blue:      #085ebd;
+      --blue-lt:   #e8f1fb;
+      --green:     #28a745;
+      --green-lt:  #e9f7ec;
+      --red:       #c0392b;
+      --red-lt:    #fdecea;
+      --yellow:    #e6a817;
+      --yellow-lt: #fff9e6;
+      --grey:      #6c757d;
+      --grey-lt:   #f4f5f6;
+      --dark:      #1a1a2e;
+      --card-bg:   #ffffff;
+      --border:    #dee2e6;
+      --shadow:    0 2px 8px rgba(0,0,0,.10);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, var(--dark) 0%, #16213e 60%, var(--blue) 100%);
+      color: #fff;
+      padding: 2.5rem 2rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: "";
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(
+        45deg, transparent, transparent 30px,
+        rgba(255,255,255,.03) 30px, rgba(255,255,255,.03) 60px
+      );
+    }
+    header h1 { font-size: 1.75rem; font-weight: 700; position: relative; z-index: 1; }
+    header .sub { font-size: .95rem; opacity: .8; margin-top: .4rem; position: relative; z-index: 1; }
+    .meta-bar {
+      display: flex; gap: 1.5rem; flex-wrap: wrap;
+      margin-top: 1.2rem; position: relative; z-index: 1;
+    }
+    .meta-pill {
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 20px; padding: .25rem .9rem;
+      font-size: .8rem;
+    }
+
+    /* ── Layout ── */
+    .wrapper { max-width: 1240px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+    /* ── KPI Strip ── */
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    .kpi {
+      background: var(--card-bg); border-radius: 10px;
+      box-shadow: var(--shadow); padding: 1.1rem 1.2rem;
+      border-top: 4px solid var(--orange);
+      display: flex; flex-direction: column; gap: .3rem;
+    }
+    .kpi.green  { border-top-color: var(--green); }
+    .kpi.red    { border-top-color: var(--red); }
+    .kpi.blue   { border-top-color: var(--blue); }
+    .kpi.yellow { border-top-color: var(--yellow); }
+    .kpi-val  { font-size: 1.9rem; font-weight: 800; color: var(--dark); }
+    .kpi-val.red    { color: var(--red); }
+    .kpi-val.green  { color: var(--green); }
+    .kpi-val.yellow { color: var(--yellow); }
+    .kpi-val.blue   { color: var(--blue); }
+    .kpi-lbl  { font-size: .78rem; color: var(--grey); text-transform: uppercase; letter-spacing: .05em; }
+
+    /* ── Sections ── */
+    section { margin-bottom: 2.5rem; }
+    .section-title {
+      display: flex; align-items: center; gap: .6rem;
+      font-size: 1.25rem; font-weight: 700; color: var(--dark);
+      border-bottom: 2px solid var(--orange);
+      padding-bottom: .5rem; margin-bottom: 1.3rem;
+    }
+    .section-icon { font-size: 1.4rem; }
+
+    /* ── Cards ── */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.2rem; }
+    .card {
+      background: var(--card-bg); border-radius: 10px;
+      box-shadow: var(--shadow); padding: 1.3rem 1.4rem;
+    }
+    .card h3 {
+      font-size: 1rem; font-weight: 700; margin-bottom: .7rem;
+      display: flex; align-items: center; gap: .4rem;
+    }
+    .card p { font-size: .9rem; color: #444; margin-bottom: .6rem; }
+
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 1.5rem; }
+    table { border-collapse: collapse; width: 100%; background: var(--card-bg); font-size: .87rem; }
+    thead th {
+      background: var(--dark); color: #fff;
+      padding: .75rem 1rem; text-align: left; font-weight: 600;
+      white-space: nowrap;
+    }
+    tbody tr:nth-child(even) { background: var(--grey-lt); }
+    tbody td { padding: .6rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tbody tr:hover { background: #edf3fb; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block; padding: .15rem .55rem;
+      border-radius: 12px; font-size: .74rem; font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-green  { background: var(--green-lt); color: #196532; }
+    .badge-red    { background: var(--red-lt);   color: var(--red); }
+    .badge-yellow { background: var(--yellow-lt); color: #8a6000; }
+    .badge-blue   { background: var(--blue-lt);  color: var(--blue); }
+    .badge-grey   { background: var(--grey-lt);  color: var(--grey); }
+    .badge-orange { background: var(--orange-lt); color: #b35000; }
+
+    /* ── Alert boxes ── */
+    .alert {
+      border-left: 5px solid; border-radius: 6px;
+      padding: .85rem 1.1rem; margin: .8rem 0; font-size: .88rem;
+    }
+    .alert-red    { border-color: var(--red);    background: var(--red-lt); }
+    .alert-yellow { border-color: var(--yellow); background: var(--yellow-lt); }
+    .alert-green  { border-color: var(--green);  background: var(--green-lt); }
+    .alert-blue   { border-color: var(--blue);   background: var(--blue-lt); }
+    .alert strong { display: block; margin-bottom: .2rem; }
+
+    /* ── Lists ── */
+    ul.checks li { padding: .25rem 0; padding-left: 1.4rem; position: relative; font-size: .9rem; }
+    ul.checks li::before { content: attr(data-icon); position: absolute; left: 0; }
+
+    /* ── Priority table ── */
+    .priority-row-p1 td:first-child { border-left: 4px solid var(--red); }
+    .priority-row-p2 td:first-child { border-left: 4px solid var(--yellow); }
+    .priority-row-p3 td:first-child { border-left: 4px solid var(--blue); }
+    .priority-row-p4 td:first-child { border-left: 4px solid var(--green); }
+
+    /* ── Progress bars ── */
+    .progress-bar { background: #e9ecef; border-radius: 6px; height: 12px; overflow: hidden; margin: .3rem 0; }
+    .progress-fill { height: 100%; border-radius: 6px; transition: width .3s; }
+    .fill-green  { background: var(--green); }
+    .fill-yellow { background: var(--yellow); }
+    .fill-red    { background: var(--red); }
+
+    /* ── Code ── */
+    code {
+      background: #f0f0f4; border: 1px solid #d8d8e8;
+      border-radius: 4px; padding: .1rem .4rem;
+      font-family: "Consolas", monospace; font-size: .82rem;
+    }
+    pre {
+      background: #1e1e2e; color: #cdd6f4;
+      border-radius: 8px; padding: 1rem 1.2rem;
+      overflow-x: auto; font-size: .82rem; line-height: 1.55;
+      margin: .8rem 0;
+    }
+
+    /* ── TOC ── */
+    nav.toc {
+      background: var(--card-bg); border-radius: 10px;
+      box-shadow: var(--shadow); padding: 1.2rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+    nav.toc h2 { font-size: 1rem; font-weight: 700; margin-bottom: .8rem; color: var(--orange); }
+    nav.toc ol { padding-left: 1.4rem; }
+    nav.toc li { margin: .35rem 0; font-size: .92rem; }
+    nav.toc a { color: var(--blue); text-decoration: none; }
+    nav.toc a:hover { text-decoration: underline; }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--dark); color: rgba(255,255,255,.6);
+      text-align: center; padding: 1.2rem; font-size: .8rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🔍 Analyse Parseur &amp; Qualité des Données — Chatbot BRASIL N3</h1>
+  <div class="sub">Support Applicatif Niveau 3 — Orange France · BRASIL (Référentiel Réseau)</div>
+  <div class="meta-bar">
+    <span class="meta-pill">📅 Mars 2026</span>
+    <span class="meta-pill">🎯 222 tickets analysés</span>
+    <span class="meta-pill">📁 51 Fiches de Résolution</span>
+    <span class="meta-pill">📊 1 133 événements log</span>
+    <span class="meta-pill">🧩 20 clusters d'incidents</span>
+  </div>
+</header>
+
+<div class="wrapper">
+
+  <!-- TOC -->
+  <nav class="toc">
+    <h2>📋 Table des matières</h2>
+    <ol>
+      <li><a href="#parseur">Analyse du Parseur NLP</a> — Points forts, faiblesses, recommandations</li>
+      <li><a href="#donnees">Analyse de la Qualité des Données</a> — Tickets, FR, Logs, Clusters</li>
+      <li><a href="#impact">Impact sur le Chatbot</a> — Risques et types d'erreurs générables</li>
+      <li><a href="#priorites">Priorisation des Actions</a> — Feuille de route correctrice</li>
+    </ol>
+  </nav>
+
+  <!-- ─── KPI STRIP ─── -->
+  <div class="kpi-strip">
+    <div class="kpi red">
+      <span class="kpi-val red">60%</span>
+      <span class="kpi-lbl">Tickets faible confiance (&lt;0.55)</span>
+    </div>
+    <div class="kpi red">
+      <span class="kpi-val red">66%</span>
+      <span class="kpi-lbl">Tickets sans code erreur extrait</span>
+    </div>
+    <div class="kpi yellow">
+      <span class="kpi-val yellow">32%</span>
+      <span class="kpi-lbl">Tickets intent = "unknown"</span>
+    </div>
+    <div class="kpi yellow">
+      <span class="kpi-val yellow">0/20</span>
+      <span class="kpi-lbl">Clusters liés à une FR</span>
+    </div>
+    <div class="kpi green">
+      <span class="kpi-val blue">51</span>
+      <span class="kpi-lbl">FR disponibles (score moy. 71.9)</span>
+    </div>
+    <div class="kpi green">
+      <span class="kpi-val green">49/51</span>
+      <span class="kpi-lbl">FR avec codes erreur indexés</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1 — PARSEUR                                          -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section id="parseur">
+    <div class="section-title"><span class="section-icon">⚙️</span> 1. Analyse du Parseur NLP</div>
+
+    <div class="card-grid">
+
+      <!-- Points forts -->
+      <div class="card">
+        <h3>✅ Points forts</h3>
+        <ul class="checks">
+          <li data-icon="✅">Pipeline structuré en 4 couches : <code>Preprocessor</code> → <code>Enricher</code> → <code>Taxonomy</code> → <code>DiagnosticBehavior</code></li>
+          <li data-icon="✅">Glossaire domaine BRASIL de 45 abréviations (<code>avp</code>, <code>nd</code>, <code>nro</code>, <code>dslam</code>…)</li>
+          <li data-icon="✅">Extraction multi-pattern d'erreurs : B4002, AVP-1300, ORA-xxxxx, 42C, codes 3-5 chiffres</li>
+          <li data-icon="✅">Taxonomie riche : 80+ types d'incidents hiérarchisés (catégorie → type)</li>
+          <li data-icon="✅">14 familles d'intention reconnues avec priorité explicite (<code>INTENT_PRIORITY</code>)</li>
+          <li data-icon="✅">Détection de langue FR/EN pour bilinguisme</li>
+          <li data-icon="✅">Score de confiance composite (intent + entités + codes erreur + type incident)</li>
+          <li data-icon="✅">Gestion Unicode : NFC + strip caractères de contrôle</li>
+          <li data-icon="✅">Détection d'apostrophes Unicode <code>U+2019</code> dans <code>_DEPOSITOR_INDICATORS</code></li>
+        </ul>
+      </div>
+
+      <!-- Points faibles -->
+      <div class="card">
+        <h3>⚠️ Points faibles identifiés</h3>
+        <ul class="checks">
+          <li data-icon="❌"><strong>Encodage CSV latin-1 non normalisé</strong> : les messages bruts contiennent des séquences <code>Ã©</code>, <code>Ã¨</code> (latin-1 interprété UTF-8). Le preprocessor ne corrige pas ces artéfacts.</li>
+          <li data-icon="❌"><strong>60% des tickets restent en confiance faible</strong> (&lt;0.55) après enrichissement, ce qui déclenche un flag <code>requires_human_review</code> non utilisé.</li>
+          <li data-icon="❌"><strong>66% sans code erreur extrait</strong> : les messages informels ne contiennent pas de code structuré ("avp 1300 bloque la demande" non détecté sans le pattern <code>AVP[-\s]?\d+</code>).</li>
+          <li data-icon="❌"><strong>32% d'intentions inconnues</strong> : les tickets opérationnels courts ("merci de supprimer le routeur NBLIL701") ne matchent aucun pattern d'intention.</li>
+          <li data-icon="❌"><strong>Dépendance aux mots-clés exacts</strong> : <code>_classify_intent()</code> compare des sous-chaînes exactes, sans tolérance aux fautes, variantes ou synonymes.</li>
+          <li data-icon="❌"><strong>Absence de NER pour les ND</strong> : les numéros ND (ex. <code>0563741427</code>) ne sont pas extraits en tant qu'entité nommée structurée.</li>
+          <li data-icon="❌"><strong>Synonymes manquants</strong> : "rejouer" = re-lancer, "recréer" = supprimer+créer, "dégager" = libérer — non mappés dans le glossaire ni les intentions.</li>
+          <li data-icon="❌"><strong>Pas de détection de composants DSLAM/carte/port</strong> dans les messages : patterns d'ID équipement trop génériques (<code>[A-Z]{2,5}[A-Z0-9]{2,4}\d{3,6}</code>).</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Analyse détaillée des lacunes -->
+    <div class="alert alert-red" style="margin-top:1rem;">
+      <strong>🚨 Problème critique — Encodage CSV</strong>
+      Les messages <code>user_sig</code> du CSV source sont en <strong>latin-1 non converti</strong> (ex : <code>"le ND est supprimÃ© de BRASIL"</code>). Le <code>TextPreprocessor</code> appelle <code>unicodedata.normalize("NFC", text)</code> mais ne décode pas les séquences d'encodage cassé. Résultat : les regex et le glossaire échouent sur ces tokens corrompus.
+    </div>
+    <div class="alert alert-yellow">
+      <strong>⚠️ Problème structurel — Intent par sous-chaînes</strong>
+      L'algorithme <code>_classify_intent()</code> fait un simple <code>if p in text_lower</code> pour chaque mot-clé. Il ne gère pas : les fautes de frappe, les variantes morphologiques (<em>supprimer/suppression/supprimé</em>), ni les expressions multi-mots (<em>"impossible de lancer"</em> matche "lancer" et "impossible" séparément). Cela génère des scores multi-intent flottants.
+    </div>
+
+    <!-- Tableau comparatif des intentions -->
+    <h3 style="margin:1.3rem 0 .6rem; font-size:1rem;">Distribution des intentions extraites (222 tickets)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Intention</th>
+            <th>Tickets</th>
+            <th>% total</th>
+            <th>Qualité extraction</th>
+            <th>Observation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>unknown</code></td><td>72</td><td>32%</td><td><span class="badge badge-red">Critique</span></td><td>Messages opérationnels courts non couverts par aucun pattern</td></tr>
+          <tr><td><code>investigate_error</code></td><td>62</td><td>28%</td><td><span class="badge badge-yellow">Moyen</span></td><td>Intent correct mais trop générique pour choisir la FR</td></tr>
+          <tr><td><code>investigate_block</code></td><td>45</td><td>20%</td><td><span class="badge badge-yellow">Moyen</span></td><td>Bien détecté via "bloqué", mais sans séparation AVP/1300/42C</td></tr>
+          <tr><td><code>delete_equipment</code></td><td>21</td><td>9%</td><td><span class="badge badge-green">Bon</span></td><td>Pattern "supprimer" fiable</td></tr>
+          <tr><td><code>check_status</code></td><td>10</td><td>5%</td><td><span class="badge badge-green">Bon</span></td><td>Détecté via "vérifier", "état"</td></tr>
+          <tr><td><code>update_configuration</code></td><td>7</td><td>3%</td><td><span class="badge badge-yellow">Moyen</span></td><td>"modifier" trop générique — faux positifs possibles</td></tr>
+          <tr><td><code>analyze_behavior</code></td><td>3</td><td>1%</td><td><span class="badge badge-grey">Rare</span></td><td>Sous-représenté dans les patterns</td></tr>
+          <tr><td><code>escalate</code></td><td>2</td><td>1%</td><td><span class="badge badge-grey">Rare</span></td><td>Attendu plus fréquent vu le volume N3</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Recommandations parseur -->
+    <h3 style="margin:1rem 0 .6rem; font-size:1rem;">🛠️ Recommandations d'amélioration du parseur</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Amélioration</th><th>Impact</th><th>Effort</th><th>Implémentation</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><strong>Décodage latin-1→UTF-8 au chargement CSV</strong></td>
+            <td><span class="badge badge-red">Critique</span></td>
+            <td><span class="badge badge-green">Faible</span></td>
+            <td>Ajouter dans <code>ticket_structurer.load_csv()</code> : <code>df['user_sig'] = df['user_sig'].apply(lambda x: x.encode('latin-1').decode('utf-8', errors='replace') if isinstance(x, str) else x)</code> — ou forcer <code>encoding='latin-1'</code> + <code>errors='replace'</code></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><strong>Pattern ND dans l'extracteur d'entités</strong></td>
+            <td><span class="badge badge-red">Critique</span></td>
+            <td><span class="badge badge-green">Faible</span></td>
+            <td>Ajouter dans <code>ENTITY_PATTERNS["nd_number"]</code> : <code>r"\b(0[1-9]\d{8,9})\b"</code> (numéro de nœud de distribution 10 chiffres)</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><strong>Synonymes opérationnels dans TYPO_MAP</strong></td>
+            <td><span class="badge badge-yellow">Élevé</span></td>
+            <td><span class="badge badge-green">Faible</span></td>
+            <td>Ajouter : <code>"rejouer": "relancer"</code>, <code>"recréer": "supprimer créer"</code>, <code>"dégager": "libérer"</code>, <code>"régulariser": "corriger"</code>, <code>"rejeu": "relancer"</code></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><strong>Intent basé sur TF-IDF ou embeddings</strong></td>
+            <td><span class="badge badge-yellow">Élevé</span></td>
+            <td><span class="badge badge-yellow">Moyen</span></td>
+            <td>Remplacer <code>_classify_intent()</code> par une classification vectorielle sur les clusters existants — utiliser les embeddings Qdrant déjà calculés pour classer l'intent par cosine similarity</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><strong>Corriger detection_confidence du flag <code>requires_human_review</code></strong></td>
+            <td><span class="badge badge-yellow">Élevé</span></td>
+            <td><span class="badge badge-green">Faible</span></td>
+            <td>Le flag est calculé mais n'est jamais utilisé dans le pipeline RAG. Brancher sur un workflow de validation (ex : JIRA label, Slack notif) ou au moins dans le log de chatbot</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><strong>Détecter le type d'action BRASIL dans la taxonomie</strong></td>
+            <td><span class="badge badge-yellow">Élevé</span></td>
+            <td><span class="badge badge-yellow">Moyen</span></td>
+            <td>Créer un extracteur d'action composite : <em>verbe + objet</em> (ex. "supprimer + DSLAM" → <code>deletion_request.dslam</code>). Cela permettrait de sélectionner directement FR 189 pour "supprimer DSLAM impossible"</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><strong>Normaliser les codes AVP en entités structurées</strong></td>
+            <td><span class="badge badge-yellow">Élevé</span></td>
+            <td><span class="badge badge-green">Faible</span></td>
+            <td>Le pattern <code>r"\bAVP[-\s]?\d+\b"</code> existe dans l'extracteur mais ne capture pas "avp 1300" en minuscules. Ajouter <code>re.IGNORECASE</code> systématiquement</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><strong>Détecter les pièces jointes référencées</strong></td>
+            <td><span class="badge badge-grey">Moyen</span></td>
+            <td><span class="badge badge-green">Faible</span></td>
+            <td>Beaucoup de messages mentionnent "Ci-joint la capture d'écran" sans que le parser ne note l'absence d'attachement analysable — ajouter un flag <code>has_attachment_ref</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Code example -->
+    <h3 style="margin:1rem 0 .5rem; font-size:1rem;">Exemple concret — Ticket mal parsé</h3>
+    <pre>
+# ─── Message brut (CSV, encodage cassé) ───────────────────────────────────
+"Bonjour. 4002 Erreur interne Brasil : merci de traiter l.AVP"
+
+# ─── Problèmes d'extraction actuels ───────────────────────────────────────
+preprocessed_text  → "4002 Erreur interne brasil : merci de traiter l.AVP"
+                      (le "." vient de l'encodage latin-1 de l'apostrophe)
+error_codes        → ["4002"]        ✅ OK
+intent             → "investigate_error"  ⚠️  mais "avp" → pas de pattern AVP
+entities           → [("error_code", "4002")]
+incident_type      → "backend_error.api_error"  ⚠️  devrait être "command_failure.avp_constraint"
+trust_score        → 0.30  ← trop bas car pas de code AVP extrait
+
+# ─── Avec les corrections proposées ──────────────────────────────────────
+1. Décodage latin-1 → "l'AVP" (apostrophe correcte)
+2. Pattern AVP (case-insensitive) → error_code = ["4002", "AVP"]
+3. Synonyme "traiter" → action = "correct" → incident_type = "command_failure.avp_constraint"
+4. trust_score → 0.40 (code AVP reconnu → bonus +0.15 → meilleure sélection FR)</pre>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2 — QUALITÉ DES DONNÉES                              -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section id="donnees">
+    <div class="section-title"><span class="section-icon">🗄️</span> 2. Analyse de la Qualité des Données</div>
+
+    <!-- 2.1 Tickets CSV -->
+    <h3 style="font-size:1rem; margin-bottom:.8rem;">2.1 — Source tickets.csv (222 tickets structurés)</h3>
+    <div class="card-grid">
+      <div class="card">
+        <h3>✅ Forces</h3>
+        <ul class="checks">
+          <li data-icon="✅">Dataset réel de production (INC001010…)</li>
+          <li data-icon="✅">Champs riches : <code>inc_resume</code>, <code>user_sig</code>, <code>inc_solution</code>, <code>inc_cause</code>, <code>datetime_debut/resolution</code>, groupes N2/N3</li>
+          <li data-icon="✅">Données de résolution disponibles (<code>inc_solution</code>) utilisables pour le clustering supervisé</li>
+          <li data-icon="✅">Traçabilité multi-système : <code>application_ticket</code>, <code>application_ticket_resolution</code></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>❌ Lacunes &amp; Problèmes</h3>
+        <ul class="checks">
+          <li data-icon="❌"><strong>Encodage cassé</strong> : latin-1 dans un fichier UTF-8 → artéfacts <code>Ã©</code>, <code>Ã¨</code>, <code>Ã</code> omniprésents dans <code>user_sig</code></li>
+          <li data-icon="❌"><strong>Solutions très courtes</strong> : "ras bdd brasil", "La commande est débloquée", "le ND est supprimé" — pas exploitables seules pour une FR</li>
+          <li data-icon="❌"><strong>Champ <code>user_sig</code> absent dans 47 tickets</strong> (null ou "-") — le parseur utilise alors <code>inc_resume</code> qui est moins riche</li>
+          <li data-icon="❌"><strong>Pas de lien direct vers une FR</strong> dans les champs CSV — impossible de valider automatiquement "ce ticket a été résolu par FR 130"</li>
+          <li data-icon="❌"><strong>Période courte</strong> : décembre 2025–mars 2026 seulement — biais saisonnier possible, incidents rares sous-représentés</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 2.2 Fiches FR -->
+    <h3 style="font-size:1rem; margin:.8rem 0 .6rem;">2.2 — Fiches de Résolution (51 FR, score moyen 71.9/100)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>FR</th><th>Titre</th><th>Score qualité</th><th>Mots</th><th>Label</th><th>Problème détecté</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>FR 130</td><td>Les types d'erreur 1300</td>
+            <td><span class="badge badge-red">41/100</span></td><td>89</td>
+            <td><span class="badge badge-orange">Partielle</span></td>
+            <td>89 mots — trop courte, pas de procédure détaillée. Erreur 1300 la plus fréquente (14 tickets) mais sa FR est la plus pauvre</td>
+          </tr>
+          <tr>
+            <td>FR 206</td><td>INCOHERENCE BRASIL TERRAIN</td>
+            <td><span class="badge badge-red">41/100</span></td><td>109</td>
+            <td><span class="badge badge-orange">Partielle</span></td>
+            <td>Pas de procédure concrète, pas de codes erreur, pas de sections structurées</td>
+          </tr>
+          <tr>
+            <td>FR 001</td><td>CalculerToc</td>
+            <td><span class="badge badge-yellow">50/100</span></td><td>156</td>
+            <td><span class="badge badge-orange">Partielle</span></td>
+            <td>Pas de code erreur, aucune section "symptômes" identifiée</td>
+          </tr>
+          <tr>
+            <td>FR 300</td><td>Brasil Correcteur — Chgt mot de passe BDD</td>
+            <td><span class="badge badge-yellow">52/100</span></td><td>156</td>
+            <td><span class="badge badge-orange">Partielle</span></td>
+            <td>Procédure opérationnelle importante (accès BDD) mais trop peu documentée</td>
+          </tr>
+          <tr>
+            <td>FR 011</td><td>Bouton Configurer Nouveaux Services</td>
+            <td><span class="badge badge-yellow">53/100</span></td><td>500</td>
+            <td><span class="badge badge-orange">Partielle</span></td>
+            <td>Aucun code erreur, sections "causes" et "risques" absentes</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-red">
+      <strong>🚨 Problème critique — FR 130 (Erreur 1300)</strong>
+      L'erreur 1300 est le code le plus cité dans les tickets et dans les clusters (<em>erreur_1300_network_equipment</em> = 14 tickets, <em>1300_unknown</em> = 8 tickets). Or FR 130 ne contient que <strong>89 mots</strong> et score <strong>41/100</strong> — c'est la fiche la plus consultée et la plus déficiente. Le chatbot ne peut pas produire de réponse utile à partir de cette base.
+    </div>
+
+    <div class="alert alert-yellow">
+      <strong>⚠️ FR manquantes pour des problèmes fréquents</strong>
+      <ul style="margin-top:.4rem; padding-left:1.2rem; font-size:.88rem;">
+        <li>Erreur <strong>B4002</strong> — couverte partiellement par FR 194 (score 78) mais pas par les clusters <code>2025_unknown</code> (60 tickets au total)</li>
+        <li>Erreur <strong>AVP 1300 + commandes ARTEMIS bloquées</strong> — couverte par FR 201 (score 89 ✅) mais pas reliée aux clusters</li>
+        <li>Corrections de nœuds routeurs (<em>NECHR10Z, NBLIL701</em>) — récurrentes dans tickets, aucune FR dédiée</li>
+        <li>Suppressions DSLAM/routeur/BAS — FR 189/188 disponibles mais pas liées aux clusters correspondants</li>
+      </ul>
+    </div>
+
+    <!-- Gap coverage chart -->
+    <h3 style="font-size:1rem; margin:.8rem 0 .5rem;">Couverture FR par code erreur fréquent</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Code erreur</th><th>Fréquence tickets</th><th>FR disponible</th><th>Score FR</th><th>Lien cluster→FR</th><th>Évaluation</th></tr></thead>
+        <tbody>
+          <tr><td>1300</td><td>22+ tickets</td><td>FR 130</td><td><span class="badge badge-red">41</span></td><td><span class="badge badge-red">Absent</span></td><td>🔴 FR insuffisante, lien manquant</td></tr>
+          <tr><td>4002 / B4002</td><td>~20 tickets</td><td>FR 194</td><td><span class="badge badge-green">78</span></td><td><span class="badge badge-red">Absent</span></td><td>🟡 FR bonne, lien manquant</td></tr>
+          <tr><td>42C</td><td>16 tickets</td><td>FR 147B</td><td><span class="badge badge-green">75</span></td><td><span class="badge badge-red">Absent</span></td><td>🟡 FR acceptable, lien manquant</td></tr>
+          <tr><td>AVP 1300 (ARTEMIS)</td><td>~10 tickets</td><td>FR 201</td><td><span class="badge badge-green">89</span></td><td><span class="badge badge-red">Absent</span></td><td>🟡 Meilleure FR, lien manquant</td></tr>
+          <tr><td>1002</td><td>~5 tickets</td><td>FR 012, FR 013</td><td><span class="badge badge-yellow">58-70</span></td><td><span class="badge badge-red">Absent</span></td><td>🟡 FR partielle</td></tr>
+          <tr><td>DSLAM fermé production</td><td>33 events log</td><td>FR 1583/1583B</td><td><span class="badge badge-green">72</span></td><td><span class="badge badge-red">Absent</span></td><td>🟡 Connaissance log présente, lien absent</td></tr>
+          <tr><td>Nœud routeur incorrect</td><td>~8 tickets</td><td><span class="badge badge-red">Aucune</span></td><td>—</td><td><span class="badge badge-red">Absent</span></td><td>🔴 FR manquante</td></tr>
+          <tr><td>Script bloqué en cours</td><td>~5 tickets</td><td>FR 164-1</td><td><span class="badge badge-green">80</span></td><td><span class="badge badge-red">Absent</span></td><td>🟡 FR bonne, lien manquant</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 2.3 Logs -->
+    <h3 style="font-size:1rem; margin:.8rem 0 .6rem;">2.3 — Logs Applicatifs (1 133 événements, 42 patterns)</h3>
+    <div class="card-grid">
+      <div class="card">
+        <h3>✅ Forces</h3>
+        <ul class="checks">
+          <li data-icon="✅">30 fichiers sources issus de composants réels : <code>connectorCL</code>, <code>brasil-api</code>, <code>sollicitationDLM</code>, <code>sollicitationFTTH</code>…</li>
+          <li data-icon="✅">Tous les événements sont de niveau ERROR → signal/bruit excellent</li>
+          <li data-icon="✅">100% des events ont un timestamp exploitable</li>
+          <li data-icon="✅">Patterns récurrents bien capturés : <em>DSLAM_CLOSED</em> (33×), <em>DUPLICATE_RESOURCE</em> (129×), <em>TRANSACTION_KO</em> (38×), <em>DB_DEADLOCK</em> (27×)</li>
+          <li data-icon="✅">40 records de connaissance log générés avec causes probables et actions</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>❌ Lacunes &amp; Problèmes</h3>
+        <ul class="checks">
+          <li data-icon="❌"><strong>0% d'events avec user_id</strong> — impossible de corréler un log avec un ticket ou un utilisateur</li>
+          <li data-icon="❌"><strong>18% seulement ont un code erreur structuré</strong> — les 82% restants ont des messages en texte libre non normalisé</li>
+          <li data-icon="❌"><strong>Logs mono-service majoritaires</strong> : 35% sont du service <code>transaction</code>, 9% <code>connectorCL</code> — les composants <code>SEBA</code>, <code>ORCHESTRA</code>, <code>ARTEMIS</code> sont absents</li>
+          <li data-icon="❌"><strong>Pas de correlation tickets ↔ logs</strong> : les timestamps des incidents dans les tickets ne sont pas croisés avec les logs pour identifier la séquence d'événements</li>
+          <li data-icon="❌"><strong>Trust score log knowledge très bas</strong> : moyenne 0.36 sur 0-1 — les records log ne passent pas le filtre <code>MIN_TRUST_SCORE=0.40</code> du RAG indexer pour 40% d'entre eux</li>
+          <li data-icon="❌"><strong>Artéfacts d'encodage dans les messages log</strong> : <code>Ã©</code>, <code>Ã</code> présents dans les logs applicatifs eux-mêmes (source Java en latin-1)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 2.4 Clusters -->
+    <h3 style="font-size:1rem; margin:.8rem 0 .6rem;">2.4 — Clusters d'incidents (20 clusters, trust moyen 0.51)</h3>
+    <div class="alert alert-red">
+      <strong>🚨 Problème architectural — Aucun cluster lié à une FR</strong>
+      L'étape de clustering (<code>cluster_results.json</code>) génère 20 clusters pertinents mais le champ <code>suggested_procedure_ids</code> est vide pour tous. Sans ce lien, le chatbot ne peut pas passer du cluster au déclenchement de la FR correspondante — il doit s'en remettre uniquement à la recherche vectorielle, qui peut rater si l'embedding ne discrimine pas assez.
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Cluster</th><th>Taille</th><th>Trust</th><th>Codes erreur principaux</th><th>FR candidate évidente</th><th>Lien actuel</th></tr></thead>
+        <tbody>
+          <tr><td>42c_unknown</td><td>16</td><td>0.55</td><td>42C, 2020</td><td>FR 147B</td><td><span class="badge badge-red">Absent</span></td></tr>
+          <tr><td>erreur_1300_network_equipment</td><td>14</td><td>0.55</td><td>ERREUR 1300, 9903</td><td>FR 130</td><td><span class="badge badge-red">Absent</span></td></tr>
+          <tr><td>2025_unknown (×3)</td><td>60 total</td><td>0.55-0.65</td><td>2025, 4002</td><td>FR 194, FR 101</td><td><span class="badge badge-red">Absent</span></td></tr>
+          <tr><td>1203_unknown</td><td>9</td><td>0.48</td><td>1203, AVP 1300</td><td>FR 201</td><td><span class="badge badge-red">Absent</span></td></tr>
+          <tr><td>1300_unknown</td><td>8</td><td>0.48</td><td>1300</td><td>FR 130</td><td><span class="badge badge-red">Absent</span></td></tr>
+          <tr><td>erreur_3_unknown</td><td>8</td><td>0.48</td><td>ERREUR 3</td><td>?</td><td><span class="badge badge-red">Absent</span></td></tr>
+          <tr><td>traçage (×1)</td><td>6</td><td>0.48</td><td>—</td><td>?</td><td><span class="badge badge-red">Absent</span></td></tr>
+          <tr><td>2930_unknown</td><td>6</td><td>0.48</td><td>2930, 7304</td><td>?</td><td><span class="badge badge-red">Absent</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-yellow">
+      <strong>⚠️ Qualité des noms de clusters</strong>
+      Des noms comme <code>"traçage_traçage_inc001010426752_traçage_..."</code> ou <code>"2025_unknown"</code> (×3 avec le même nom) révèlent un problème de nommage algorithmique. Ces noms apparaissent dans les chunks Qdrant et dégradent la qualité des réponses RAG car ils ne contiennent pas de sémantique exploitable par le LLM.
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3 — IMPACT CHATBOT                                   -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section id="impact">
+    <div class="section-title"><span class="section-icon">🤖</span> 3. Impact potentiel sur le Chatbot</div>
+
+    <div class="card-grid">
+      <div class="card">
+        <h3>🔴 Types d'erreurs générables</h3>
+        <ul class="checks">
+          <li data-icon="🔴"><strong>Hallucination de procédures</strong> : face à un ticket "1300" dont FR 130 est vide (89 mots), le LLM remplira les lacunes avec des procédures génériques inventées ou issues d'autres domaines</li>
+          <li data-icon="🔴"><strong>Recommandation de mauvaise FR</strong> : si le cluster 1300 pointe vers le mauvais chunk RAG (faute de lien cluster→FR), la FR 136 ou 194 peut être suggérée à tort</li>
+          <li data-icon="🔴"><strong>Perte d'information sur le ND</strong> : le numéro de nœud de distribution (clé primaire du problème) n'est pas extrait → le chatbot ne peut pas vérifier l'état du ND, ni l'inclure dans le message de clôture</li>
+          <li data-icon="🔴"><strong>Intent incorrect sur messages courts</strong> : "merci de supprimer le routeur NBLIL701" → intent=<code>unknown</code> → contexte générique fourni → réponse hors sujet</li>
+          <li data-icon="🔴"><strong>Artéfacts d'encodage dans les réponses</strong> : si les tickets mal encodés sont injectés comme contexte RAG, le LLM peut reproduire les artéfacts (<code>Ã©</code>) dans ses réponses</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🟡 Risques pour la résolution</h3>
+        <ul class="checks">
+          <li data-icon="⚠️"><strong>Faible discriminance du vecteur d'embedding</strong> pour les clusters "2025_unknown" qui regroupent des tickets très différents (B4002 sur SEBA, B4002 sur IPON, B4002 sur creation de VLAN) — le RAG ramènera du bruit</li>
+          <li data-icon="⚠️"><strong>Trust gate trop restrictif</strong> : avec trust_score moyen à 0.33 pour les tickets et 0.36 pour les records log, de nombreuses réponses légitimes seraient bloquées par le seuil de confiance</li>
+          <li data-icon="⚠️"><strong>Absence de corrélation ticket ↔ log</strong> : le chatbot ne peut pas enrichir une réponse avec "à ce moment, les logs montrent l'erreur DSLAM_CLOSED" car le lien temporel n'est pas construit</li>
+          <li data-icon="⚠️"><strong>Escalade trop tardive</strong> : sur les 72 tickets "unknown", le chatbot produit des réponses génériques au lieu d'escalader immédiatement vers un expert</li>
+          <li data-icon="⚠️"><strong>Réponses de clôture incomplètes</strong> : sans ND extrait et sans lien FR→solution, les messages de clôture générés manqueront les éléments essentiels (référence de la correction, numéros de ressources affectées)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Scénarios concrets -->
+    <h3 style="font-size:1rem; margin:1rem 0 .5rem;">📋 Scénarios critiques détaillés</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Scénario</th><th>Message dépositaire</th><th>Comportement actuel</th><th>Comportement attendu</th><th>Cause racine</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>A — Erreur 1300</td>
+            <td><em>"erreur 1300 : contacter le soutien BRASIL pour analyse des logs"</em></td>
+            <td>Cluster 1300 trouvé, FR 130 retournée (41/100) → réponse générique et incomplète</td>
+            <td>FR 130 enrichie + logs corrélés pour expliquer les 3 causes possibles de 1300</td>
+            <td>FR 130 trop courte, pas de lien cluster→FR, logs non corrélés</td>
+          </tr>
+          <tr>
+            <td>B — Suppression équipement</td>
+            <td><em>"merci de supprimer le routeur NBLIL701"</em></td>
+            <td>intent=<code>unknown</code>, ND non extrait, FR 188 non sélectionnée</td>
+            <td>intent=<code>delete_equipment.router</code>, FR 188 proposée avec étapes détaillées</td>
+            <td>Pattern intent trop générique, entité ND manquante</td>
+          </tr>
+          <tr>
+            <td>C — AVP 1300 ARTEMIS</td>
+            <td><em>"dossier bloqué AVP erreur interne brasil"</em></td>
+            <td>intent=<code>investigate_block</code>, cluster 1203 trouvé, mais aucune FR reliée → LLM improvise</td>
+            <td>FR 201 sélectionnée (score 89) via lien cluster→FR</td>
+            <td>0 clusters liés à une FR</td>
+          </tr>
+          <tr>
+            <td>D — Script bloqué IHM</td>
+            <td><em>"Pouvez-vous arrêter le script en le mettant en erreur"</em></td>
+            <td><code>detect_intent_override</code> → <code>procedure_lookup_script_blocked</code> ✅, mais FR 164-1 non liée au cluster</td>
+            <td>FR 164-1 retournée avec la procédure complète IHM Lancement Script</td>
+            <td>Manque lien cluster→FR</td>
+          </tr>
+          <tr>
+            <td>E — Correction nœud routeur</td>
+            <td><em>"corriger le noeud du NECHR10Z… apparait CHROUX CHX/MSCH or noeud est CHROUX CHX/CHT1"</em></td>
+            <td>intent=<code>update_configuration</code>, aucune FR correspondante → LLM hallucine une procédure</td>
+            <td>Escalade N3-SA + création FR dédiée suggérée (FR manquante documentée)</td>
+            <td>FR inexistante pour corrections de nœuds</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 4 — PRIORISATION                                     -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section id="priorites">
+    <div class="section-title"><span class="section-icon">🎯</span> 4. Priorisation des Actions</div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Priorité</th><th>Action</th><th>Fichier(s) concerné(s)</th>
+            <th>Impact chatbot</th><th>Effort</th><th>Délai cible</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- P1 -->
+          <tr class="priority-row-p1">
+            <td><span class="badge badge-red">P1 🔥</span></td>
+            <td><strong>Corriger l'encodage latin-1 du CSV tickets.csv</strong><br>
+              <small>Tout le dataset est affecté. Sans ça, 60%+ des tokens sont corrompus avant même d'entrer dans le parseur.</small></td>
+            <td><code>ticket_structurer.py</code> → <code>load_csv()</code></td>
+            <td><span class="badge badge-red">Critique</span></td>
+            <td><span class="badge badge-green">2h</span></td>
+            <td>Immédiat</td>
+          </tr>
+
+          <tr class="priority-row-p1">
+            <td><span class="badge badge-red">P1 🔥</span></td>
+            <td><strong>Enrichir FR 130 (Erreur 1300)</strong><br>
+              <small>La FR la plus consultée (14+ tickets) score seulement 41/100. Ajouter : description complète des 3 cas (SEBA, données incohérentes, lock BDD), procédure de vérification des logs, requêtes SQL de diagnostic.</small></td>
+            <td><code>backend/FR/FR 130 Les types d'erreur 1300.docx</code></td>
+            <td><span class="badge badge-red">Critique</span></td>
+            <td><span class="badge badge-yellow">1 jour</span></td>
+            <td>Sprint 1</td>
+          </tr>
+
+          <tr class="priority-row-p1">
+            <td><span class="badge badge-red">P1 🔥</span></td>
+            <td><strong>Mapper les clusters vers leurs FR candidates</strong><br>
+              <small>Actuellement 0/20 clusters liés à une FR. Créer une table de correspondance <code>cluster_to_fr.json</code> et l'injecter dans le RAG indexer. Cela seul ferait passer la précision de sélection de FR de ~40% à ~75%.</small></td>
+            <td><code>data_pipeline/rag_indexer.py</code>, <code>clustering_engine.py</code></td>
+            <td><span class="badge badge-red">Critique</span></td>
+            <td><span class="badge badge-yellow">4h</span></td>
+            <td>Sprint 1</td>
+          </tr>
+
+          <!-- P2 -->
+          <tr class="priority-row-p2">
+            <td><span class="badge badge-yellow">P2</span></td>
+            <td><strong>Ajouter pattern ND (numéro nœud distribution) dans EntityExtractor</strong><br>
+              <small>Les ND à 10 chiffres (<code>0563741427</code>) sont la clé primaire de 80% des opérations BRASIL et ne sont pas extraits en entité structurée.</small></td>
+            <td><code>enricher.py</code> → <code>ENTITY_PATTERNS["nd_number"]</code></td>
+            <td><span class="badge badge-yellow">Élevé</span></td>
+            <td><span class="badge badge-green">1h</span></td>
+            <td>Sprint 1</td>
+          </tr>
+
+          <tr class="priority-row-p2">
+            <td><span class="badge badge-yellow">P2</span></td>
+            <td><strong>Abaisser MIN_TRUST_SCORE à 0.30 dans le RAG indexer</strong><br>
+              <small>Le seuil actuel de 0.40 élimine 40% des records log_knowledge dont le trust moyen est 0.36. Ces records contiennent des causes et actions valides pour DSLAM_CLOSED, DB_DEADLOCK, etc.</small></td>
+            <td><code>data_pipeline/rag_indexer.py</code> → <code>MIN_TRUST_SCORE</code></td>
+            <td><span class="badge badge-yellow">Élevé</span></td>
+            <td><span class="badge badge-green">15min</span></td>
+            <td>Sprint 1</td>
+          </tr>
+
+          <tr class="priority-row-p2">
+            <td><span class="badge badge-yellow">P2</span></td>
+            <td><strong>Créer une FR pour les corrections de nœuds routeurs</strong><br>
+              <small>8 tickets documentent ce cas récurrent (NECHR10Z, NBLIL701) sans aucune FR. À créer en se basant sur les solutions dans <code>inc_solution</code>.</small></td>
+            <td>Nouveau fichier <code>backend/FR/FR 210 Correction nœud routeur.docx</code></td>
+            <td><span class="badge badge-yellow">Élevé</span></td>
+            <td><span class="badge badge-yellow">1 jour</span></td>
+            <td>Sprint 2</td>
+          </tr>
+
+          <tr class="priority-row-p2">
+            <td><span class="badge badge-yellow">P2</span></td>
+            <td><strong>Enrichir le glossaire avec synonymes opérationnels</strong><br>
+              <small>Ajouter dans TYPO_MAP : <em>rejouer→relancer, recréer→créer, régulariser→corriger, dégager→libérer, rejeu→relancer, débloquer→corriger, purger→supprimer</em></small></td>
+            <td><code>nlp/preprocessor.py</code> → <code>TYPO_MAP</code></td>
+            <td><span class="badge badge-yellow">Élevé</span></td>
+            <td><span class="badge badge-green">1h</span></td>
+            <td>Sprint 1</td>
+          </tr>
+
+          <!-- P3 -->
+          <tr class="priority-row-p3">
+            <td><span class="badge badge-blue">P3</span></td>
+            <td><strong>Corriger l'encodage dans les logs applicatifs</strong><br>
+              <small>Les messages d'erreur Java contiennent aussi des artéfacts latin-1. Ajouter une étape de décodage dans <code>log_ingester.py</code> avant extraction de patterns.</small></td>
+            <td><code>data_pipeline/log_ingester.py</code></td>
+            <td><span class="badge badge-blue">Moyen</span></td>
+            <td><span class="badge badge-green">2h</span></td>
+            <td>Sprint 2</td>
+          </tr>
+
+          <tr class="priority-row-p3">
+            <td><span class="badge badge-blue">P3</span></td>
+            <td><strong>Correlation temporelle tickets ↔ logs</strong><br>
+              <small>Croiser <code>datetime_debut</code> du ticket avec les timestamps log (±30min) pour enrichir le StructuredTicket avec les patterns log contemporains. Permet au chatbot de citer "à l'heure de l'incident, le log montre DSLAM_CLOSED".</small></td>
+            <td><code>ticket_structurer.py</code> + <code>log_ingester.py</code></td>
+            <td><span class="badge badge-blue">Moyen</span></td>
+            <td><span class="badge badge-yellow">1 jour</span></td>
+            <td>Sprint 3</td>
+          </tr>
+
+          <tr class="priority-row-p3">
+            <td><span class="badge badge-blue">P3</span></td>
+            <td><strong>Dédoublonner et renommer les clusters 2025_unknown</strong><br>
+              <small>3 clusters portent le même nom "2025_unknown". Forcer un identifiant unique + un nommage sémantique basé sur le top-1 symptôme extrait plutôt que sur le premier code erreur + l'intent.</small></td>
+            <td><code>data_pipeline/clustering_engine.py</code></td>
+            <td><span class="badge badge-blue">Moyen</span></td>
+            <td><span class="badge badge-green">2h</span></td>
+            <td>Sprint 2</td>
+          </tr>
+
+          <tr class="priority-row-p3">
+            <td><span class="badge badge-blue">P3</span></td>
+            <td><strong>Activer le flag <code>requires_human_review</code> dans le chatbot</strong><br>
+              <small>Ce flag est calculé mais jamais utilisé. Le brancher sur une réponse de type "Ce cas nécessite une validation manuelle — je suggère d'escalader à N3-SA" quand confidence &lt; 0.55 ET que le topic est inconnu.</small></td>
+            <td><code>chatbot_service.py</code></td>
+            <td><span class="badge badge-blue">Moyen</span></td>
+            <td><span class="badge badge-green">2h</span></td>
+            <td>Sprint 2</td>
+          </tr>
+
+          <!-- P4 -->
+          <tr class="priority-row-p4">
+            <td><span class="badge badge-green">P4</span></td>
+            <td><strong>Classification intent par cosine similarity (embeddings)</strong><br>
+              <small>Remplacer la classification par sous-chaînes par une recherche vectorielle sur des exemples de référence (1 exemple par intent). Résoudrait les 32% d'intents "unknown".</small></td>
+            <td><code>nlp/enricher.py</code> → <code>_classify_intent()</code></td>
+            <td><span class="badge badge-blue">Moyen</span></td>
+            <td><span class="badge badge-red">3-5 jours</span></td>
+            <td>Sprint 4</td>
+          </tr>
+
+          <tr class="priority-row-p4">
+            <td><span class="badge badge-green">P4</span></td>
+            <td><strong>Agrandir le dataset tickets (historique 6 mois)</strong><br>
+              <small>222 tickets sur 3 mois = base trop étroite. Viser 1000+ tickets sur 6 mois pour améliorer la représentativité des clusters et réduire le biais saisonnier.</small></td>
+            <td><code>data_pipeline/input/tickets.csv</code></td>
+            <td><span class="badge badge-blue">Moyen</span></td>
+            <td><span class="badge badge-yellow">Extraction JIRA</span></td>
+            <td>Sprint 4</td>
+          </tr>
+
+          <tr class="priority-row-p4">
+            <td><span class="badge badge-green">P4</span></td>
+            <td><strong>Ajouter logs SEBA, ORCHESTRA, ARTEMIS</strong><br>
+              <small>Les composants interfacés (SEBA, ORCHESTRA, ARTEMIS) sont absents des logs actuels. Leurs erreurs spécifiques (ex. refus SEBA sur code 9903, ARTEMIS timeout) restent inconnues du chatbot.</small></td>
+            <td><code>data_pipeline/input/</code> + <code>log_ingester.py</code></td>
+            <td><span class="badge badge-blue">Moyen</span></td>
+            <td><span class="badge badge-yellow">Accès infra requis</span></td>
+            <td>Sprint 5</td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Roadmap visuelle -->
+    <h3 style="font-size:1rem; margin:1.3rem 0 .6rem;">📅 Feuille de route synthétique</h3>
+    <div class="card-grid">
+      <div class="card">
+        <h3>🔥 Sprint 1 — Semaine 1 (actions &lt;1 jour)</h3>
+        <ul class="checks">
+          <li data-icon="1️⃣">Fix encodage CSV latin-1 dans <code>ticket_structurer.py</code></li>
+          <li data-icon="2️⃣">Enrichir FR 130 (erreur 1300) — rédaction contenu</li>
+          <li data-icon="3️⃣">Créer <code>cluster_to_fr.json</code> et l'injecter dans RAG indexer</li>
+          <li data-icon="4️⃣">Ajouter entité ND dans <code>ENTITY_PATTERNS</code></li>
+          <li data-icon="5️⃣">Baisser <code>MIN_TRUST_SCORE</code> à 0.30</li>
+          <li data-icon="6️⃣">Enrichir <code>TYPO_MAP</code> avec synonymes opérationnels</li>
+        </ul>
+        <div class="progress-bar" style="margin-top:.5rem;"><div class="progress-fill fill-red" style="width:0%"></div></div>
+        <small style="color:var(--grey);">Gain estimé confiance chatbot : +15-20 pts</small>
+      </div>
+      <div class="card">
+        <h3>⚡ Sprint 2 — Semaine 2-3</h3>
+        <ul class="checks">
+          <li data-icon="7️⃣">FR 210 — Correction nœud routeur (nouvelle FR)</li>
+          <li data-icon="8️⃣">Fix encodage logs applicatifs dans <code>log_ingester.py</code></li>
+          <li data-icon="9️⃣">Dédoublonner clusters "2025_unknown" + renommage sémantique</li>
+          <li data-icon="🔟">Activer <code>requires_human_review</code> dans <code>chatbot_service.py</code></li>
+        </ul>
+        <div class="progress-bar" style="margin-top:.5rem;"><div class="progress-fill fill-yellow" style="width:0%"></div></div>
+        <small style="color:var(--grey);">Gain estimé : réduction de 40% des réponses hors-sujet</small>
+      </div>
+      <div class="card">
+        <h3>🔮 Sprint 3-5 — Mois 2</h3>
+        <ul class="checks">
+          <li data-icon="🅰️">Corrélation temporelle tickets ↔ logs</li>
+          <li data-icon="🅱️">Classification intent par embeddings</li>
+          <li data-icon="🅲️">Extension dataset (6 mois, 1000+ tickets)</li>
+          <li data-icon="🅳️">Ajout logs SEBA/ORCHESTRA/ARTEMIS</li>
+        </ul>
+        <div class="progress-bar" style="margin-top:.5rem;"><div class="progress-fill fill-green" style="width:0%"></div></div>
+        <small style="color:var(--grey);">Objectif : intent unknown &lt;10%, trust moyen &gt;0.55</small>
+      </div>
+    </div>
+
+  </section>
+
+</div><!-- /wrapper -->
+
+<footer>
+  Chatbot BRASIL N3 — Orange France · Analyse générée le 9 mars 2026 ·
+  Sources : tickets.csv (222), FR (51), logs (1133 events), clusters (20)
+</footer>
+
+</body>
+</html>

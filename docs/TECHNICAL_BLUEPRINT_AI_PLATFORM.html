@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blueprint Technique — Plateforme IA N3 Support Télécom</title>
+  <style>
+    :root {
+      --orange: #ff6600;
+      --orange-light: #ff8533;
+      --orange-dark: #cc5200;
+      --orange-bg: #fff5ef;
+      --orange-border: #ffccaa;
+      --dark: #1a1a2e;
+      --dark2: #16213e;
+      --dark3: #0f3460;
+      --text: #2d2d2d;
+      --text-muted: #6b7280;
+      --bg: #f9fafb;
+      --white: #ffffff;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --success: #059669;
+      --info: #0284c7;
+      --warning: #d97706;
+      --purple: #7c3aed;
+      --radius: 10px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.75; }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, var(--dark) 0%, var(--dark3) 55%, #1a3a5c 100%);
+      color: white; padding: 60px 40px 50px; position: relative; overflow: hidden;
+    }
+    header::before { content:''; position:absolute; top:-80px; right:-80px; width:380px; height:380px; border-radius:50%; background:rgba(255,102,0,0.12); }
+    header::after  { content:''; position:absolute; bottom:-60px; left:-40px; width:260px; height:260px; border-radius:50%; background:rgba(255,102,0,0.07); }
+    .header-inner { max-width:1040px; margin:0 auto; position:relative; z-index:1; }
+    .header-tag {
+      display:inline-block; background:rgba(255,102,0,0.22); border:1px solid rgba(255,102,0,0.45);
+      color:#ffb380; font-size:0.7rem; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+      padding:4px 12px; border-radius:20px; margin-bottom:16px;
+    }
+    header h1 { font-size:2.2rem; font-weight:900; letter-spacing:-0.5px; line-height:1.2; margin-bottom:10px; }
+    header h1 span { color:var(--orange-light); }
+    header h2 { font-size:1rem; font-weight:400; color:rgba(255,255,255,0.72); margin-bottom:30px; }
+    .meta-grid { display:flex; flex-wrap:wrap; gap:16px; margin-top:6px; }
+    .meta-item { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:8px 16px; font-size:0.82rem; color:rgba(255,255,255,0.85); }
+    .meta-item strong { color:var(--orange-light); display:block; font-size:0.68rem; letter-spacing:1px; text-transform:uppercase; margin-bottom:2px; }
+
+    /* NAV */
+    nav { background:var(--dark2); padding:0 40px; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+    .nav-inner { max-width:1040px; margin:0 auto; display:flex; gap:0; overflow-x:auto; }
+    .nav-inner a { color:rgba(255,255,255,0.55); text-decoration:none; font-size:0.75rem; font-weight:600; padding:13px 14px; white-space:nowrap; border-bottom:2px solid transparent; transition:all 0.2s; }
+    .nav-inner a:hover { color:var(--orange-light); border-bottom-color:var(--orange); }
+
+    /* LAYOUT */
+    main { max-width:1040px; margin:0 auto; padding:48px 24px; }
+    section { margin-bottom:72px; }
+
+    .section-label { display:flex; align-items:center; gap:14px; margin-bottom:28px; }
+    .section-num {
+      background:linear-gradient(135deg,var(--orange),var(--orange-dark));
+      color:white; min-width:42px; height:42px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:900; flex-shrink:0;
+    }
+    .section-label h2 { font-size:1.5rem; font-weight:900; color:var(--dark); }
+
+    h3 { font-size:1.05rem; font-weight:800; color:var(--dark3); margin:30px 0 12px; padding-left:14px; border-left:3px solid var(--orange); }
+    h4 { font-size:0.96rem; font-weight:700; color:var(--dark); margin:18px 0 8px; }
+    p { margin-bottom:14px; color:var(--text); }
+    ul.plain-list { list-style:none; padding:0; margin:10px 0; }
+    ul.plain-list li { font-size:0.9rem; color:var(--text-muted); padding:4px 0 4px 20px; position:relative; }
+    ul.plain-list li::before { content:'→'; position:absolute; left:0; color:var(--orange); font-weight:700; }
+
+    /* CALLOUT */
+    .callout { background:var(--orange-bg); border-left:4px solid var(--orange); border-radius:0 var(--radius) var(--radius) 0; padding:16px 20px; margin:20px 0; font-size:0.93rem; }
+    .callout strong { color:var(--orange-dark); }
+    .callout.info { background:#eff6ff; border-left-color:var(--info); }
+    .callout.info strong { color:var(--info); }
+    .callout.warn { background:#fffbeb; border-left-color:var(--warning); }
+    .callout.warn strong { color:var(--warning); }
+    .callout.success { background:#f0fdf4; border-left-color:var(--success); }
+    .callout.success strong { color:var(--success); }
+
+    /* TABLES */
+    .table-wrap { overflow-x:auto; margin:16px 0 24px; border-radius:var(--radius); box-shadow:var(--shadow); }
+    table { width:100%; border-collapse:collapse; background:var(--card); font-size:0.88rem; }
+    thead tr { background:linear-gradient(135deg,var(--dark),var(--dark3)); color:white; }
+    thead th { padding:12px 16px; text-align:left; font-weight:700; font-size:0.8rem; letter-spacing:0.5px; }
+    tbody tr { border-bottom:1px solid var(--border); }
+    tbody tr:last-child { border-bottom:none; }
+    tbody tr:hover { background:var(--orange-bg); }
+    tbody td { padding:11px 16px; vertical-align:top; }
+    tbody td strong { color:var(--orange-dark); }
+
+    /* CODE / ARCH DIAGRAMS */
+    .arch-diagram {
+      background:var(--dark); border-radius:var(--radius); padding:28px 32px;
+      font-family:'Courier New', monospace; font-size:0.77rem; color:#e2e8f0;
+      overflow-x:auto; margin:20px 0; box-shadow:var(--shadow-lg); line-height:1.7;
+      white-space:pre;
+    }
+    .arch-diagram .c { color:var(--orange-light); }
+    .arch-diagram .k { color:#93c5fd; }
+    .arch-diagram .s { color:#86efac; }
+    .arch-diagram .h { color:#fbbf24; font-weight:700; }
+
+    code { background:#f1f5f9; border:1px solid var(--border); border-radius:4px; padding:2px 7px; font-family:'Courier New',monospace; font-size:0.82rem; color:var(--orange-dark); }
+    .code-block {
+      background:#1e293b; border-radius:var(--radius); padding:20px 24px; margin:16px 0;
+      font-family:'Courier New',monospace; font-size:0.82rem; color:#e2e8f0;
+      overflow-x:auto; line-height:1.6; box-shadow:var(--shadow);
+    }
+    .code-block .cm { color:#94a3b8; }
+    .code-block .ck { color:#7dd3fc; }
+    .code-block .cs { color:#86efac; }
+    .code-block .cn { color:#fbbf24; }
+
+    /* LAYER CARDS */
+    .layer-stack { display:flex; flex-direction:column; gap:0; margin:20px 0; }
+    .layer-card { background:var(--card); border:1px solid var(--border); padding:18px 22px; position:relative; transition:box-shadow 0.2s; }
+    .layer-card:first-child { border-radius:var(--radius) var(--radius) 0 0; }
+    .layer-card:last-child { border-radius:0 0 var(--radius) var(--radius); }
+    .layer-card:hover { box-shadow:var(--shadow); z-index:1; }
+    .layer-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:linear-gradient(180deg,var(--orange),var(--orange-dark)); border-radius:4px 0 0 4px; }
+    .layer-arrow { text-align:center; color:var(--orange); font-size:1.2rem; background:var(--border); padding:4px; }
+    .layer-title { font-size:0.72rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:var(--orange); margin-bottom:4px; }
+    .layer-name { font-size:1rem; font-weight:800; color:var(--dark); margin-bottom:6px; }
+    .layer-desc { font-size:0.86rem; color:var(--text-muted); }
+    .layer-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+    .tag { background:var(--orange-bg); border:1px solid var(--orange-border); color:var(--orange-dark); font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:20px; }
+    .tag.blue { background:#eff6ff; border-color:#bfdbfe; color:var(--info); }
+    .tag.green { background:#f0fdf4; border-color:#bbf7d0; color:var(--success); }
+    .tag.dark { background:#e8eaf6; border-color:#c5cae9; color:var(--dark3); }
+    .tag.purple { background:#f5f3ff; border-color:#ddd6fe; color:var(--purple); }
+
+    /* APP GRID */
+    .app-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:12px; margin:20px 0; }
+    .app-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 10px; text-align:center; box-shadow:var(--shadow); transition:all 0.2s; }
+    .app-card:hover { border-color:var(--orange); transform:translateY(-2px); box-shadow:var(--shadow-lg); }
+    .app-icon { width:38px; height:38px; background:linear-gradient(135deg,var(--orange),var(--orange-dark)); border-radius:9px; margin:0 auto 8px; display:flex; align-items:center; justify-content:center; font-size:0.95rem; }
+    .app-name { font-size:0.8rem; font-weight:900; color:var(--dark); }
+    .app-label { font-size:0.68rem; color:var(--text-muted); margin-top:2px; }
+
+    /* TIMELINE */
+    .timeline { position:relative; margin:24px 0; padding-left:32px; }
+    .timeline::before { content:''; position:absolute; left:10px; top:8px; bottom:8px; width:2px; background:linear-gradient(180deg,var(--orange),var(--orange-dark)); }
+    .phase { position:relative; margin-bottom:28px; }
+    .phase::before { content:''; position:absolute; left:-26px; top:7px; width:12px; height:12px; border-radius:50%; background:var(--orange); border:2px solid white; box-shadow:0 0 0 3px var(--orange-border); }
+    .phase-title { font-size:0.95rem; font-weight:900; color:var(--dark); margin-bottom:8px; }
+    .phase-badge { display:inline-block; font-size:0.68rem; font-weight:700; padding:2px 10px; border-radius:20px; margin-right:8px; }
+    .badge-current { background:#dcfce7; color:var(--success); }
+    .badge-soon { background:#fff7ed; color:var(--orange-dark); }
+    .badge-mid { background:#eff6ff; color:var(--info); }
+    .badge-future { background:#f3e8ff; color:var(--purple); }
+    .phase ul { list-style:none; padding:0; }
+    .phase ul li { font-size:0.86rem; color:var(--text-muted); padding:3px 0 3px 20px; position:relative; }
+    .phase ul li::before { content:'→'; position:absolute; left:0; color:var(--orange); font-weight:700; }
+
+    /* WORKFLOW STEPS */
+    .workflow { display:flex; flex-direction:column; gap:0; margin:20px 0; }
+    .wf-step { display:flex; align-items:flex-start; gap:16px; background:var(--card); border:1px solid var(--border); padding:16px 20px; }
+    .wf-step:first-child { border-radius:var(--radius) var(--radius) 0 0; }
+    .wf-step:last-child { border-radius:0 0 var(--radius) var(--radius); }
+    .wf-step + .wf-step { border-top:none; }
+    .wf-num { background:linear-gradient(135deg,var(--orange),var(--orange-dark)); color:white; min-width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.78rem; font-weight:900; flex-shrink:0; margin-top:2px; }
+    .wf-content h4 { margin:0 0 4px; font-size:0.94rem; color:var(--dark); }
+    .wf-content p { margin:0; font-size:0.84rem; color:var(--text-muted); }
+
+    /* COMPONENT CARDS */
+    .comp-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin:20px 0; }
+    .comp-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); border-top:3px solid var(--orange); }
+    .comp-card.blue { border-top-color:var(--info); }
+    .comp-card.green { border-top-color:var(--success); }
+    .comp-card.purple { border-top-color:var(--purple); }
+    .comp-card h4 { font-size:0.88rem; color:var(--dark); margin:0 0 8px; }
+    .comp-card p { font-size:0.8rem; color:var(--text-muted); margin:0; }
+    .comp-card ul { list-style:none; padding:0; margin:8px 0 0; }
+    .comp-card ul li { font-size:0.78rem; color:var(--text-muted); padding:3px 0 3px 14px; position:relative; border-bottom:1px solid var(--border); }
+    .comp-card ul li:last-child { border-bottom:none; }
+    .comp-card ul li::before { content:'·'; position:absolute; left:2px; color:var(--orange); font-weight:900; }
+
+    /* TOC */
+    .toc { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:24px 28px; margin-bottom:48px; box-shadow:var(--shadow); }
+    .toc-title { font-size:0.82rem; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:16px; }
+    .toc-cols { display:grid; grid-template-columns:1fr 1fr; gap:0 32px; }
+    .toc ol { padding-left:18px; margin:0; }
+    .toc li { margin-bottom:6px; }
+    .toc a { color:var(--dark3); font-weight:600; font-size:0.87rem; text-decoration:none; }
+    .toc a:hover { color:var(--orange); }
+
+    /* INTENT BADGES */
+    .intent-grid { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
+    .intent-badge { background:#f1f5f9; border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-size:0.78rem; font-weight:700; color:var(--dark3); font-family:'Courier New',monospace; }
+
+    /* ROADMAP */
+    .roadmap-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:16px; margin:20px 0; }
+    .roadmap-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); }
+    .roadmap-period { font-size:0.7rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; padding:4px 10px; border-radius:20px; display:inline-block; }
+    .roadmap-card ul { list-style:none; padding:0; }
+    .roadmap-card ul li { font-size:0.83rem; color:var(--text-muted); padding:5px 0 5px 16px; position:relative; border-bottom:1px solid var(--border); }
+    .roadmap-card ul li:last-child { border-bottom:none; }
+    .roadmap-card ul li::before { content:'▸'; position:absolute; left:0; color:var(--orange); }
+
+    /* GLOSSARY */
+    .glossary { display:flex; flex-direction:column; }
+    .gloss-row { display:flex; gap:16px; border-bottom:1px solid var(--border); padding:11px 0; }
+    .gloss-term { width:190px; flex-shrink:0; font-weight:900; font-size:0.85rem; color:var(--orange-dark); font-family:'Courier New',monospace; }
+    .gloss-def { font-size:0.85rem; color:var(--text-muted); }
+
+    /* FOOTER */
+    footer { background:var(--dark); color:rgba(255,255,255,0.45); text-align:center; padding:28px; font-size:0.78rem; margin-top:48px; }
+    footer strong { color:var(--orange-light); }
+
+    @media(max-width:680px){
+      header { padding:36px 20px; }
+      header h1 { font-size:1.6rem; }
+      main { padding:32px 16px; }
+      .toc-cols { grid-template-columns:1fr; }
+      .gloss-term { width:110px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════ HEADER ════════════════ -->
+<header>
+  <div class="header-inner">
+    <div class="header-tag">Blueprint Technique — Document d'Architecture</div>
+    <h1>Plateforme IA de <span>Diagnostic N3 Télécom</span></h1>
+    <h2>Blueprint complet &amp; Manuel d'implémentation — Architecte Principal Systèmes IA</h2>
+    <div class="meta-grid">
+      <div class="meta-item"><strong>Type</strong>Blueprint Technique</div>
+      <div class="meta-item"><strong>Audience</strong>Équipes d'ingénierie &amp; Leadership technique</div>
+      <div class="meta-item"><strong>Statut</strong>Document de référence — v1.0</div>
+      <div class="meta-item"><strong>Date</strong>Mars 2026</div>
+      <div class="meta-item"><strong>Classification</strong>Interne — Confidentiel</div>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════ NAV ════════════════ -->
+<nav>
+  <div class="nav-inner">
+    <a href="#s1">1. Résumé</a>
+    <a href="#s2">2. État actuel</a>
+    <a href="#s3">3. Architecture cible</a>
+    <a href="#s4">4. Contextes multi-app</a>
+    <a href="#s5">5. Pipeline données</a>
+    <a href="#s6">6. Moteur patterns</a>
+    <a href="#s7">7. Authentification</a>
+    <a href="#s8">8. Scaling</a>
+    <a href="#s9">9. Roadmap</a>
+    <a href="#s10">10. Manuel impl.</a>
+    <a href="#s11">11. Évolution future</a>
+  </div>
+</nav>
+
+<!-- ════════════════ MAIN ════════════════ -->
+<main>
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-title">Table des matières</div>
+    <div class="toc-cols">
+      <ol>
+        <li><a href="#s1">Résumé Exécutif</a></li>
+        <li><a href="#s2">État Actuel du Système</a></li>
+        <li><a href="#s3">Architecture Cible de la Plateforme</a></li>
+        <li><a href="#s4">Conception Multi-Application (Contextes)</a></li>
+        <li><a href="#s5">Pipeline d'Ingestion des Données</a></li>
+        <li><a href="#s6">Moteur de Patterns d'Incidents</a></li>
+      </ol>
+      <ol start="7">
+        <li><a href="#s7">Modèle d'Authentification et d'Accès</a></li>
+        <li><a href="#s8">Stratégie de Scaling</a></li>
+        <li><a href="#s9">Roadmap de Développement</a></li>
+        <li><a href="#s10">Manuel d'Implémentation</a></li>
+        <li><a href="#s11">Évolution Future</a></li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 1 : RÉSUMÉ EXÉCUTIF ══ -->
+  <section id="s1">
+    <div class="section-label">
+      <div class="section-num">1</div>
+      <h2>Résumé Exécutif</h2>
+    </div>
+
+    <p>Ce document constitue le <strong>blueprint technique complet</strong> de la plateforme IA de diagnostic N3 Télécom. Il décrit l'architecture actuelle, l'architecture cible, la stratégie de scaling multi-applications, et fournit un manuel d'implémentation actionnable pour les équipes d'ingénierie.</p>
+
+    <p>La plateforme est un <strong>assistant IA de troubleshooting</strong> conçu pour les ingénieurs support de niveau N3 opérant sur un Système d'Information (SI) complexe, composé d'applications télécom indépendantes et interdépendantes. L'assistant est actuellement centré sur <strong>BRASIL</strong> et doit progressivement couvrir l'ensemble du périmètre applicatif : SEBA, ARTEMIS, SCA, et d'autres systèmes internes.</p>
+
+    <div class="callout">
+      <strong>Point critique d'architecture :</strong> BRASIL, SEBA, ARTEMIS et SCA sont des <em>systèmes indépendants</em> — pas des modules d'une seule application. Chacun possède ses propres serveurs, logs, équipes et vocabulaire. L'architecture doit les traiter comme des domaines isolés mais corrélables.
+    </div>
+
+    <h3>Valeur stratégique</h3>
+    <div class="comp-grid">
+      <div class="comp-card">
+        <h4>⚡ Accélération du diagnostic</h4>
+        <p>L'IA guide l'ingénieur vers la cause racine en combinant tickets historiques, logs et procédures FR en temps réel.</p>
+      </div>
+      <div class="comp-card blue">
+        <h4>🧠 Capitalisation de la connaissance</h4>
+        <p>Chaque ticket résolu enrichit la base de connaissance. La valeur s'accumule avec le temps et résiste aux rotations d'équipe.</p>
+      </div>
+      <div class="comp-card green">
+        <h4>🚀 MEC accélérée</h4>
+        <p>Les nouveaux ingénieurs sont guidés par l'IA dès le premier jour, réduisant la période de montée en compétences (MEC) de 2 mois à ~1 mois.</p>
+      </div>
+      <div class="comp-card purple">
+        <h4>🔗 Scalabilité multi-SI</h4>
+        <p>Architecture conçue dès le départ pour supporter 5 applications en phase 2, et des dizaines à terme, sans refactoring majeur.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SECTION 2 : ÉTAT ACTUEL ══ -->
+  <section id="s2">
+    <div class="section-label">
+      <div class="section-num">2</div>
+      <h2>État Actuel du Système</h2>
+    </div>
+
+    <h3>2.1 Architecture existante</h3>
+    <p>La plateforme opère actuellement sur le périmètre BRASIL avec les composants suivants en production :</p>
+
+    <div class="layer-stack">
+      <div class="layer-card">
+        <div class="layer-title">Composant actif</div>
+        <div class="layer-name">Pipeline RAG (Retrieval-Augmented Generation)</div>
+        <div class="layer-desc">Récupère les documents pertinents (tickets, FR, JIRA) via recherche sémantique en base vectorielle, puis les injecte comme contexte dans le LLM pour générer des réponses diagnostiques.</div>
+        <div class="layer-tags"><span class="tag">Vector Store</span><span class="tag">Embeddings sémantiques</span><span class="tag">Retrieval top-k</span></div>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-card">
+        <div class="layer-title">Composant actif</div>
+        <div class="layer-name">Raisonnement diagnostique</div>
+        <div class="layer-desc">Le LLM core analyse les symptômes d'incident, croise avec la connaissance récupérée, et propose une analyse structurée avec causes probables et étapes d'investigation.</div>
+        <div class="layer-tags"><span class="tag">LLM Core</span><span class="tag">Chain-of-thought</span><span class="tag">Structured output</span></div>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-card">
+        <div class="layer-title">Composant actif</div>
+        <div class="layer-name">Scoring de confiance des connaissances</div>
+        <div class="layer-desc">Chaque source de connaissance est scorée selon sa pertinence, sa fraîcheur et sa fiabilité avant d'être injectée dans le contexte du LLM.</div>
+        <div class="layer-tags"><span class="tag">Trust score</span><span class="tag">Freshness weight</span><span class="tag">Source ranking</span></div>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-card">
+        <div class="layer-title">Composant actif</div>
+        <div class="layer-name">Classification d'intention (Intent Router)</div>
+        <div class="layer-desc">Identifie l'intention de la requête ingénieur pour router vers le pipeline de traitement adapté.</div>
+        <div class="layer-tags"><span class="tag">Intent classification</span><span class="tag">Query routing</span></div>
+      </div>
+    </div>
+
+    <h3>2.2 Intents existants</h3>
+    <p>Le système reconnaît actuellement les intents suivants :</p>
+    <div class="intent-grid">
+      <span class="intent-badge">diagnostic_request</span>
+      <span class="intent-badge">pattern_analysis</span>
+      <span class="intent-badge">knowledge_lookup</span>
+      <span class="intent-badge">log_investigation</span>
+      <span class="intent-badge">procedure_lookup</span>
+      <span class="intent-badge">root_cause_exploration</span>
+      <span class="intent-badge">ticket_summary</span>
+      <span class="intent-badge">ticket_closing</span>
+      <span class="intent-badge">knowledge_gap_detection</span>
+    </div>
+
+    <h3>2.3 Sources de connaissance actuelles</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Source</th><th>Type</th><th>Statut</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Tickets internes</strong></td><td>Structuré</td><td><span class="tag green">Actif</span></td></tr>
+          <tr><td><strong>FR (Fiches de Résolution)</strong></td><td>Documentaire</td><td><span class="tag green">Actif</span></td></tr>
+          <tr><td><strong>JIRA (cartes ingénierie)</strong></td><td>Semi-structuré</td><td><span class="tag green">Actif</span></td></tr>
+          <tr><td><strong>Logs applicatifs</strong></td><td>Non structuré</td><td><span class="tag">En développement</span></td></tr>
+          <tr><td><strong>Références code source</strong></td><td>Textuel/code</td><td><span class="tag">Partiel</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>2.4 Limitations actuelles</h3>
+    <div class="callout warn">
+      <strong>Limitations identifiées à adresser dans l'architecture cible :</strong>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Limitation</th><th>Impact</th><th>Solution cible</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Périmètre mono-application (BRASIL uniquement)</strong></td><td>Inutilisable pour SEBA, ARTEMIS, SCA</td><td>Couche de contexte applicatif isolée</td></tr>
+          <tr><td><strong>Pas d'isolation de contexte par application</strong></td><td>Risque de confusion inter-systèmes</td><td>Application Context Layer</td></tr>
+          <tr><td><strong>Extraction de logs manuelle</strong></td><td>Lenteur d'investigation</td><td>Pipeline d'extraction automatisée</td></tr>
+          <tr><td><strong>Pas de détection de patterns récurrents</strong></td><td>Ré-investigation d'incidents connus</td><td>Incident Pattern Engine</td></tr>
+          <tr><td><strong>Pas de contrôle d'accès applicatif</strong></td><td>Risque de fuite d'information inter-domaine</td><td>Modèle CUID + access mapping</td></tr>
+          <tr><td><strong>Pas de corrélation inter-application</strong></td><td>Pannes en cascade non détectées</td><td>Cross-app correlation engine (Phase 3)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>2.5 Données initiales disponibles</h3>
+    <div class="callout info">
+      <strong>Base de départ :</strong> 222 tickets BRASIL (année 2025). C'est le socle réel disponible pour l'entraînement initial du moteur de patterns. L'objectif est d'atteindre 5 000 tickets cumulés sur l'ensemble des applications à 24 mois.
+    </div>
+  </section>
+
+  <!-- ══ SECTION 3 : ARCHITECTURE CIBLE ══ -->
+  <section id="s3">
+    <div class="section-label">
+      <div class="section-num">3</div>
+      <h2>Architecture Cible de la Plateforme</h2>
+    </div>
+
+    <h3>3.1 Vue d'ensemble — Architecture 6 couches</h3>
+    <div class="arch-diagram"><span class="h">╔══════════════════════════════════════════════════════════════════════════════╗
+║              PLATEFORME IA N3 SUPPORT TÉLÉCOM — VUE GLOBALE                ║
+╚══════════════════════════════════════════════════════════════════════════════╝</span>
+
+<span class="c">┌──────────────────────────────────────────────────────────────────────────┐</span>
+<span class="c">│  COUCHE 1 — ACCÈS UTILISATEUR                                            │</span>
+<span class="c">│  Authentification SSO · Résolution CUID · Mapping accès applicatifs      │</span>
+<span class="c">└────────────────────────────┬─────────────────────────────────────────────┘</span>
+                             <span class="k">│ CUID résolu → contexte applicatif identifié</span>
+<span class="c">┌────────────────────────────▼─────────────────────────────────────────────┐</span>
+<span class="c">│  COUCHE 2 — MOTEUR IA GLOBAL (LLM Core)                                  │</span>
+<span class="c">│  Intent router · Raisonnement diagnostique · Génération de réponses      │</span>
+<span class="c">└────────────────────────────┬─────────────────────────────────────────────┘</span>
+                             <span class="k">│ Contexte applicatif chargé</span>
+<span class="c">┌────────────────────────────▼─────────────────────────────────────────────┐</span>
+<span class="c">│  COUCHE 3 — COUCHE DE CONTEXTE APPLICATIF                                │</span>
+<span class="c">│                                                                          │</span>
+<span class="c">│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │</span>
+<span class="c">│  │  BRASIL  │  │   SEBA   │  │ ARTEMIS  │  │   SCA    │  │  future  │  │</span>
+<span class="c">│  │ Context  │  │ Context  │  │ Context  │  │ Context  │  │    ...   │  │</span>
+<span class="c">│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │</span>
+<span class="c">└────────────────────────────┬─────────────────────────────────────────────┘</span>
+                             <span class="k">│ Requête contextualisée</span>
+<span class="c">┌────────────────────────────▼─────────────────────────────────────────────┐</span>
+<span class="c">│  COUCHE 4 — SYSTÈME DE RÉCUPÉRATION DES CONNAISSANCES (RAG + Graph)      │</span>
+<span class="c">│  Vector Store · Knowledge Graph · Trust Scoring · Pattern Engine         │</span>
+<span class="c">└────────────────────────────┬─────────────────────────────────────────────┘</span>
+                             <span class="k">│ Connaissances récupérées et scorées</span>
+<span class="c">┌────────────────────────────▼─────────────────────────────────────────────┐</span>
+<span class="c">│  COUCHE 5 — MOTEUR DE PATTERNS D'INCIDENTS                               │</span>
+<span class="c">│  Clustering · Pattern matching · Root cause linking · Solution engine    │</span>
+<span class="c">└────────────────────────────┬─────────────────────────────────────────────┘</span>
+                             <span class="k">│ Données normalisées</span>
+<span class="c">┌────────────────────────────▼─────────────────────────────────────────────┐</span>
+<span class="c">│  COUCHE 6 — PIPELINE D'INGESTION DES DONNÉES                             │</span>
+<span class="c">│  Tickets · JIRA · Logs serveurs · FR docs · Code source                  │</span>
+<span class="c">└──────────────────────────────────────────────────────────────────────────┘</span></div>
+
+    <h3>3.2 Description des couches</h3>
+    <div class="layer-stack">
+      <div class="layer-card">
+        <div class="layer-title">Couche 1</div>
+        <div class="layer-name">Couche d'Accès Utilisateur</div>
+        <div class="layer-desc">Point d'entrée unique. Gère l'authentification d'entreprise, résout le CUID pour déterminer les applications autorisées, et charge la session de contexte applicatif correspondante. Garantit l'isolation des données entre domaines.</div>
+        <div class="layer-tags"><span class="tag">SSO</span><span class="tag">CUID Resolver</span><span class="tag">Session Context Loader</span><span class="tag">Access Matrix</span></div>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-card">
+        <div class="layer-title">Couche 2</div>
+        <div class="layer-name">Moteur IA Global — LLM Core</div>
+        <div class="layer-desc">Cerveau central de la plateforme. Reçoit la requête de l'ingénieur, classe l'intention (intent router), orchestre le pipeline de récupération des connaissances, et génère une réponse diagnostique structurée adaptée au contexte applicatif actif.</div>
+        <div class="layer-tags"><span class="tag">LLM</span><span class="tag">Intent Router</span><span class="tag">Diagnostic Reasoning</span><span class="tag">Response Generator</span></div>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-card">
+        <div class="layer-title">Couche 3</div>
+        <div class="layer-name">Couche de Contexte Applicatif</div>
+        <div class="layer-desc">Isole la connaissance et les règles de raisonnement par application. Chaque contexte est une configuration autonome incluant glossaire, patterns de logs, patterns d'incidents, procédures FR et tickets historiques propres à l'application. Le moteur IA ne peut jamais mélanger les contextes de deux applications différentes.</div>
+        <div class="layer-tags"><span class="tag dark">BRASIL ctx</span><span class="tag dark">SEBA ctx</span><span class="tag dark">ARTEMIS ctx</span><span class="tag dark">SCA ctx</span><span class="tag dark">...</span></div>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-card">
+        <div class="layer-title">Couche 4</div>
+        <div class="layer-name">Système de Récupération des Connaissances</div>
+        <div class="layer-desc">Récupère les documents les plus pertinents pour chaque requête diagnostique via recherche sémantique vectorielle. Intègre un Trust Scoring pour pondérer les sources selon leur fiabilité et fraîcheur. En phase avancée, un Knowledge Graph viendra enrichir les relations entre entités.</div>
+        <div class="layer-tags"><span class="tag blue">Vector Store</span><span class="tag blue">Semantic Search</span><span class="tag blue">Trust Score</span><span class="tag blue">Knowledge Graph</span></div>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-card">
+        <div class="layer-title">Couche 5</div>
+        <div class="layer-name">Moteur de Patterns d'Incidents</div>
+        <div class="layer-desc">Analyse les tickets historiques pour identifier des patterns récurrents, regrouper les incidents similaires, lier les causes racines aux solutions validées. Se construit progressivement à mesure que de nouveaux tickets sont ingérés.</div>
+        <div class="layer-tags"><span class="tag green">Clustering</span><span class="tag green">Pattern Matching</span><span class="tag green">RCA Linking</span><span class="tag green">Solution Engine</span></div>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-card">
+        <div class="layer-title">Couche 6</div>
+        <div class="layer-name">Pipeline d'Ingestion des Données</div>
+        <div class="layer-desc">Collecte, normalise et indexe toutes les sources de connaissance : tickets, JIRA, logs extraits des serveurs applicatifs, documentation FR, et références code source. Chaque source est taggée avec l'application source pour maintenir l'isolation de contexte.</div>
+        <div class="layer-tags"><span class="tag">Tickets</span><span class="tag">JIRA</span><span class="tag">Logs</span><span class="tag">FR docs</span><span class="tag">Code</span></div>
+      </div>
+    </div>
+
+    <h3>3.3 Principes d'architecture</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Principe</th><th>Description</th><th>Raison</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Isolation par contexte</strong></td><td>Chaque application a son espace de connaissance étanche</td><td>Éviter les contaminations diagnostiques inter-systèmes</td></tr>
+          <tr><td><strong>Enrichissement progressif</strong></td><td>La plateforme s'améliore à chaque nouveau ticket ou log ingéré</td><td>Construire la valeur graduellement sans dépendance à un volume initial élevé</td></tr>
+          <tr><td><strong>Humain dans la boucle</strong></td><td>L'ingénieur valide toujours la réponse IA</td><td>Maintenir la qualité diagnostique et alimenter le feedback loop</td></tr>
+          <tr><td><strong>Stateless par requête</strong></td><td>Chaque session charge dynamiquement le contexte applicatif</td><td>Flexibilité multi-application et isolation de session</td></tr>
+          <tr><td><strong>Vendor agnostic</strong></td><td>Le LLM core est abstrait derrière une interface</td><td>Éviter le lock-in technologique</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══ SECTION 4 : CONTEXTES MULTI-APPLICATION ══ -->
+  <section id="s4">
+    <div class="section-label">
+      <div class="section-num">4</div>
+      <h2>Conception Multi-Application — Couche de Contexte</h2>
+    </div>
+
+    <h3>4.1 Pourquoi une couche de contexte applicatif</h3>
+    <p>BRASIL, SEBA, ARTEMIS et SCA ne sont pas des modules d'un même système. Ce sont des applications indépendantes avec des architectures différentes, des équipes différentes, et un vocabulaire incident différent. Un ingénieur BRASIL parlera de <em>"timeout de liaison BRASIL→passerelle"</em> — un ingénieur SCA parlera de <em>"rupture de flux SCA"</em>. Ces vocabulaires ne doivent jamais être confondus par le moteur IA.</p>
+
+    <div class="callout">
+      <strong>Règle fondamentale :</strong> Le moteur IA ne doit jamais croiser les connaissances de deux applications différentes dans une même session de diagnostic, sauf en cas de corrélation explicitement demandée (feature Phase 3).
+    </div>
+
+    <h3>4.2 Structure d'un contexte applicatif</h3>
+    <p>Chaque application est modélisée comme un <strong>Application Context Object</strong> contenant les éléments suivants :</p>
+
+    <div class="comp-grid">
+      <div class="comp-card">
+        <h4>📖 Glossaire Domaine</h4>
+        <ul>
+          <li>Termes techniques propres à l'application</li>
+          <li>Acronymes et abréviations internes</li>
+          <li>Noms de composants et de services</li>
+          <li>Taxonomie des erreurs connues</li>
+        </ul>
+      </div>
+      <div class="comp-card blue">
+        <h4>🔍 Patterns de Logs</h4>
+        <ul>
+          <li>Signatures de logs d'erreurs connues</li>
+          <li>Expressions régulières de détection</li>
+          <li>Niveaux de criticité associés</li>
+          <li>Composant source du log</li>
+        </ul>
+      </div>
+      <div class="comp-card green">
+        <h4>⚡ Patterns d'Incidents</h4>
+        <ul>
+          <li>Types d'incidents récurrents</li>
+          <li>Sympt&ocirc;mes caractéristiques</li>
+          <li>Séquences d'erreurs typiques</li>
+          <li>Fréquence et saisonnalité</li>
+        </ul>
+      </div>
+      <div class="comp-card purple">
+        <h4>📋 Procédures FR</h4>
+        <ul>
+          <li>Fiches de résolution par type d'incident</li>
+          <li>Étapes ordonnées d'investigation</li>
+          <li>Commandes et vérifications</li>
+          <li>Escalades et contacts</li>
+        </ul>
+      </div>
+      <div class="comp-card">
+        <h4>🗄️ Base de Tickets</h4>
+        <ul>
+          <li>Tickets historiques avec résolutions</li>
+          <li>Causes racines identifiées</li>
+          <li>Solutions validées par l'équipe</li>
+          <li>Embeddings vectoriels précalculés</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>4.3 Structure de données — Application Context</h3>
+    <div class="code-block"><span class="cm"># Structure conceptuelle d'un contexte applicatif</span>
+
+<span class="cn">ApplicationContext</span> {
+    app_id:        <span class="cs">"BRASIL"</span>           <span class="cm"># Identifiant unique</span>
+    display_name:  <span class="cs">"BRASIL"</span>
+    authorized_cuids: [<span class="cs">"DQPG9805"</span>, ...]  <span class="cm"># CUIDs autorisés</span>
+
+    knowledge_config: {
+        vector_index:    <span class="cs">"brasil_index"</span>    <span class="cm"># Index vectoriel dédié</span>
+        glossary_path:   <span class="cs">"brasil/glossary.json"</span>
+        fr_docs_path:    <span class="cs">"brasil/fr/"</span>
+        log_patterns:    <span class="cs">"brasil/log_patterns.yaml"</span>
+        incident_types:  <span class="cs">"brasil/incident_types.json"</span>
+    }
+
+    llm_config: {
+        system_prompt:   <span class="cs">"Tu es un expert N3 BRASIL..."</span>
+        context_prefix:  <span class="cs">"Contexte applicatif: BRASIL..."</span>
+    }
+
+    pattern_engine: {
+        cluster_model:   <span class="cs">"brasil/patterns_v1.pkl"</span>
+        ticket_count:    <span class="cn">222</span>
+        last_updated:    <span class="cs">"2026-03-01"</span>
+    }
+}</div>
+
+    <h3>4.4 Chargement du contexte lors d'une session</h3>
+    <div class="workflow">
+      <div class="wf-step">
+        <div class="wf-num">1</div>
+        <div class="wf-content">
+          <h4>Résolution CUID → applications autorisées</h4>
+          <p>Le CUID est résolu dans la matrice d'accès. Retourne la liste des app_ids accessibles par cet utilisateur.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">2</div>
+        <div class="wf-content">
+          <h4>Sélection de l'application par l'ingénieur</h4>
+          <p>L'interface présente uniquement les applications autorisées. L'ingénieur sélectionne son contexte de travail.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">3</div>
+        <div class="wf-content">
+          <h4>Chargement du ApplicationContext</h4>
+          <p>La plateforme charge l'objet ApplicationContext correspondant : index vectoriel, patterns, system prompt LLM, glossaire.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">4</div>
+        <div class="wf-content">
+          <h4>Session active — toutes les requêtes sont contextualisées</h4>
+          <p>Pendant toute la session, chaque requête RAG, chaque appel LLM, et chaque réponse est produite dans le cadre exclusif du contexte applicatif chargé.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>4.5 Applications cibles et leur périmètre</h3>
+    <div class="app-grid">
+      <div class="app-card"><div class="app-icon">🇧🇷</div><div class="app-name">BRASIL</div><div class="app-label">Phase 0 — actif</div></div>
+      <div class="app-card"><div class="app-icon">⚙️</div><div class="app-name">SEBA</div><div class="app-label">Phase 1</div></div>
+      <div class="app-card"><div class="app-icon">🛰️</div><div class="app-name">ARTEMIS</div><div class="app-label">Phase 1</div></div>
+      <div class="app-card"><div class="app-icon">📡</div><div class="app-name">SCA</div><div class="app-label">Phase 2</div></div>
+      <div class="app-card"><div class="app-icon">🌐</div><div class="app-name">REFSITES</div><div class="app-label">Phase 2</div></div>
+      <div class="app-card"><div class="app-icon">➕</div><div class="app-name">Futures</div><div class="app-label">Phase 3+</div></div>
+    </div>
+  </section>
+
+  <!-- ══ SECTION 5 : PIPELINE DONNÉES ══ -->
+  <section id="s5">
+    <div class="section-label">
+      <div class="section-num">5</div>
+      <h2>Pipeline d'Ingestion des Données</h2>
+    </div>
+
+    <h3>5.1 Vue d'ensemble du pipeline</h3>
+    <div class="arch-diagram"><span class="h">PIPELINE D'INGESTION — VUE GLOBALE</span>
+
+<span class="c">Sources brutes</span>         <span class="k">Extraction</span>       <span class="s">Normalisation</span>      <span class="h">Indexation</span>
+
+[Tickets DB]      →  Ticket Extractor  →  Structuration  →  Vector Index
+[JIRA API]        →  JIRA Extractor    →  Card parsing   →  Vector Index
+[Serveur BRASIL]  →  Log Agent         →  Log parsing    →  Log Index
+[Serveur SEBA]    →  Log Agent         →  Log parsing    →  Log Index
+[Serveur ARTEMIS] →  Log Agent         →  Log parsing    →  Log Index
+[Serveur SCA]     →  Log Agent         →  Log parsing    →  Log Index
+[FR Docs]         →  Doc Extractor     →  Chunking       →  Vector Index
+[Code Repos]      →  Code Extractor    →  Chunking       →  Vector Index
+                                                            ↓
+                                                    <span class="h">Pattern Engine</span>
+                                                    (tickets + logs)</div>
+
+    <h3>5.2 Étapes de traitement par source</h3>
+
+    <h4>Tickets internes</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Étape</th><th>Action</th><th>Output</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1. Extraction</strong></td><td>Connexion API ou export CSV depuis la base de tickets</td><td>Tickets bruts JSON</td></tr>
+          <tr><td><strong>2. Filtrage</strong></td><td>Filtrer par application source, statut résolu, date</td><td>Tickets filtrés</td></tr>
+          <tr><td><strong>3. Enrichissement</strong></td><td>Ajouter : app_id, équipe, catégorie, résumé normalisé</td><td>Tickets enrichis</td></tr>
+          <tr><td><strong>4. Chunking</strong></td><td>Découper les longs tickets en segments sémantiques</td><td>Chunks texte</td></tr>
+          <tr><td><strong>5. Embedding</strong></td><td>Générer les vecteurs d'embedding pour chaque chunk</td><td>Vecteurs + métadonnées</td></tr>
+          <tr><td><strong>6. Indexation</strong></td><td>Stocker dans le Vector Store avec tag app_id</td><td>Index vectoriel mis à jour</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Logs applicatifs (extraction depuis serveurs)</h4>
+    <div class="callout warn">
+      <strong>Point d'attention infrastructure :</strong> Chaque application fonctionne sur ses propres serveurs. Les logs ne peuvent pas être centralisés directement. Un <em>Log Extraction Agent</em> doit être déployé sur chaque serveur (ou avoir accès SSH/API) pour extraire, compresser et transmettre les logs au pipeline central.
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Étape</th><th>Action</th><th>Outil recommandé</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1. Extraction</strong></td><td>Agent pull via SSH, API ou filebeat/logstash</td><td>Filebeat / script Python</td></tr>
+          <tr><td><strong>2. Parsing</strong></td><td>Parser les lignes de log en champs structurés (timestamp, level, component, message)</td><td>Grok patterns / Regex</td></tr>
+          <tr><td><strong>3. Filtrage</strong></td><td>Conserver uniquement les logs ERROR, WARN, CRITICAL</td><td>Filtre niveau de log</td></tr>
+          <tr><td><strong>4. Tagging</strong></td><td>Ajouter app_id, server_id, environnement</td><td>Métadonnées pipeline</td></tr>
+          <tr><td><strong>5. Embedding</strong></td><td>Vectoriser les messages de log normalisés</td><td>Sentence Transformers</td></tr>
+          <tr><td><strong>6. Indexation</strong></td><td>Stocker dans un index dédié (séparé des tickets)</td><td>FAISS / Qdrant</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>JIRA</h4>
+    <ul class="plain-list">
+      <li>Connexion via JIRA REST API (token d'authentification)</li>
+      <li>Extraction des issues par projet (filtre par app_id)</li>
+      <li>Parsing : titre, description, commentaires, labels, résolution</li>
+      <li>Embedding et indexation avec tag <code>source=jira</code> et <code>app_id</code></li>
+    </ul>
+
+    <h4>FR Documentation</h4>
+    <ul class="plain-list">
+      <li>Extraction depuis le système documentaire (wiki, SharePoint, PDF)</li>
+      <li>Chunking par section (titre + contenu)</li>
+      <li>Préservation de la structure hiérarchique (procédure → étapes)</li>
+      <li>Embedding et indexation avec tag <code>source=fr</code></li>
+    </ul>
+
+    <h3>5.3 Schéma de métadonnées universelles</h3>
+    <div class="code-block"><span class="cm"># Métadonnées attachées à chaque chunk dans le Vector Store</span>
+{
+    <span class="ck">"chunk_id"</span>:      <span class="cs">"brasil_ticket_0042_chunk_2"</span>,
+    <span class="ck">"app_id"</span>:         <span class="cs">"BRASIL"</span>,
+    <span class="ck">"source_type"</span>:    <span class="cs">"ticket"</span>,  <span class="cm"># ticket | jira | log | fr | code</span>
+    <span class="ck">"source_id"</span>:      <span class="cs">"TKT-2025-0042"</span>,
+    <span class="ck">"date"</span>:           <span class="cs">"2025-06-15"</span>,
+    <span class="ck">"trust_score"</span>:    <span class="cn">0.92</span>,     <span class="cm"># Score de fiabilité 0-1</span>
+    <span class="ck">"resolved"</span>:       <span class="cn">true</span>,
+    <span class="ck">"root_cause"</span>:     <span class="cs">"timeout_gateway"</span>,
+    <span class="ck">"text"</span>:           <span class="cs">"Perte de liaison entre BRASIL et passerelle..."</span>,
+    <span class="ck">"embedding"</span>:      <span class="cn">[0.034, -0.112, ...]</span>
+}</div>
+  </section>
+
+  <!-- ══ SECTION 6 : MOTEUR DE PATTERNS ══ -->
+  <section id="s6">
+    <div class="section-label">
+      <div class="section-num">6</div>
+      <h2>Moteur de Patterns d'Incidents</h2>
+    </div>
+
+    <h3>6.1 Objectif</h3>
+    <p>Le Moteur de Patterns d'Incidents transforme une collection de tickets historiques en une <strong>bibliothèque de patterns reconnaissables</strong>. Lorsqu'un ingénieur décrit un nouvel incident, le moteur identifie automatiquement si ce type de problème a déjà été rencontré et quelle résolution a été validée.</p>
+
+    <div class="callout success">
+      <strong>Principe de construction graduelle :</strong> Le moteur ne nécessite pas 5 000 tickets pour commencer à apporter de la valeur. Dès 50–100 tickets bien structurés, des premiers patterns émergent. La qualité s'améliore continuellement.
+    </div>
+
+    <h3>6.2 Architecture du moteur</h3>
+    <div class="arch-diagram"><span class="h">INCIDENT PATTERN ENGINE — FLUX DE TRAITEMENT</span>
+
+<span class="c">Tickets historiques</span>
+        ↓
+<span class="k">[1. Preprocessing]</span>
+    Nettoyage · Normalisation · Extraction des champs clés
+    (résumé, cause, solution, catégorie, composant affecté)
+        ↓
+<span class="k">[2. Feature Extraction]</span>
+    Vectorisation des descriptions d'incident
+    Extraction d'entités : composants, erreurs, actions
+        ↓
+<span class="k">[3. Clustering]</span>
+    Regroupement par similarité sémantique
+    Algorithme : K-Means ou HDBSCAN sur embeddings
+    → Chaque cluster = un type d'incident récurrent
+        ↓
+<span class="k">[4. Pattern Labeling]</span>
+    Nommage du pattern (ex: "timeout_gateway_brasil")
+    Identification de la cause racine dominante par cluster
+    Sélection de la solution la plus fréquente et validée
+        ↓
+<span class="k">[5. Pattern Registry]</span>
+    Stockage structuré de chaque pattern :
+    { pattern_id, name, symptoms, root_cause, solution_fr, frequency }
+        ↓
+<span class="s">[6. Runtime Matching]</span>
+    Lors d'un diagnostic : comparer l'incident entrant
+    avec le Pattern Registry par similarité vectorielle
+    → Score de correspondance · Pattern suggéré · FR associée</div>
+
+    <h3>6.3 Structure d'un Pattern</h3>
+    <div class="code-block"><span class="cm"># Exemple de Pattern structuré</span>
+{
+    <span class="ck">"pattern_id"</span>:     <span class="cs">"BRASIL-P-007"</span>,
+    <span class="ck">"app_id"</span>:          <span class="cs">"BRASIL"</span>,
+    <span class="ck">"name"</span>:            <span class="cs">"Timeout liaison passerelle BRASIL"</span>,
+    <span class="ck">"frequency"</span>:       <span class="cn">14</span>,      <span class="cm"># Nb de tickets similaires dans l'historique</span>
+    <span class="ck">"symptoms"</span>: [
+        <span class="cs">"Timeout sur appel API passerelle"</span>,
+        <span class="cs">"Log WARN: connection refused port 8443"</span>,
+        <span class="cs">"Incident déclenché en pic de charge"</span>
+    ],
+    <span class="ck">"root_cause"</span>:      <span class="cs">"Pool de connexions saturé côté passerelle"</span>,
+    <span class="ck">"linked_fr"</span>:       <span class="cs">"FR-BRASIL-042"</span>,
+    <span class="ck">"resolution_summary"</span>: <span class="cs">"Redémarrage service gateway + augmentation pool"</span>,
+    <span class="ck">"last_seen"</span>:        <span class="cs">"2025-11-03"</span>,
+    <span class="ck">"confidence"</span>:       <span class="cn">0.87</span>
+}</div>
+
+    <h3>6.4 Amélioration continue</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Déclencheur</th><th>Action du moteur</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Nouveau ticket résolu ingéré</strong></td><td>Tentative de rattachement à un pattern existant ou création d'un nouveau candidat</td></tr>
+          <tr><td><strong>Ingénieur valide un diagnostic IA</strong></td><td>Renforcement du score de confiance du pattern correspondant</td></tr>
+          <tr><td><strong>Ingénieur corrige un diagnostic IA</strong></td><td>Ajout du ticket corrigé au corpus d'entraînement — reclassification prochaine</td></tr>
+          <tr><td><strong>Seuil de tickets atteint (ex: 50 nouveaux)</strong></td><td>Re-clustering partiel pour affiner les patterns existants</td></tr>
+          <tr><td><strong>Nouveau type d'erreur non reconnu</strong></td><td>Signalement comme knowledge gap — soumis à validation N3</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══ SECTION 7 : AUTHENTIFICATION ══ -->
+  <section id="s7">
+    <div class="section-label">
+      <div class="section-num">7</div>
+      <h2>Modèle d'Authentification et d'Accès</h2>
+    </div>
+
+    <h3>7.1 Champs d'authentification</h3>
+    <p>L'accès à la plateforme requiert trois champs :</p>
+    <div class="comp-grid">
+      <div class="comp-card">
+        <h4>👤 Username</h4>
+        <p>Identifiant nominal de l'utilisateur dans le système d'annuaire de l'entreprise (LDAP / AD).</p>
+      </div>
+      <div class="comp-card blue">
+        <h4>🔑 Password</h4>
+        <p>Mot de passe associé au compte. Authentification via protocole SSO d'entreprise (LDAP / SAML / OAuth2).</p>
+      </div>
+      <div class="comp-card green">
+        <h4>🏷️ CUID</h4>
+        <p>Identifiant Unique d'Entreprise (ex: DQPG9805). C'est la clé de résolution des droits d'accès applicatifs.</p>
+      </div>
+    </div>
+
+    <h3>7.2 Processus de résolution du CUID</h3>
+    <div class="arch-diagram"><span class="h">FLUX D'AUTHENTIFICATION ET CHARGEMENT DE CONTEXTE</span>
+
+Utilisateur → [username + password + CUID]
+                        ↓
+               <span class="k">[1. Validation SSO]</span>
+               Vérification credentials dans LDAP/AD
+               → Échec: accès refusé
+               → Succès: session ouverte
+                        ↓
+               <span class="k">[2. Résolution CUID]</span>
+               Lookup dans la Access Matrix :
+               CUID → { app_ids[], team_context, role }
+
+               Exemple:
+               DQPG9805 → {
+                   apps: [<span class="cs">"BRASIL"</span>, <span class="cs">"SEBA"</span>],
+                   team: <span class="cs">"N3-Telecom-Sud"</span>,
+                   role: <span class="cs">"engineer"</span>
+               }
+                        ↓
+               <span class="s">[3. Présentation des applications autorisées]</span>
+               Interface affiche uniquement les apps accessibles
+
+                        ↓
+               <span class="k">[4. Sélection de l'application]</span>
+               L'ingénieur choisit son contexte de travail
+                        ↓
+               <span class="s">[5. Chargement du ApplicationContext]</span>
+               Index vectoriel · Patterns · System prompt · FR</div>
+
+    <h3>7.3 Matrice d'accès — structure de données</h3>
+    <div class="code-block"><span class="cm"># Access Matrix — exemple de structure</span>
+{
+    <span class="cs">"DQPG9805"</span>: {
+        <span class="ck">"authorized_apps"</span>: [<span class="cs">"BRASIL"</span>, <span class="cs">"SEBA"</span>],
+        <span class="ck">"team"</span>:            <span class="cs">"N3-Telecom-Sud"</span>,
+        <span class="ck">"role"</span>:            <span class="cs">"engineer"</span>,
+        <span class="ck">"can_validate"</span>:    <span class="cn">true</span>
+    },
+    <span class="cs">"ABCD1234"</span>: {
+        <span class="ck">"authorized_apps"</span>: [<span class="cs">"BRASIL"</span>, <span class="cs">"ARTEMIS"</span>, <span class="cs">"SCA"</span>],
+        <span class="ck">"team"</span>:            <span class="cs">"N3-Telecom-Nord"</span>,
+        <span class="ck">"role"</span>:            <span class="cs">"senior_engineer"</span>,
+        <span class="ck">"can_validate"</span>:    <span class="cn">true</span>
+    }
+}</div>
+
+    <h3>7.4 Règles d'accès</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Règle</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Isolation stricte</strong></td><td>Un CUID n'ayant accès qu'à BRASIL ne peut pas accéder aux données SEBA, même indirectement via le LLM</td></tr>
+          <tr><td><strong>Contexte unique par session</strong></td><td>Une session active ne peut travailler que sur un seul contexte applicatif à la fois</td></tr>
+          <tr><td><strong>Multi-app possible</strong></td><td>Un CUID peut avoir accès à plusieurs applications — l'ingénieur change de contexte en se déconnectant de l'un et en sélectionnant l'autre</td></tr>
+          <tr><td><strong>Audit log</strong></td><td>Chaque accès et chaque requête diagnostique est tracé avec CUID, app_id, timestamp</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══ SECTION 8 : SCALING ══ -->
+  <section id="s8">
+    <div class="section-label">
+      <div class="section-num">8</div>
+      <h2>Stratégie de Scaling</h2>
+    </div>
+
+    <h3>8.1 Principes de scaling</h3>
+    <p>L'architecture est conçue pour être <strong>horizontalement scalable</strong> au niveau des contextes applicatifs. Ajouter une nouvelle application ne nécessite pas de modifier le moteur IA — il suffit de créer un nouveau <code>ApplicationContext</code> et d'alimenter son index vectoriel dédié.</p>
+
+    <h3>8.2 Plan de déploiement progressif</h3>
+    <div class="timeline">
+      <div class="phase">
+        <div class="phase-title"><span class="phase-badge badge-current">En cours</span>Phase 0 — Fondation BRASIL</div>
+        <ul>
+          <li>Périmètre unique : BRASIL</li>
+          <li>222 tickets historiques 2025 ingérés</li>
+          <li>Pipeline RAG opérationnel</li>
+          <li>9 intents classifiés et actifs</li>
+          <li>Trust scoring et knowledge ingestion fonctionnels</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="phase-title"><span class="phase-badge badge-soon">Court terme</span>Phase 1 — Extension SEBA + ARTEMIS</div>
+        <ul>
+          <li>Implémentation de la couche ApplicationContext</li>
+          <li>Création des contextes SEBA et ARTEMIS</li>
+          <li>Intégration CUID Access Matrix</li>
+          <li>Déploiement des Log Extraction Agents sur serveurs SEBA/ARTEMIS</li>
+          <li>Ingestion des tickets historiques SEBA et ARTEMIS</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="phase-title"><span class="phase-badge badge-mid">Moyen terme</span>Phase 2 — 5 applications actives</div>
+        <ul>
+          <li>Ajout des contextes SCA et REFSITES</li>
+          <li>Déploiement du Moteur de Patterns v1</li>
+          <li>~1 000–1 500 tickets cumulés traités</li>
+          <li>Interface de sélection d'application opérationnelle</li>
+          <li>Feedback loop ingénieur → enrichissement base de connaissance</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="phase-title"><span class="phase-badge badge-future">Long terme</span>Phase 3 — Échelle entreprise</div>
+        <ul>
+          <li>10+ contextes applicatifs actifs</li>
+          <li>5 000 tickets cumulés (objectif multi-app)</li>
+          <li>Knowledge Graph inter-applicatif</li>
+          <li>Corrélation cross-application activée</li>
+          <li>Pipeline d'apprentissage continu automatisé</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>8.3 Isolation vs Corrélation</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Dimension</th><th>Phase 0–2 : Isolation stricte</th><th>Phase 3+ : Corrélation controlée</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Contexte de diagnostic</strong></td><td>100% isolé par application</td><td>Possibilité de requête cross-app explicite</td></tr>
+          <tr><td><strong>Index vectoriel</strong></td><td>1 index par application</td><td>Index partagé + filtres applicatifs</td></tr>
+          <tr><td><strong>Pattern matching</strong></td><td>Dans le contexte de l'app sélectionnée uniquement</td><td>Détection de patterns similaires cross-app</td></tr>
+          <tr><td><strong>Knowledge Graph</strong></td><td>Non activé</td><td>Graphe inter-systèmes opérationnel</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>8.4 Multi-contexte RAG — architecture technique</h3>
+    <div class="code-block"><span class="cm"># Requête RAG contextualisée par application</span>
+
+<span class="cn">def</span> <span class="ck">retrieve_knowledge</span>(query: str, app_id: str, top_k: <span class="cn">int</span> = <span class="cn">5</span>):
+    <span class="cm"># 1. Vectoriser la requête</span>
+    query_vector = embed(query)
+
+    <span class="cm"># 2. Filtrer l'index vectoriel sur l'app_id</span>
+    results = vector_store.search(
+        vector=query_vector,
+        filter={<span class="cs">"app_id"</span>: app_id},   <span class="cm"># Isolation stricte</span>
+        top_k=top_k
+    )
+
+    <span class="cm"># 3. Trier par trust_score</span>
+    results.sort(key=<span class="cn">lambda</span> x: x.trust_score, reverse=<span class="cn">True</span>)
+
+    <span class="cn">return</span> results</div>
+  </section>
+
+  <!-- ══ SECTION 9 : ROADMAP ══ -->
+  <section id="s9">
+    <div class="section-label">
+      <div class="section-num">9</div>
+      <h2>Roadmap de Développement</h2>
+    </div>
+
+    <div class="roadmap-grid">
+      <div class="roadmap-card">
+        <span class="roadmap-period" style="background:#dcfce7;color:#059669;">Phase 1 — Fondation</span>
+        <ul>
+          <li>Stabilisation pipeline RAG BRASIL</li>
+          <li>Implémentation ApplicationContext dataclass</li>
+          <li>CUID Access Matrix (JSON/DB)</li>
+          <li>Interface sélection d'application</li>
+          <li>Ingestion 222 tickets BRASIL 2025</li>
+          <li>Validation intent router sur 9 intents</li>
+          <li>Trust scoring opérationnel</li>
+        </ul>
+      </div>
+      <div class="roadmap-card">
+        <span class="roadmap-period" style="background:#fff7ed;color:#c2410c;">Phase 2 — Multi-App</span>
+        <ul>
+          <li>Déploiement contextes SEBA, ARTEMIS</li>
+          <li>Log Extraction Agents v1</li>
+          <li>Ingestion tickets SEBA + ARTEMIS</li>
+          <li>Tests d'isolation inter-contexte</li>
+          <li>Audit logging (CUID + app + query)</li>
+          <li>Feedback loop ingénieur → enrichissement</li>
+        </ul>
+      </div>
+      <div class="roadmap-card">
+        <span class="roadmap-period" style="background:#eff6ff;color:#0284c7;">Phase 3 — Pattern Engine</span>
+        <ul>
+          <li>Incident Pattern Engine v1 (clustering)</li>
+          <li>Pattern Registry structuré</li>
+          <li>Matching temps réel lors du diagnostic</li>
+          <li>Ajout contextes SCA, REFSITES</li>
+          <li>Interface de validation pattern par N3</li>
+          <li>Tableaux de bord patterns récurrents</li>
+        </ul>
+      </div>
+      <div class="roadmap-card">
+        <span class="roadmap-period" style="background:#f3e8ff;color:#7c3aed;">Phase 4 — Intelligence avancée</span>
+        <ul>
+          <li>Knowledge Graph v1</li>
+          <li>Corrélation cross-application</li>
+          <li>Analyse prédictive de logs</li>
+          <li>Pipeline d'apprentissage automatisé</li>
+          <li>10+ contextes applicatifs</li>
+          <li>5 000+ tickets cumulés</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>9.2 Dépendances entre phases</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Phase</th><th>Prérequis</th><th>Durée estimée</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Phase 1</strong></td><td>Aucun — état actuel</td><td>En cours</td></tr>
+          <tr><td><strong>Phase 2</strong></td><td>ApplicationContext Layer (Phase 1) + accès serveurs SEBA/ARTEMIS</td><td>3–4 mois après Phase 1</td></tr>
+          <tr><td><strong>Phase 3</strong></td><td>~500 tickets ingérés minimum + Phase 2 complète</td><td>6–9 mois après Phase 2</td></tr>
+          <tr><td><strong>Phase 4</strong></td><td>Pattern Engine stable (Phase 3) + 5 app contextes actifs</td><td>12+ mois après Phase 3</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══ SECTION 10 : MANUEL D'IMPLÉMENTATION ══ -->
+  <section id="s10">
+    <div class="section-label">
+      <div class="section-num">10</div>
+      <h2>Manuel d'Implémentation — Guide Étape par Étape</h2>
+    </div>
+
+    <div class="callout info">
+      <strong>À qui s'adresse ce manuel :</strong> Aux ingénieurs responsables de l'implémentation de la plateforme. Chaque étape est ordonnée selon les dépendances. Chaque bloc doit être validé avant de passer au suivant.
+    </div>
+
+    <h3>BLOC A — Infrastructure de base</h3>
+    <div class="workflow">
+      <div class="wf-step">
+        <div class="wf-num">A1</div>
+        <div class="wf-content">
+          <h4>Déployer le Vector Store</h4>
+          <p>Installer et configurer un Vector Store (FAISS local pour le développement, Qdrant ou Weaviate pour la production). Créer un index par application : <code>brasil_index</code>, <code>seba_index</code>, etc. Définir le schéma de métadonnées universel (voir Section 5.3).</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">A2</div>
+        <div class="wf-content">
+          <h4>Configurer le modèle d'embedding</h4>
+          <p>Sélectionner et déployer un modèle d'embedding multilingue (français/anglais). Recommandé : <code>sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2</code>. Valider la qualité des embeddings sur un échantillon de tickets BRASIL.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">A3</div>
+        <div class="wf-content">
+          <h4>Configurer le LLM Core</h4>
+          <p>Connecter le LLM (Groq/OpenAI/local) via une interface abstraite. Implémenter le mécanisme de <em>system prompt dynamique</em> qui charge le prompt applicatif en fonction du contexte actif. Tester avec le système prompt BRASIL existant.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">A4</div>
+        <div class="wf-content">
+          <h4>Implémenter l'Intent Router</h4>
+          <p>Classifier la requête entrante parmi les 9 intents définis. Implémenter le routing vers le pipeline de traitement correspondant. Valider avec un jeu de test de 50 requêtes annotées.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>BLOC B — Couche de contexte applicatif</h3>
+    <div class="workflow">
+      <div class="wf-step">
+        <div class="wf-num">B1</div>
+        <div class="wf-content">
+          <h4>Implémenter la dataclass ApplicationContext</h4>
+          <p>Créer la structure de données <code>ApplicationContext</code> (voir Section 4.3). Elle doit contenir : app_id, config des index, system prompt LLM, chemins vers les ressources (glossaire, FR, patterns).</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">B2</div>
+        <div class="wf-content">
+          <h4>Créer le contexte BRASIL</h4>
+          <p>Peupler le premier ApplicationContext avec les ressources BRASIL : index vectoriel existant, system prompt calibré pour BRASIL, glossaire extrait des tickets, patterns de logs identifiés. Tester que le pipeline RAG utilise exclusivement l'index BRASIL.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">B3</div>
+        <div class="wf-content">
+          <h4>Implémenter le Context Loader</h4>
+          <p>Service qui, à partir d'un <code>app_id</code>, charge dynamiquement l'ApplicationContext correspondant en mémoire et l'injecte dans tous les composants de la session (RAG retriever, LLM, Pattern Engine).</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">B4</div>
+        <div class="wf-content">
+          <h4>Tester l'isolation entre contextes</h4>
+          <p>Créer un contexte SEBA minimal (même avec 5 faux tickets). Vérifier qu'une requête en contexte BRASIL ne retourne jamais de résultats SEBA, et vice versa. Ce test d'isolation est critique avant tout déploiement multi-app.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>BLOC C — Authentification et accès</h3>
+    <div class="workflow">
+      <div class="wf-step">
+        <div class="wf-num">C1</div>
+        <div class="wf-content">
+          <h4>Implémenter la Access Matrix</h4>
+          <p>Créer et peupler la matrice CUID → applications autorisées. Commencer par une implémentation simple (JSON ou table base de données). Définir le schéma : CUID, authorized_apps, team, role, can_validate.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">C2</div>
+        <div class="wf-content">
+          <h4>Implémenter le flux d'authentification</h4>
+          <p>Connecter le formulaire login (username + password + CUID) à l'annuaire d'entreprise (LDAP/AD) ou implémenter une authentification locale pour le développement. À la connexion réussie : résoudre le CUID, charger la liste des apps autorisées, initialiser la session.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">C3</div>
+        <div class="wf-content">
+          <h4>Implémenter l'audit logging</h4>
+          <p>Logguer chaque accès : CUID, timestamp, app_id sélectionné, requête (anonymisée si nécessaire), intent classifié, sources récupérées. Stocker dans une base de logs d'audit séparée de la base de connaissance.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>BLOC D — Pipeline d'ingestion des données</h3>
+    <div class="workflow">
+      <div class="wf-step">
+        <div class="wf-num">D1</div>
+        <div class="wf-content">
+          <h4>Pipeline tickets BRASIL (222 tickets)</h4>
+          <p>Écrire le script d'extraction depuis la base de tickets. Normaliser les champs (résumé, cause, solution, catégorie). Chunker et vectoriser. Indexer dans <code>brasil_index</code> avec métadonnées complètes. Vérifier la qualité des embeddings par recherche manuelle.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">D2</div>
+        <div class="wf-content">
+          <h4>Pipeline FR Documentation</h4>
+          <p>Extraire les fiches FR depuis leur source (wiki/SharePoint/PDF). Chunker par section. Indexer avec tag <code>source=fr</code> + <code>app_id</code>. Assigner un trust_score élevé (0.95) car sources de référence validées.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">D3</div>
+        <div class="wf-content">
+          <h4>Pipeline JIRA</h4>
+          <p>Configurer l'accès JIRA REST API. Extraire les issues du projet BRASIL. Parser titre, description, commentaires de résolution. Indexer avec tag <code>source=jira</code>.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">D4</div>
+        <div class="wf-content">
+          <h4>Log Extraction Agent (BRASIL)</h4>
+          <p>Déployer l'agent d'extraction sur le serveur BRASIL (ou configurer l'accès SSH/API). Parser les logs ERROR/WARN. Normaliser au format standard. Indexer dans un index de logs séparé. Planifier l'extraction périodique (cron daily ou streaming).</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>BLOC E — Moteur de Patterns</h3>
+    <div class="workflow">
+      <div class="wf-step">
+        <div class="wf-num">E1</div>
+        <div class="wf-content">
+          <h4>Preprocessing des tickets</h4>
+          <p>Extraire les champs clés de chaque ticket : résumé incident, cause identifiée, solution appliquée, composant affecté. Nettoyer et normaliser le texte. Construire le corpus d'entraînement du moteur.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">E2</div>
+        <div class="wf-content">
+          <h4>Clustering initial</h4>
+          <p>Vectoriser les descriptions de tickets. Appliquer un algorithme de clustering (commencer par K-Means, explorer HDBSCAN). Analyser manuellement 5–10 clusters pour valider la cohérence. Ajuster le nombre de clusters et relancer.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">E3</div>
+        <div class="wf-content">
+          <h4>Labeling des patterns (avec l'équipe N3)</h4>
+          <p>Présenter les clusters aux experts N3 BRASIL pour validation. Nommer chaque pattern, confirmer la cause racine dominante, identifier la FR de référence. Ce step requiert 2–3 heures avec un expert N3.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">E4</div>
+        <div class="wf-content">
+          <h4>Implémenter le Pattern Registry et le runtime matcher</h4>
+          <p>Stocker les patterns validés dans le Pattern Registry. Implémenter la fonction de matching temps réel : lors d'une requête diagnostique, calculer la similarité entre l'incident décrit et les patterns connus, retourner le top-3 patterns avec score de confiance.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>BLOC F — Intégration et tests</h3>
+    <div class="workflow">
+      <div class="wf-step">
+        <div class="wf-num">F1</div>
+        <div class="wf-content">
+          <h4>Tests de bout en bout</h4>
+          <p>Tester le flux complet : login → sélection app → description incident → récupération RAG → diagnostic LLM → suggestion pattern → réponse structurée. Utiliser 20 tickets historiques comme jeu de test (réponse attendue connue).</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">F2</div>
+        <div class="wf-content">
+          <h4>Tests d'isolation</h4>
+          <p>Vérifier que les données BRASIL ne sont jamais accessibles depuis un contexte SEBA et vice versa. Tester les tentatives d'accès cross-contexte et confirmer leur blocage.</p>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">F3</div>
+        <div class="wf-content">
+          <h4>Déploiement pilote avec l'équipe N3 BRASIL</h4>
+          <p>Ouvrir l'accès à 2–3 ingénieurs N3 BRASIL volontaires. Collecter les retours hebdomadaires. Mesurer : précision des diagnostics, utilité des patterns suggérés, qualité des réponses. Itérer sur les prompts et la base de connaissance.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SECTION 11 : ÉVOLUTION FUTURE ══ -->
+  <section id="s11">
+    <div class="section-label">
+      <div class="section-num">11</div>
+      <h2>Évolution Future</h2>
+    </div>
+
+    <h3>11.1 Knowledge Graph inter-applicatif</h3>
+    <p>À terme, les contextes applicatifs aujourd'hui isolés pourront être connectés via un <strong>Knowledge Graph</strong> qui modélise les relations entre systèmes, incidents, composants et résolutions.</p>
+
+    <div class="arch-diagram"><span class="h">KNOWLEDGE GRAPH — VISION LONG TERME</span>
+
+<span class="c">Nœuds :</span>
+[Application]  ←→  [Composant]  ←→  [Incident Type]
+                                           ↕
+                                   [Root Cause]  ←→  [FR Procedure]
+                                           ↕
+                                     [Solution]
+
+<span class="k">Exemple de chemin :</span>
+BRASIL → Passerelle API → Timeout incident
+    → Root cause: Pool connexions saturé
+    → FR-BRASIL-042 → Solution: restart + tuning pool
+
+<span class="s">Corrélation cross-app (Phase 3+) :</span>
+Timeout BRASIL-Passerelle ←→ Rupture flux SCA-Interface
+    → même infra réseau sous-jacente
+    → investigation conjointe recommandée</div>
+
+    <h3>11.2 Détection automatique d'incidents</h3>
+    <p>En phase avancée, le pipeline de logs pourra déclencher des alertes proactives sans attendre qu'un ingénieur soumette une requête :</p>
+    <ul class="plain-list">
+      <li>Détection de signatures de logs correspondant à des patterns connus à haute fréquence</li>
+      <li>Alerte automatique à l'équipe N3 avec diagnostic pré-établi</li>
+      <li>Corrélation avec les tickets ouverts en cours sur la même période</li>
+    </ul>
+
+    <h3>11.3 Analyse prédictive de logs</h3>
+    <ul class="plain-list">
+      <li>Détection de dégradations lentes avant rupture de service (anomaly detection sur séries temporelles de logs)</li>
+      <li>Identification de tendances anormales dans les volumes d'erreurs</li>
+      <li>Score de risque incident par application mis à jour en continu</li>
+    </ul>
+
+    <h3>11.4 Intelligence diagnostique avancée</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Capacité future</th><th>Description</th><th>Horizon</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Corrélation cross-application</strong></td><td>Détecter qu'un incident BRASIL est lié à un incident SCA via infrastructure commune</td><td>Phase 4 (24+ mois)</td></tr>
+          <tr><td><strong>Analyse prédictive de logs</strong></td><td>Anticiper les pannes avant qu'elles se produisent sur la base des tendances de logs</td><td>Phase 4</td></tr>
+          <tr><td><strong>Auto-enrichissement de la base</strong></td><td>Pipeline automatisé : nouveau ticket résolu → vectorisation → enrichissement sans intervention humaine</td><td>Phase 3 (12–24 mois)</td></tr>
+          <tr><td><strong>Génération d'analyses post-incident</strong></td><td>L'IA produit automatiquement un compte-rendu post-incident structuré à partir de la session de diagnostic</td><td>Phase 3</td></tr>
+          <tr><td><strong>Expert N3 virtuel cross-SI</strong></td><td>Un seul assistant capable de guider un ingénieur sur n'importe quelle application du SI avec une expertise de niveau N3</td><td>Phase 4+</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <strong>Ambition ultime :</strong> La plateforme doit évoluer vers un <strong>expert N3 virtuel à périmètre SI complet</strong> — capable de guider n'importe quel ingénieur, sur n'importe quelle application, en s'appuyant sur l'intelligence collective de toutes les équipes N3 capitalisée dans la base de connaissance.
+    </div>
+
+    <!-- ══ ANNEXE GLOSSAIRE ══ -->
+    <h3 id="glossaire">Annexe — Glossaire technique</h3>
+    <div class="glossary">
+      <div class="gloss-row"><div class="gloss-term">RAG</div><div class="gloss-def">Retrieval-Augmented Generation — technique IA combinant LLM et récupération de documents pertinents dans une base de connaissance</div></div>
+      <div class="gloss-row"><div class="gloss-term">LLM</div><div class="gloss-def">Large Language Model — modèle de langage de grande taille, cerveau central du moteur IA</div></div>
+      <div class="gloss-row"><div class="gloss-term">Vector Store</div><div class="gloss-def">Base de données stockant des embeddings vectoriels pour la recherche par similarité sémantique</div></div>
+      <div class="gloss-row"><div class="gloss-term">Embedding</div><div class="gloss-def">Représentation numérique dense d'un texte dans un espace vectoriel, permettant la comparaison sémantique</div></div>
+      <div class="gloss-row"><div class="gloss-term">Intent Router</div><div class="gloss-def">Composant classifiant l'intention de la requête pour router vers le bon pipeline de traitement</div></div>
+      <div class="gloss-row"><div class="gloss-term">Trust Score</div><div class="gloss-def">Score de fiabilité assigné à chaque source de connaissance selon sa fraîcheur, sa validation et son type</div></div>
+      <div class="gloss-row"><div class="gloss-term">ApplicationContext</div><div class="gloss-def">Objet de configuration isolant toute la connaissance et les paramètres IA propres à une application</div></div>
+      <div class="gloss-row"><div class="gloss-term">Pattern Engine</div><div class="gloss-def">Moteur identifiant les signatures d'incidents récurrents par clustering des tickets historiques</div></div>
+      <div class="gloss-row"><div class="gloss-term">Knowledge Graph</div><div class="gloss-def">Graphe structuré reliant systèmes, incidents, causes racines et résolutions par des arêtes typées</div></div>
+      <div class="gloss-row"><div class="gloss-term">CUID</div><div class="gloss-def">Corporate Unique Identifier — identifiant d'entreprise déterminant les droits d'accès applicatifs</div></div>
+      <div class="gloss-row"><div class="gloss-term">FR</div><div class="gloss-def">Fiche de Résolution — procédure validée de résolution d'incident par l'équipe N3</div></div>
+      <div class="gloss-row"><div class="gloss-term">MEC</div><div class="gloss-def">Montée en Compétences — période d'intégration d'un nouvel ingénieur (jusqu'à 2 mois actuellement)</div></div>
+      <div class="gloss-row"><div class="gloss-term">RCA</div><div class="gloss-def">Root Cause Analysis — identification de la cause racine d'un incident</div></div>
+      <div class="gloss-row"><div class="gloss-term">N3</div><div class="gloss-def">Troisième niveau de support — niveau d'expertise opérationnelle le plus élevé</div></div>
+      <div class="gloss-row"><div class="gloss-term">SI</div><div class="gloss-def">Système d'Information — ensemble des applications du système informatique de l'entreprise</div></div>
+      <div class="gloss-row"><div class="gloss-term">Chunking</div><div class="gloss-def">Découpage d'un document long en segments plus courts pour l'indexation vectorielle</div></div>
+      <div class="gloss-row"><div class="gloss-term">HDBSCAN</div><div class="gloss-def">Algorithme de clustering hiérarchique basé sur la densité, adapté aux données de haute dimensionnalité</div></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ════════════════ FOOTER ════════════════ -->
+<footer>
+  <p><strong>Préparé par :</strong> Équipe Architecture IA d'Entreprise &nbsp;·&nbsp; <strong>Version :</strong> 1.0 — Mars 2026</p>
+  <p style="margin-top:6px;font-size:0.73rem;">Document technique interne — usage réservé aux équipes d'ingénierie et de direction technique. Soumis à révision périodique au fil de l'avancement de l'implémentation.</p>
+</footer>
+
+</body>
+</html>

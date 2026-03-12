@@ -161,6 +161,7 @@
         <li><a href="#diagnostic-engine">Moteur Diagnostic N3</a></li>
         <li><a href="#chatbot">Chatbot</a></li>
         <li><a href="#validation">Validation</a></li>
+        <li><a href="#classification-ml">Classification ML</a></li>
       </ul>
 
       <!-- interface section removed as requested -->
@@ -172,6 +173,7 @@
         <li><a href="#api-chat">Chat API</a></li>
         <li><a href="#api-knowledge">Knowledge API</a></li>
         <li><a href="#api-n3">N3 Diagnostic API</a></li>
+        <li><a href="#api-classification-ml">Classification ML API</a></li>
       </ul>
       
       <h3>Développement</h3>
@@ -199,7 +201,7 @@
         
         <div class="alert alert-info">
           <div class="alert-title">📚 Version actuelle</div>
-          Cette documentation correspond à la version <strong>2.0.0</strong> d'AI Support Agent — incluant le pipeline N3 Knowledge Engineering et le moteur de diagnostic BRASIL.
+          Cette documentation correspond à la version <strong>3.0.0</strong> d'AI Support Agent — incluant le pipeline N3 Knowledge Engineering, le moteur de diagnostic BRASIL et le module de <strong>Classification ML Hybride</strong> (FAISS + TF-IDF + keyword boost).
         </div>
         
         <h2>Qu'est-ce qu'AI Support Agent ?</h2>
@@ -212,6 +214,8 @@
           <li><strong>Knowledge Graph N3</strong> : Pipeline complet FR→Cluster→Procédure→Qdrant avec trust scoring</li>
           <li><strong>Moteur de Diagnostic N3</strong> : Détection d'exceptions BRASIL, retrieval de procédures, raisonnement structuré</li>
           <li><strong>RAG Pipeline</strong> : Recherche sémantique sur <code>brasil_log_patterns</code> + <code>brasil_procedures</code> via Qdrant</li>
+          <li><strong>Classification ML Hybride</strong> : Classifier automatique de tickets avec FAISS (similarité sémantique), boost de mots-clés métier et TF-IDF — pipeline 9 étapes, colonne texte et max_features configurables depuis l'UI</li>
+          <li><strong>Correction interactive</strong> : Carte de correction avec contexte <code>user_sig</code>, <code>inc_solution</code>, seuil de confiance ajustable</li>
           <li><strong>Validation continue</strong> : Feedback loop avec experts humains et scoring de confiance</li>
           <li><strong>Observabilité</strong> : Dashboards et métriques en temps réel</li>
         </ul>
@@ -219,6 +223,8 @@
         <h3>Cas d'usage</h3>
         <ul>
           <li>Diagnostic N3 automatique BRASIL (DslamClosed, UnknownMRT, BusinessRuleViolation…)</li>
+          <li>Classification automatique de tickets d'incidents par cause (<code>inc_cause</code>) avec le classifieur hybride FAISS</li>
+          <li>Correction et révision manuelle des prédictions ML avec carte contextuelle (<code>user_sig</code>, <code>inc_solution</code>)</li>
           <li>Support technique niveau 1, 2 et 3</li>
           <li>Analyse d'incidents et corrélation avec tickets Jira</li>
           <li>Documentation automatique de code legacy</li>
@@ -864,6 +870,77 @@ RETURN t.name</code></pre>
         </ul>
       </section>
       
+      <!-- Classification ML -->
+      <section id="classification-ml">
+        <h2>🤖 Classification ML Hybride</h2>
+        <p>Le module Classification ML permet d'entraîner un classifieur automatique sur vos tickets d'incidents et de prédire la cause de nouveaux tickets en temps réel. Il combine <strong>FAISS</strong> (similarité sémantique), <strong>TF-IDF avec boost de mots-clés métier</strong> et un pipeline 9 étapes pour maximiser la précision.</p>
+
+        <h3>Pipeline hybride (9 étapes)</h3>
+        <ol>
+          <li><strong>Upload</strong> : Téléversement du CSV de tickets (jusqu'à 50 000 lignes)</li>
+          <li><strong>Prepare</strong> : Normalisation, déduplication, nettoyage des valeurs vides</li>
+          <li><strong>Train</strong> : Entraînement TF-IDF + FAISS sur la colonne texte choisie, avec boost de mots-clés métier BRASIL</li>
+          <li><strong>Predict</strong> : Prédiction par similarité FAISS (cosinus) + score TF-IDF combiné</li>
+          <li><strong>Threshold</strong> : Filtrage des prédictions sous le seuil de confiance configuré</li>
+          <li><strong>Correction interactive</strong> : Révision manuelle des prédictions incertaines</li>
+          <li><strong>Export</strong> : Export CSV avec prédictions et scores de confiance</li>
+          <li><strong>Feedback loop</strong> : Les corrections enrichissent le jeu d'entraînement</li>
+          <li><strong>Re-train</strong> : Re-entraînement incrémental avec les corrections accumulées</li>
+        </ol>
+
+        <h3>Paramètres d'entraînement (UI)</h3>
+        <p>Depuis l'onglet <strong>Entraînement</strong> du module Classification ML, trois paramètres sont configurables :</p>
+        <table>
+          <thead><tr><th>Paramètre</th><th>Valeur par défaut</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Colonne à prédire (label)</strong></td><td><code>cause</code></td><td>Colonne du CSV contenant les étiquettes de classification (ex: <code>inc_cause</code>, <code>cause_canonique</code>)</td></tr>
+            <tr><td><strong>Colonne texte source</strong></td><td>Auto-détection</td><td>Colonne utilisée pour extraire le texte d'entraînement. Si vide, la priorité est : <code>text_ml_postmortem</code> → <code>texte_complet</code> → <code>user_sig</code> → <code>inc_solution</code> → <code>inc_resume</code> → <code>description</code></td></tr>
+            <tr><td><strong>Max Features (TF-IDF)</strong></td><td>5 000</td><td>Taille du vocabulaire TF-IDF. Plage : 1 000 – 20 000. Guidé par des hints dynamiques : ⚡ Rapide (≤2 000), ✅ Recommandé &lt;500 tickets (≤7 000), 🎯 Optimal grands datasets (&gt;7 000)</td></tr>
+          </tbody>
+        </table>
+
+        <div class="alert alert-info">
+          <div class="alert-title">💡 Recommandation pour BRASIL (222 tickets)</div>
+          Choisir <code>user_sig</code> comme colonne texte source + <code>inc_cause</code> comme colonne label + Max Features à <strong>3 000–5 000</strong> (hint : ✅ Recommandé pour &lt;500 tickets).
+        </div>
+
+        <h3>Classifieur hybride FAISS</h3>
+        <p>Le classifieur combine deux approches complémentaires :</p>
+        <table>
+          <thead><tr><th>Approche</th><th>Modèle</th><th>Rôle</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Sémantique</strong></td><td>FAISS + <code>paraphrase-multilingual-MiniLM-L12-v2</code> (dim=384)</td><td>Similarité cosinus sur embeddings multilingues — capture le sens même avec des variations orthographiques</td></tr>
+            <tr><td><strong>Lexical</strong></td><td>TF-IDF (sklearn)</td><td>Poids des termes dans le vocabulaire — rapide et robuste sur petits datasets</td></tr>
+            <tr><td><strong>Keyword boost</strong></td><td>Dictionnaire métier BRASIL</td><td>Surpoids des termes critiques (<code>DSLAM</code>, <code>MRT</code>, <code>vlan</code>, <code>débit</code>…) pour orienter la classification</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Carte de correction</h3>
+        <p>Pour chaque prédiction sous le seuil de confiance, une carte de correction s'affiche avec :</p>
+        <ul>
+          <li><strong><code>user_sig</code></strong> : Signature utilisateur / résumé du ticket (colonne principale affichée)</li>
+          <li><strong><code>inc_solution</code></strong> : Solution apportée à l'incident — contexte clé pour la correction</li>
+          <li><strong>Prédiction actuelle</strong> avec score de confiance et badge coloré (vert/orange/rouge)</li>
+          <li><strong>Sélecteur de classe</strong> : Toutes les classes disponibles pour corriger la prédiction</li>
+        </ul>
+
+        <h3>Métriques de qualité</h3>
+        <table>
+          <thead><tr><th>Métrique</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Coverage</strong></td><td>% de tickets prédits au-dessus du seuil de confiance. 7.7% à seuil=0.5 sur 222 tickets BRASIL (21 classes granulaires)</td></tr>
+            <tr><td><strong>Accepted</strong></td><td>Nombre de prédictions acceptées sans correction</td></tr>
+            <tr><td><strong>Training count</strong></td><td>Nombre d'exemples d'entraînement par classe</td></tr>
+            <tr><td><strong>Threshold</strong></td><td>Seuil de confiance minimum (0.0 – 1.0, défaut : 0.5)</td></tr>
+          </tbody>
+        </table>
+
+        <div class="alert alert-warning">
+          <div class="alert-title">⚠️ Coverage faible ?</div>
+          Avec 21 classes et 222 tickets (~10 exemples/classe), la coverage est naturellement basse. Pour améliorer : baisser le seuil à 0.3, augmenter les données d'entraînement, ou regrouper les classes similaires.
+        </div>
+      </section>
+
       <!-- API Auth -->
       <section id="api-auth">
         <h2>🔐 Authentification API</h2>
@@ -1017,6 +1094,100 @@ RETURN t.name</code></pre>
             <span class="endpoint-path">/api/v1/chat/message</span>
           </div>
           <p>Chat avec diagnostic N3 intégré — retourne <code>procedure_id</code> et <code>exceptions_detected</code> en plus de la réponse LLM</p>
+        </div>
+      </section>
+
+      <!-- API Classification ML -->
+      <section id="api-classification-ml">
+        <h2>🤖 Classification ML API</h2>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/classification-ml/upload</span>
+          </div>
+          <p>Upload d'un fichier CSV de tickets pour démarrer une session de classification</p>
+          <h4>Body (multipart/form-data)</h4>
+          <pre><code>file: tickets.csv  (champ fichier)</code></pre>
+          <h4>Réponse</h4>
+          <pre><code>{
+  "session_id": "4204e7cc-48b2-431b-9327-837b1ca31c2c",
+  "rows": 222,
+  "columns": ["inc_cause", "user_sig", "inc_solution", ...]
+}</code></pre>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/classification-ml/prepare</span>
+          </div>
+          <p>Normalise et prépare les données de la session courante</p>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/classification-ml/train</span>
+          </div>
+          <p>Entraîne le classifieur hybride FAISS + TF-IDF sur la session courante</p>
+          <h4>Body</h4>
+          <pre><code>{
+  "label_col": "inc_cause",
+  "text_col": "user_sig",
+  "max_features": 5000,
+  "use_cause_hint": false,
+  "session_id": "4204e7cc-..."
+}</code></pre>
+          <h4>Réponse</h4>
+          <pre><code>{
+  "classes": 21,
+  "training_count": 2,
+  "trained_at": "2026-03-08T00:23:36",
+  "text_col_used": "user_sig"
+}</code></pre>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/classification-ml/predict-session</span>
+          </div>
+          <p>Lance la prédiction sur tous les tickets de la session courante</p>
+          <h4>Body</h4>
+          <pre><code>{
+  "threshold": 0.5
+}</code></pre>
+          <h4>Réponse</h4>
+          <pre><code>{
+  "predictions": [...],
+  "accepted": 17,
+  "coverage": 0.077,
+  "threshold": 0.5
+}</code></pre>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/classification-ml/correct</span>
+          </div>
+          <p>Soumet une correction manuelle pour une prédiction</p>
+          <h4>Body</h4>
+          <pre><code>{
+  "ticket_id": "INC-0042",
+  "predicted_label": "DSLAM_CLOSED",
+  "corrected_label": "MRT_NOT_FOUND",
+  "confidence": 0.42
+}</code></pre>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/v1/classification-ml/status</span>
+          </div>
+          <p>Statut du modèle courant — classes entraînées, date, colonne texte utilisée</p>
         </div>
       </section>
 

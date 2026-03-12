@@ -115,7 +115,7 @@
   <section class="hero">
       <div class="hero-content">
       <h1>AI Support Agent</h1>
-      <p>Assistant intelligent N3 pour diagnostiquer, analyser et résoudre les incidents BRASIL en temps réel</p>
+      <p>Assistant intelligent N3 pour diagnostiquer, analyser, classer et résoudre les incidents BRASIL — avec Classification ML Hybride (FAISS + TF-IDF + keyword boost)</p>
       <div class="hero-cta">
         <a href="#features" class="btn btn-primary">Découvrir</a>
         <a href="#workflow" class="btn btn-secondary">Comment ça marche</a>
@@ -168,6 +168,16 @@
           <div class="feature-icon">✅</div>
           <h3>Validation Continue</h3>
           <p>Amélioration itérative grâce aux retours d'experts et aux métriques de qualité en temps réel.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <h3>Classification ML Hybride</h3>
+          <p>Classifie automatiquement vos tickets par cause métier grâce à un pipeline 9 étapes combinant FAISS (sémantique), TF-IDF et keyword boost BRASIL. Colonne texte source et max_features configurables depuis l'UI.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">✏️</div>
+          <h3>Correction Interactive</h3>
+          <p>Carte de correction contextuelle affichant <code>user_sig</code> et <code>inc_solution</code> pour chaque prédiction incertaine. Seuil de confiance ajustable, feedback loop automatique pour améliorer le modèle.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">📊</div>
@@ -238,11 +248,19 @@
         </div>
         <div class="timeline-item">
           <div class="timeline-content">
-            <h3>7. Validation</h3>
-            <p>Revue humaine, corrections persistées et amélioration continue basée sur les feedbacks et le re-training du trust score.</p>
+            <h3>7. Classification ML Hybride</h3>
+            <p>Upload CSV → préparation → entraînement FAISS + TF-IDF sur la colonne texte choisie (<code>user_sig</code>, <code>inc_solution</code>…) → prédictions avec score de confiance → correction interactive via carte contextuelle.</p>
           </div>
           <div class="timeline-dot"></div>
           <div class="timeline-content" style="opacity:0"></div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-content" style="opacity:0"></div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <h3>8. Validation</h3>
+            <p>Revue humaine, corrections persistées et amélioration continue basée sur les feedbacks et le re-training du trust score.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -308,6 +326,15 @@
           </ul>
         </div>
         <div class="arch-card">
+          <h3>Classification ML</h3>
+          <ul>
+            <li>FAISS (cosinus, dim=384)</li>
+            <li>TF-IDF + keyword boost</li>
+            <li>MiniLM-L12-v2 embeddings</li>
+            <li>9-step hybrid pipeline</li>
+          </ul>
+        </div>
+        <div class="arch-card">
           <h3>LLM &amp; IA</h3>
           <ul>
             <li>Groq API (inference)</li>
@@ -338,12 +365,15 @@
         <div class="tech-badge">FastAPI</div>
         <div class="tech-badge">React</div>
         <div class="tech-badge">TypeScript</div>
+        <div class="tech-badge">FAISS</div>
+        <div class="tech-badge">scikit-learn</div>
         <div class="tech-badge">Qdrant</div>
         <div class="tech-badge">PostgreSQL</div>
         <div class="tech-badge">Redis</div>
         <div class="tech-badge">Docker</div>
         <div class="tech-badge">Groq</div>
         <div class="tech-badge">SentenceTransformers</div>
+        <div class="tech-badge">MiniLM-L12-v2</div>
         <div class="tech-badge">HDBSCAN</div>
         <div class="tech-badge">TailwindCSS</div>
         <div class="tech-badge">Vite</div>
@@ -364,7 +394,15 @@
         </div>
         <div class="stat-card">
           <div class="stat-number">30+</div>
-          <div class="stat-label">Classificateurs d’erreurs BRASIL</div>
+          <div class="stat-label">Classificateurs d'erreurs BRASIL</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">21</div>
+          <div class="stat-label">Classes ML (inc_cause BRASIL)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">9</div>
+          <div class="stat-label">Étapes pipeline ML hybride</div>
         </div>
         <div class="stat-card">
           <div class="stat-number">1 133</div>
