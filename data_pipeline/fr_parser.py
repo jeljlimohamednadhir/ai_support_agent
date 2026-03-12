@@ -17,7 +17,7 @@ except ImportError:
     sys.exit(1)
 
 
-FR_DIR = Path(__file__).parents[1] / "backend" / "FR"
+FR_DIR = Path(os.environ.get("FR_DIR_OVERRIDE", "") or Path(__file__).parents[1] / "backend" / "FR")
 OUTPUT_FILE = Path(__file__).parent / "output" / "fr_parsed.json"
 
 

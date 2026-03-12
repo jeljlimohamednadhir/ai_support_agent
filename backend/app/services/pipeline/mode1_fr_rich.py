@@ -25,7 +25,8 @@ class FrRichPipeline:
     def __init__(self, app_context: ApplicationContext, vector_service: VectorService):
         self.ctx = app_context
         self.vector_service = vector_service
-        self.collection = f"{app_context.qdrant_collection_prefix or app_context.id.lower() + '_'}knowledge"
+        _override = (app_context.extra_config or {}).get("knowledge_collection")
+        self.collection = _override or f"{app_context.qdrant_collection_prefix or app_context.id.lower() + '_'}knowledge"
 
     async def search(
         self,
