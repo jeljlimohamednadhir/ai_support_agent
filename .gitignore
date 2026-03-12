@@ -9,6 +9,7 @@ uvicorn_out.txt
 uvicorn_err.txt
 backend/uvicorn.err
 backend/uvicorn.out
+backend/data/uploads/
 
 # Environnement
 .env
