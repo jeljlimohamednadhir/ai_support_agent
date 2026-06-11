@@ -84,4 +84,55 @@ data_pipeline/output/
 analyze_nd.py
 poll_training.py
 uvicorn_out.txt
+
+# Production source code (too large, sensitive)
+brasil-default/
+
+# SQL session files
+*.session.sql
+*.session.results.json
+*.session.results.md
+brasil_prod.session.*
+ai_support_agent.session.sql
+
+# Large data archives
+*.zip
+*.tar.gz
+data/1-ReferenceDocumentaire.zip
+
+# Runtime / generated data
+data/uploads/
+data/2-Soutien/
+data/historical_analysis/
+data/scenarios/
+backend/data/learning/
+backend/data/model_versions/
+backend/data/fr_structured/
+
+# Generated knowledge base (auto-built from source)
+backend/app/services/chatbot/brasil_schema_knowledge.py
+
+# Generated code maps
+docs/code_map*.dot
+docs/code_map*.md
+docs/code_map*.html
+docs/code_map_label_map.csv
+
+# Utility / one-shot scripts at root
+execute_brasil_session.py
+extract_schema_knowledge.py
+build_brasil_knowledge_pack.py
+
+# Demo outputs (generated)
+demo/full_responses.json
+demo/gap_report.md
+demo/corrections_applied.md
+demo/remaining_risks.md
+
+# Docs history
+docs/history/
+docs/vendor/
+
+# Ticket export
+Ticket_Brasil.csv
 uvicorn_err.txt
