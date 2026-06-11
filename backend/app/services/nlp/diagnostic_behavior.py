@@ -107,6 +107,7 @@ class ConversationState:
     locked_systems: List[str] = field(default_factory=list)   # systems in scope
     excluded_systems: List[str] = field(default_factory=list) # systems to exclude from RAG
     turn_count: int = 0
+    resolution_confirmation_count: int = 0        # auto-close after 3 confirmations
     # Maps a normalised question fingerprint → how many times it was asked unanswered.
     # Used to detect loops (same question repeated ≥ 2 times) and trigger escalation.
     repeated_questions: Dict[str, int] = field(default_factory=dict)
@@ -134,6 +135,7 @@ class ConversationState:
             d = json.loads(s)
             d["phase"] = ConversationPhase(d.get("phase", "diagnostic"))
             d.setdefault("repeated_questions", {})
+            d.setdefault("resolution_confirmation_count", 0)
             return cls(**d)
         except Exception:
             return cls()
@@ -166,6 +168,25 @@ _TRANSITION_TO_CLOSING = re.compile(
     r"probl[eè]me\s+r[eé]gl[eé]|r[eé]solution\s+confirm[eé]e|"
     r"notifier\s+(le\s+)?(client|d[eé]positaire)|communiquer\s+(la\s+)?r[eé]solution|"
     r"cl[oô]ture\s+du\s+ticket|ticket\s+[àa]\s+fermer|on\s+peut\s+fermer)\b",
+    re.IGNORECASE,
+)
+
+# ── Resolution confirmation signals (soft — counted, not immediate close) ──
+RESOLUTION_CONFIRMATION_SIGNALS = re.compile(
+    r"\b("
+    r"c'est\s+bon|c\s+est\s+bon|"
+    r"[cç]a\s+marche(\s+maintenant)?|[cç]a\s+fonctionne(\s+maintenant)?|"
+    r"le\s+probl[eè]me\s+est\s+r[eé]solu|"
+    r"probl[eè]me\s+r[eé]solu|incident\s+r[eé]solu|"
+    r"tout\s+(fonctionne|marche)\s+(bien|correctement|maintenant)?|"
+    r"ok\s+merci|merci\s+[cç]a|[cç]a\s+a\s+march[eé]|"
+    r"resolved|fixed|it\s+works(\s+now)?|"
+    r"le\s+service\s+(est\s+)?r[eé]tabli|service\s+r[eé]tabli|"
+    r"les\s+clients\s+sont\s+(de\s+nouveau\s+)?connect[eé]s|"
+    r"tout\s+est\s+(rentré|rentr[eé])\s+dans\s+l'ordre|"
+    r"nichts?\s+mehr|probl[eè]me\s+corrig[eé]|"
+    r"la\s+correction\s+a\s+fonctionn[eé]"
+    r")\b",
     re.IGNORECASE,
 )
 
@@ -301,14 +322,29 @@ def detect_intent_override(message: str) -> Optional[str]:
 def detect_phase_transition(
     current_phase: ConversationPhase,
     message: str,
+    conv_state: Optional["ConversationState"] = None,
 ) -> Optional[ConversationPhase]:
     """
     Returns the new phase if a transition is detected, else None.
     CLOSING can be triggered from any phase.
+
+    Auto-close logic: after 3 resolution confirmation signals (c'est bon,
+    ça marche, le problème est résolu, etc.) the phase moves to CLOSING
+    even without an explicit closure keyword.
     """
-    # Closing override — can come from any phase
+    # Hard closing keywords — immediate
     if _TRANSITION_TO_CLOSING.search(message):
         return ConversationPhase.CLOSING
+
+    # Soft resolution confirmation counter
+    if RESOLUTION_CONFIRMATION_SIGNALS.search(message):
+        if conv_state is not None:
+            conv_state.resolution_confirmation_count += 1
+            if conv_state.resolution_confirmation_count >= 3:
+                return ConversationPhase.CLOSING
+        # Single soft signal from RESOLUTION phase also triggers close
+        if current_phase == ConversationPhase.RESOLUTION:
+            return ConversationPhase.CLOSING
 
     if current_phase == ConversationPhase.DIAGNOSTIC:
         if _TRANSITION_TO_INVESTIGATION.search(message):
@@ -463,12 +499,66 @@ PERSONA_INSTRUCTION = (
     "5. Tu ne supprimes JAMAIS les informations critiques fournies par l'utilisateur — elles doivent apparaître dans ta réponse.\n"
     "6. Tu adaptes ton ton au destinataire : technique pour un ingénieur, simple et bienveillant pour un dépositaire.\n"
     "Tu ne génères jamais d'informations que tu n'as pas vérifiées dans la base de connaissances.\n"
+    "\n"
+    "RÈGLES ANTI-HALLUCINATION ABSOLUES :\n"
+    "- INTERDIT : inventer des commandes CLI comme `brasil-cli --clean-resource`, `sync_brasil_resources.sh` ou tout outil non officiel.\n"
+    "- INTERDIT : écrire des requêtes SQL avec des placeholders comme [NOM_EQPT], [VALEUR_CORRECTE], [DSLAM_XX]. Si la valeur est inconnue, dis-le explicitement.\n"
+    "- INTERDIT : conclure 'Statut final : Résolu' sans confirmation explicite de l'utilisateur.\n"
+    "- INTERDIT : proposer une procédure générique si le système a retourné 'aucune procédure validée pour ce cas'.\n"
+    "- Si tu n'as pas d'information sur un ND/IAR spécifique dans les données fournies, réponds : 'Aucune donnée disponible pour ce ND dans les sources consultées.'\n"
+    "- INTERDIT : inventer des noms de menus IHM, chemins de navigation (ex: 'Maintenance > Nettoyage des ressources'), onglets ou boutons dans l'interface BRASIL qui ne figurent pas EXPLICITEMENT dans les documents FR fournis.\n"
+    "- INTERDIT : décrire des étapes de procédure dans l'interface graphique si la FR correspondante n'est pas dans le contexte fourni. Dans ce cas, réponds : 'La procédure exacte n'est pas documentée dans la base de connaissance disponible. Consultez la FR correspondante.'\n"
+    "- INTERDIT : citer une référence de FR (ex: FR-BRASIL-VLAN-001) si elle n'apparaît pas dans les documents fournis en contexte.\n"
+    "\n"
+    "CONNAISSANCE DU SCHÉMA BRASIL (noms de tables réels) :\n"
+    "- Équipements: t_equipments (eqpt_state VARCHAR(1): A=Actif F=Fermé P=EnCours C=Créé S=Suppression)\n"
+    "- Cartes: t_cards (card_cardno SMALLINT, card_type, card_prodstate)\n"
+    "- Ports: t_ports (port_portno SMALLINT, port_outstate, port_occupstate SMALLINT)\n"
+    "- Noeuds: t_nodes (node_name42c VARCHAR(20), node_basecode42c VARCHAR(6)) — PAS de node_status ni node_type\n"
+    "- ND (numéro abonné 9 chiffres): stocké dans t_tpinitialstates.tpis_nd, t_mrt_access_dslams.dsam_nd, t_makingfiles.mkfl_nd — PAS de table t_nd\n"
+    "- Plans de transfert: t_tps (tp_dslamn VARCHAR(20), tp_state SMALLINT: 1=EnCours 2=Exécuté 3=Erreur, tp_creationdate INTEGER) — PAS de tp_status ni tp_dslam_n\n"
+    "- États TP initiaux: t_tpinitialstates (tpis_nd VARCHAR(15), tpis_vpinitial, tp_id) — PAS de t_tp_initial_states\n"
+    "- MRT DSLAM: t_mrt_access_dslams (dsam_nd, dsam_crcmrtid, dsam_farid, a_eqpt_id, oper_id)\n"
+    "- MRT SAM: t_service_access_mrts (sram_circuitid, eqpt_id) et t_service_access_mrt_vers (samv_currentstate)\n"
+    "- VLANs: dans t_res_prod_controlables (rpct_type='V', rpct_cclname, rpct_vlaninterne) — PAS de table t_vlans\n"
+    "- VC/VP: t_d_rscvcis (rscv_state, rpct_id) — PAS de t_virtual_channels\n"
+    "- Liens média: t_medialinks (mdlk_state SMALLINT, a_eqpt_id, b_eqpt_id) — PAS de t_media_links\n"
+    "- Dossiers réalisation: t_makingfiles (mkfl_nd, mkfl_state: 0=CREATED 1=ALLOCATED 2=IN_PROGRESS 3=PARTLY_CONFIGURED 4=CONFIGURED 5=AVP)\n"
+    "- EPC: t_epcs + t_epcvers (epcv_currentstate, epcv_versno) + t_epcversimpacts\n"
+    "- Scripts ES: t_es (es_state: 1=running 2=error 3=warning 4=done, es_equipment) + t_eslogs + t_estypes\n"
+    "- Opérateurs: t_operators (oper_id, oper_name) — PAS de table t_mrtdslam\n"
+    "\n"
+    "WORKFLOW UMI-EPC (ManageUMIepcBusinessImpl) :\n"
+    "- createMovement(DEM, serviceName) → makeMouvement(epcVersKey, typeMvt) → completeMovement(mvt, dem, epcVersInfo)\n"
+    "- Types de mouvement: C=Création, M=Modification, X=Suppression\n"
+    "- MakingFile states: 0=CREATED → 1=ALLOCATED → 2=IN_PROGRESS → 3=PARTLY_CONFIGURED → 4=CONFIGURED → 5=AVP\n"
+    "- EPT state calculé depuis MakingFileState + EPCState (voir MakingFileUtils.getEptStateByMfAndEpcVersState)\n"
+    "- En cas de suppression: completeDeletionMovement vide les champs profils si dslamaccessmrt n'existe plus\n"
+    "- FarId ajouté au mouvement si MRT état CONFIGURED et dossier avec farId présent\n"
 )
 
 
-# ─────────────────────────────────────────────
-# Anti-Hallucination Rules
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# BRASIL Database Schema — Complete Table Inventory (authoritative runtime list)
+# Loaded from the generated brasil_schema_knowledge pack (brasil_prod extraction).
+# Falls back to the static list defined earlier in this file.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _build_brasil_schema_tables() -> list:
+    """Return the canonical BRASIL table list, preferring the live schema pack."""
+    try:
+        from app.services.chatbot.brasil_schema_knowledge import REAL_SQL_TABLES
+        if REAL_SQL_TABLES:
+            return sorted(REAL_SQL_TABLES)
+    except Exception:
+        pass
+    # Fallback: return the static list already defined above (line ~39)
+    return list(BRASIL_SCHEMA_TABLES)
+
+
+# Overwrite the earlier static list with the authoritative version
+BRASIL_SCHEMA_TABLES = _build_brasil_schema_tables()
+
 
 ANTI_HALLUCINATION_RULES = {
     "rule_never_generate_steps": (
@@ -528,6 +618,18 @@ ANTI_HALLUCINATION_RULES = {
         "masque de nommage erroné, script bloqué), cette information DOIT apparaître "
         "explicitement et textuellement dans ta réponse finale. "
         "Ne la reformule pas de manière vague, ne l'omets pas, ne la remplace pas."
+    ),
+    "rule_never_invent_ids": (
+        "RÈGLE ABSOLUE — INTERDICTION D'INVENTER DES IDENTIFIANTS : "
+        "INTERDIT de générer des identifiants de procédure fictifs de type BRASIL-XXX-NNN "
+        "(ex: BRASIL-RESTORE-001, BRASIL-ROLLBACK-002, BRASIL-VALIDATE-003). "
+        "INTERDIT de générer des numéros FR fictifs de type FR-NNNN "
+        "(ex: FR-1234, FR-5678, FR-9012) qui ne figurent PAS dans le contexte KB fourni. "
+        "INTERDIT de générer des requêtes SQL (SELECT, INSERT, UPDATE, DELETE, JOIN). "
+        "INTERDIT d'inclure une section 'Raisonnement', 'Thinking' ou toute section "
+        "explicitant ton processus de réflexion interne — réponds directement sans préambule. "
+        "Si aucune procédure validée n'existe pour ce cas, déclare-le EXPLICITEMENT "
+        "et recommande d'escalader vers l'équipe N3."
     ),
 }
 
@@ -1182,11 +1284,26 @@ class DiagnosticReasoner:
                     "**Confiance** : MOYEN — informations à valider par l'ingénieur N3 avant toute action corrective",
                 ])
             else:
-                prompt_parts.append(
-                    "\nUTILISE UNIQUEMENT les informations ci-dessus pour formuler ta réponse. "
-                    "Cite toujours la source (procedure_id ou cluster_id). "
-                    "Présente les étapes de manière structurée et numérotée."
-                )
+                prompt_parts.extend([
+                    "",
+                    "UTILISE UNIQUEMENT les informations présentes dans le contexte KB ci-dessus.",
+                    "Cite les sources par leur snippet_id ou procedure_id EXACT (tel qu'il apparaît dans le KB).",
+                    "Présente les étapes de manière structurée et numérotée.",
+                    "",
+                    "⛔ INTERDICTIONS ABSOLUES — HALLUCINATION D'IDENTIFIANTS :",
+                    "- INTERDIT d'inventer des identifiants de procédure de type BRASIL-XXX-NNN",
+                    "  (ex: BRASIL-RESTORE-001, BRASIL-ROLLBACK-002, BRASIL-VALIDATE-003).",
+                    "- INTERDIT d'inventer des numéros FR de type FR-NNNN",
+                    "  (ex: FR-1234, FR-5678, FR-9012) qui ne figurent PAS dans le contexte KB.",
+                    "- INTERDIT de générer des requêtes SQL (SELECT, INSERT, UPDATE, DELETE).",
+                    "- Si aucune procédure validée n'existe dans le contexte pour ce cas :",
+                    "  → Déclare-le EXPLICITEMENT : 'Aucune procédure validée dans la base de connaissances.'",
+                    "  → Recommande de créer une FR ou d'escalader vers l'équipe N3.",
+                    "  → NE GÉNÈRE PAS de procédure fictive sous aucun prétexte.",
+                    "",
+                    "⛔ INTERDIT d'inclure une section 'Raisonnement', 'Thinking' ou toute section",
+                    "   expliquant ton processus de réflexion interne — réponds directement.",
+                ])
 
         # ── Branch C: no KB, not contextual → knowledge_gap or intent-specific fallback ─
         else:

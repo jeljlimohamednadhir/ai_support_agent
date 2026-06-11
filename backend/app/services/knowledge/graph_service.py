@@ -35,6 +35,9 @@ class GraphService:
     _instance = None
     _driver = None
     _initialized = False
+    _connect_attempted = False        # True after first connect attempt (success or fail)
+    _last_connect_attempt: float = 0  # epoch seconds of last attempt
+    _RETRY_INTERVAL: float = 60.0    # retry after 60 s of cooldown
     
     def __new__(cls, uri: str = "bolt://localhost:7687", auth: tuple = ("neo4j", "password")):
         """Implémenter le singleton"""
@@ -57,10 +60,19 @@ class GraphService:
         Tente la connexion Neo4j avec un pré-test TCP (<2s) pour éviter
         que le handshake Bolt ne bloque plusieurs minutes.
         Appelé à la demande par is_available() et driver.
+        Ne tente qu'une seule fois, puis attend _RETRY_INTERVAL secondes avant
+        de réessayer — évite les blocages répétés sur /ready.
         """
         if GraphService._driver is not None:
             return self._available
+        import time as _time
         import socket as _sock
+        # Honour cooldown: don't retry within _RETRY_INTERVAL seconds
+        now = _time.monotonic()
+        if GraphService._connect_attempted and (now - GraphService._last_connect_attempt) < GraphService._RETRY_INTERVAL:
+            return False
+        GraphService._connect_attempted = True
+        GraphService._last_connect_attempt = now
         try:
             host = self.uri.replace("bolt://", "").replace("bolt+s://", "").split(":")[0]
             raw = self.uri.split("//")[-1]
@@ -88,8 +100,17 @@ class GraphService:
         return self._available
 
     def is_available(self) -> bool:
-        """Vérifier si Neo4j est disponible — déclenche la connexion lazy si pas encore faite."""
-        if not self._available and GraphService._driver is None:
+        """Vérifier si Neo4j est disponible — retourne le statut mis en cache.
+        Tente la connexion une seule fois, puis attend _RETRY_INTERVAL secondes
+        avant de réessayer (évite les blocages répétés sur /ready)."""
+        if self._available:
+            return True
+        if GraphService._driver is not None:
+            return self._available
+        # If we haven't tried yet, or the cooldown has expired, probe once
+        import time as _time
+        now = _time.monotonic()
+        if not GraphService._connect_attempted or (now - GraphService._last_connect_attempt) >= GraphService._RETRY_INTERVAL:
             self._connect()
         return getattr(self, '_available', False)
 

@@ -23,7 +23,7 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Short-lived access tokens
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES  # From .env (default 10080 = 7 days)
 REFRESH_TOKEN_EXPIRE_DAYS = 7    # Longer-lived refresh tokens
 
 

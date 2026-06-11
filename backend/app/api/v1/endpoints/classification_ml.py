@@ -261,7 +261,30 @@ async def train_model(request: TrainRequest):
                 detail=f"Not enough labeled data: {len(df_train)} rows (minimum 10)"
             )
         
-        # Prepare text column (do NOT overwrite auto-detected text_col here)
+        # Validate class count — sklearn needs at least 2 distinct classes
+        n_classes = df_train[request.label_col].nunique()
+        if n_classes < 2:
+            unique_val = df_train[request.label_col].dropna().unique().tolist()
+            # Suggest columns with 2-50 unique values (good ML candidates)
+            alt_cols = [
+                c for c in df.columns
+                if c != request.label_col
+                and 2 <= int(df[c].nunique()) <= 50
+                and df[c].dtype == object
+            ][:8]
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": (
+                        f"La colonne '{request.label_col}' ne contient qu'une seule valeur "
+                        f"('{unique_val[0] if unique_val else '?'}') — "
+                        f"impossible d'entraîner un classificateur sans au moins 2 classes."
+                    ),
+                    "suggestion": "Choisissez une colonne avec au moins 2 classes différentes, par exemple 'categorie_intelligente'.",
+                    "colonnes_candidates": alt_cols,
+                }
+            )
+
         if request.use_cause_hint and request.label_col == "categorie_intelligente":
             df_train["text_for_ml"] = (
                 df_train[text_col].fillna("") + 
@@ -336,13 +359,9 @@ async def predict_session(request: PredictRequest):
         raise HTTPException(status_code=400, detail="No data uploaded — please upload a CSV first")
 
     try:
-        # Find text column — prefer the prepared ML columns, then BRASIL raw fields
-        text_col_priority = [
-            "text_ml_postmortem", "texte_complet",
-            "user_sig", "inc_solution", "inc_resume",
-            "resume", "description",
-        ]
-        text_col = next((c for c in text_col_priority if c in target_df.columns), None)
+        # Find text column
+        text_cols = ["text_ml_postmortem", "texte_complet", "resume", "description"]
+        text_col = next((c for c in text_cols if c in target_df.columns), None)
         if text_col is None:
             # fallback to first string column
             text_col = next((c for c in target_df.columns if target_df[c].dtype == object), None)
@@ -642,11 +661,28 @@ async def get_pareto(column: str):
     if _uploaded_data is None:
         raise HTTPException(status_code=400, detail="No data uploaded")
     
-    if column not in _uploaded_data.columns:
-        raise HTTPException(status_code=400, detail=f"Column '{column}' not found")
+    # Fallback automatique si la colonne demandée n'existe pas dans les données
+    CANDIDATE_COLS = [
+        column,  # demandée en premier
+        "cause_canonique", "categorie_intelligente", "predicted_label",
+        "label", "categorie", "category", "inc_cause", "groupe", "application",
+    ]
+    resolved_col = next((c for c in CANDIDATE_COLS if c in _uploaded_data.columns), None)
+
+    # Dernier recours : prendre la première colonne de type object (texte/catégorie)
+    if resolved_col is None:
+        text_cols = [c for c in _uploaded_data.columns if _uploaded_data[c].dtype == object]
+        if text_cols:
+            resolved_col = text_cols[0]
+            logger.info(f"[Pareto] Colonne '{column}' introuvable, fallback sur '{resolved_col}'")
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Aucune colonne catégorielle disponible. Colonnes : {list(_uploaded_data.columns)[:10]}"
+            )
     
     try:
-        series = _uploaded_data[column].fillna("Non classé").replace("", "Non classé")
+        series = _uploaded_data[resolved_col].fillna("Non classé").replace("", "Non classé")
         vc = series.value_counts()
         
         total = vc.sum()
@@ -663,7 +699,7 @@ async def get_pareto(column: str):
                 cumulative=round(cumulative, 2)
             ))
         
-        return ParetoResponse(items=items, column=column)
+        return ParetoResponse(items=items, column=resolved_col)
     
     except Exception as e:
         logger.error(f"Pareto analysis failed: {e}")
@@ -1350,21 +1386,10 @@ async def index_tickets_for_rag(background_tasks: BackgroundTasks):
 
 
 def _index_tickets_background(df: pd.DataFrame, vector_service):
-    """Tâche arrière-plan: indexer tickets dans Qdrant — enrichis par SmartN3Parser + labels ML"""
+    """Tâche arrière-plan: indexer tickets dans Qdrant avec labels ML enrichis"""
     try:
         from qdrant_client.models import PointStruct
         import uuid as uuid_lib
-
-        # ── Smart N3 Parser (nouveau parseur) ────────────────────────────────
-        try:
-            from app.services.nlp.smart_n3_parser import SmartN3Parser
-            smart_parser = SmartN3Parser()
-            _smart_parser_ok = True
-            logger.info("[RAG-Tickets] SmartN3Parser chargé")
-        except Exception as e_parser:
-            smart_parser = None
-            _smart_parser_ok = False
-            logger.warning(f"[RAG-Tickets] SmartN3Parser indisponible: {e_parser} — mode legacy")
 
         # ── Pré-classification ML pour enrichir le payload ───────────────────
         ml_labels: dict = {}
@@ -1384,50 +1409,25 @@ def _index_tickets_background(df: pd.DataFrame, vector_service):
                 if text_col:
                     preds, confs, _ = _ml_classifier.predict(
                         df[text_col].fillna("").astype(str),
-                        threshold=0.0
+                        threshold=0.0  # all tickets regardless of confidence
                     )
                     for idx_pos, idx_label in enumerate(df.index):
                         ml_labels[idx_label] = str(preds[idx_pos])
                         ml_confidences[idx_label] = float(confs[idx_pos])
             except Exception as ml_err:
-                logger.warning(f"[RAG-Tickets] ML pre-labeling failed: {ml_err}")
+                logger.warning(f"[RAG] ML pre-labeling failed: {ml_err}")
 
         points = []
-        smart_enriched = 0
         for idx, row in df.iterrows():
-            text = str(row.get('text_for_rag', ''))
+            # Générer embedding
+            text = row['text_for_rag']
             embedding = vector_service.embedding_model.encode(text).tolist()
 
+            # Extraire mois depuis date_debut si disponible
             date_str = str(row.get('date_debut', ''))
             mois = date_str[:7] if len(date_str) >= 7 else ""
 
-            # ── Enrichissement SmartN3Parser ──────────────────────────────
-            n3_payload: dict = {}
-            if _smart_parser_ok and smart_parser and text.strip():
-                try:
-                    ctx = smart_parser.parse(text)
-                    n3_payload = {
-                        "n3_intent":             ctx.intent.value if ctx.intent else "",
-                        "n3_intent_confidence":  round(ctx.intent_confidence, 3),
-                        "n3_error_codes":        ctx.error_codes,
-                        "n3_primary_error":      ctx.primary_error_code or "",
-                        "n3_system":             ctx.primary_system or "",
-                        "n3_nd_number":          ctx.nd_number or "",
-                        "n3_nro":                ctx.nro_name or "",
-                        "n3_dslam":              ctx.dslam_name or "",
-                        "n3_entities":           {k: v for k, v in (ctx.entities or {}).items()},
-                        "n3_confidence":         round(ctx.confidence, 3),
-                        "n3_trust_score":        round(ctx.trust_score, 3),
-                        "n3_completeness":       round(ctx.completeness_score, 3),
-                        "n3_encoding_fixed":     ctx.encoding_fixed,
-                        "n3_requires_review":    ctx.requires_human_review,
-                        "n3_rag_query":          ctx.rag_query_primary or "",
-                        "n3_suggested_fr_ids":   ctx.suggested_fr_ids or [],
-                    }
-                    smart_enriched += 1
-                except Exception as pe:
-                    logger.debug(f"[RAG-Tickets] parse error idx={idx}: {pe}")
-
+            # Construire point Qdrant avec payload enrichi ML
             point = PointStruct(
                 id=str(uuid_lib.uuid4()),
                 vector=embedding,
@@ -1441,289 +1441,35 @@ def _index_tickets_background(df: pd.DataFrame, vector_service):
                     "date":            date_str,
                     "mois":            mois,
                     "groupe":          str(row.get('groupe', '')),
+                    # ML enrichment fields
                     "predicted_label": ml_labels.get(idx, ""),
                     "confidence":      round(ml_confidences.get(idx, 0.0), 3),
                     "mttr":            float(row.get('mttr', 0)) if pd.notna(row.get('mttr', None)) else None,
                     "indexed_at":      pd.Timestamp.now().isoformat(),
-                    "source_type":     "ticket",
-                    **n3_payload,
                 }
             )
             points.append(point)
 
+            # Batch upsert every 100 tickets
             if len(points) >= 100:
-                vector_service.client.upsert(collection_name="tickets_rag", points=points)
-                logger.info(f"[RAG-Tickets] Batch upsert: {len(points)} tickets")
+                vector_service.client.upsert(
+                    collection_name="tickets_rag",
+                    points=points
+                )
+                logger.info(f"[RAG] Indexed {len(points)} tickets batch")
                 points = []
 
+        # Upsert remaining
         if points:
-            vector_service.client.upsert(collection_name="tickets_rag", points=points)
-
-        logger.info(
-            f"[RAG-Tickets] Indexation terminée: {len(df)} tickets "
-            f"({smart_enriched} enrichis N3, {len(ml_labels)} labels ML)"
-        )
-
-    except Exception as e:
-        logger.error(f"[RAG-Tickets] Indexation failed: {e}")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Endpoint — RAG multi-source : Tickets + FR + Logs
-# ─────────────────────────────────────────────────────────────────────────────
-
-class IndexRAGRequest(BaseModel):
-    source: str = "all"          # "tickets" | "fr" | "logs" | "all"
-    fr_dir: Optional[str] = None  # override FR directory path
-    log_file: Optional[str] = None  # override log file path
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Endpoint — Upload source files (FR .docx / Logs .log)
-# ─────────────────────────────────────────────────────────────────────────────
-
-@router.post("/upload-source")
-async def upload_source_files(
-    source: str = Query(..., description="fr | logs"),
-    files: List[UploadFile] = File(...),
-):
-    """
-    Sauvegarde les fichiers uploadés dans le bon dossier serveur :
-      - source=fr   → backend/FR/ (.docx / .pdf)
-      - source=logs → data_pipeline/input/ (.log / .txt / .gz)
-    Retourne les chemins des fichiers sauvegardés.
-    """
-    from pathlib import Path as _Path
-    base = _Path(__file__).parents[5]
-
-    if source == "fr":
-        dest_dir = base / "backend" / "FR"
-        allowed = {".docx", ".doc", ".pdf"}
-    elif source == "logs":
-        dest_dir = base / "data_pipeline" / "input"
-        allowed = {".log", ".txt", ".gz"}
-    else:
-        raise HTTPException(status_code=400, detail="source doit être : fr | logs")
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    saved: list = []
-    errors: list = []
-
-    for f in files:
-        suffix = _Path(f.filename or "").suffix.lower()
-        if suffix not in allowed:
-            errors.append(f"{f.filename}: extension non autorisée ({suffix})")
-            continue
-        dest = dest_dir / (f.filename or f"file_{uuid.uuid4().hex}{suffix}")
-        try:
-            content = await f.read()
-            dest.write_bytes(content)
-            saved.append(str(dest))
-            logger.info(f"[upload-source] Sauvegardé: {dest}")
-        except Exception as e:
-            errors.append(f"{f.filename}: {e}")
-
-    return {
-        "source": source,
-        "saved": len(saved),
-        "paths": saved,
-        "errors": errors,
-        "dest_dir": str(dest_dir),
-        "message": f"{len(saved)} fichier(s) sauvegardé(s) dans {dest_dir.name}/",
-    }
-
-
-@router.post("/index-rag")
-async def index_rag_multi_source(
-    background_tasks: BackgroundTasks,
-    source_param: Optional[str] = Query(None, alias="source"),
-    request: Optional[IndexRAGRequest] = None,
-):
-    # Accept source from query param (?source=logs) OR JSON body
-    if request is not None:
-        source = request.source.lower()
-        fr_dir = request.fr_dir
-        log_file_path = request.log_file
-    else:
-        source = (source_param or "all").lower()
-        fr_dir = None
-        log_file_path = None
-    """
-    Lance l'indexation RAG pour une ou toutes les sources de données :
-      - tickets : CSV uploadé → SmartN3Parser → Qdrant collection tickets_rag
-      - fr      : fichiers .docx FR → fr_parser → fr_normalizer → Qdrant brasil_canonical
-      - logs    : log_events.json → log_knowledge_extractor → Qdrant brasil_log_patterns
-      - all     : les 3 sources en séquence
-    Accepte source en query param (?source=logs) OU en body JSON.
-    """
-    if source not in ("tickets", "fr", "logs", "all"):
-        raise HTTPException(status_code=400, detail="source doit être : tickets | fr | logs | all")
-
-    results: dict = {"source": source, "launched": [], "errors": []}
-
-    # ── Tickets ──────────────────────────────────────────────────────────────
-    if source in ("tickets", "all"):
-        if _uploaded_data is None:
-            if source == "tickets":
-                raise HTTPException(status_code=400, detail="Aucun CSV chargé — importez un fichier CSV d'abord")
-            results["errors"].append("tickets: aucun CSV chargé")
-        else:
-            try:
-                from app.services.knowledge.vector_service import VectorService
-                from qdrant_client.models import Distance, VectorParams
-                vs = VectorService()
-                if vs.is_available():
-                    try:
-                        vs.client.get_collection("tickets_rag")
-                    except Exception:
-                        vs.client.create_collection(
-                            collection_name="tickets_rag",
-                            vectors_config=VectorParams(size=384, distance=Distance.COSINE),
-                        )
-
-                    df = _uploaded_data.copy()
-                    text_cols = [c for c in ['inc_resume', 'resume', 'inc_cause', 'cause',
-                                              'inc_solution', 'solution', 'inc_commentaire',
-                                              'commentaire', 'signalement', 'description', 'text']
-                                 if c in df.columns]
-                    if text_cols:
-                        df['text_for_rag'] = df[text_cols].fillna('').agg(' | '.join, axis=1)
-                        background_tasks.add_task(_index_tickets_background, df, vs)
-                        results["launched"].append({
-                            "source": "tickets",
-                            "count": len(df),
-                            "collection": "tickets_rag",
-                            "parser": "SmartN3Parser",
-                        })
-                    else:
-                        results["errors"].append("tickets: aucune colonne texte détectée")
-                else:
-                    results["errors"].append("tickets: VectorService Qdrant non disponible")
-            except Exception as e:
-                results["errors"].append(f"tickets: {e}")
-
-    # ── FR (.docx) ───────────────────────────────────────────────────────────
-    if source in ("fr", "all"):
-        background_tasks.add_task(_index_fr_background, fr_dir)
-        results["launched"].append({
-            "source": "fr",
-            "collection": "brasil_canonical",
-            "note": "pipeline fr_parser → fr_normalizer → Qdrant",
-        })
-
-    # ── Logs ─────────────────────────────────────────────────────────────────
-    if source in ("logs", "all"):
-        background_tasks.add_task(_index_logs_background, log_file_path)
-        results["launched"].append({
-            "source": "logs",
-            "collection": "brasil_log_patterns",
-            "note": "pipeline log_ingester → log_knowledge_extractor → Qdrant",
-        })
-
-    results["message"] = (
-        f"{len(results['launched'])} source(s) lancée(s) en arrière-plan"
-        + (f" | {len(results['errors'])} erreur(s)" if results["errors"] else "")
-    )
-    return results
-
-
-def _index_fr_background(fr_dir_override: Optional[str] = None):
-    """Arrière-plan: parse les FR .docx et les indexe dans brasil_canonical."""
-    import subprocess, sys, os
-    from pathlib import Path as _Path
-    pipeline_dir = _Path(__file__).parents[5] / "data_pipeline"
-    # FR dir: use override if provided, otherwise default backend/FR/
-    fr_dir = fr_dir_override or str(_Path(__file__).parents[4] / "FR")
-    env = {**os.environ, "FR_DIR_OVERRIDE": fr_dir}
-    try:
-        scripts = [
-            (pipeline_dir / "fr_parser.py",    "FR Parser"),
-            (pipeline_dir / "fr_quality_scorer.py", "FR Quality Scorer"),
-            (pipeline_dir / "fr_normalizer.py", "FR Normalizer"),
-            (pipeline_dir / "rag_indexer.py",   "RAG Indexer (FR)"),
-        ]
-        for script, label in scripts:
-            if not script.exists():
-                logger.warning(f"[RAG-FR] Script introuvable: {script}")
-                continue
-            r = subprocess.run(
-                [sys.executable, str(script)],
-                cwd=str(pipeline_dir.parent),
-                capture_output=True, text=True, encoding="utf-8", timeout=300,
-                env={**env, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"},
+            vector_service.client.upsert(
+                collection_name="tickets_rag",
+                points=points
             )
-            if r.returncode != 0:
-                logger.error(f"[RAG-FR] {label} failed: {r.stderr[-500:]}")
-                return
-            logger.info(f"[RAG-FR] {label} OK")
-        logger.info("[RAG-FR] Pipeline FR terminé → brasil_canonical")
+
+        logger.info(f"[RAG] Indexation complete: {len(df)} tickets (ML labels: {len(ml_labels)})")
+
     except Exception as e:
-        logger.error(f"[RAG-FR] Pipeline failed: {e}")
-
-
-def _index_logs_background(log_file_override: Optional[str] = None):
-    """Arrière-plan: ingère les logs et les indexe dans brasil_log_patterns."""
-    import subprocess, sys, os
-    from pathlib import Path as _Path
-    pipeline_dir = _Path(__file__).parents[5] / "data_pipeline"
-    # Upload-source saves to backend/data_pipeline/input/
-    input_dirs = [
-        pipeline_dir / "input",                                    # data_pipeline/input/
-        _Path(__file__).parents[4] / "data_pipeline" / "input",   # backend/data_pipeline/input/
-    ]
-    try:
-        scripts: list = []
-
-        # Determine log file(s) to ingest
-        if log_file_override:
-            log_files = [_Path(log_file_override)]
-        else:
-            # Pick any .log / .txt in both input dirs
-            log_files = []
-            for input_dir in input_dirs:
-                if input_dir.exists():
-                    log_files += [f for f in input_dir.glob("*.log") if f.stat().st_size > 0]
-                    log_files += [f for f in input_dir.glob("*.txt") if f.stat().st_size > 0]
-            # Deduplicate by name
-            seen = set()
-            log_files = [f for f in log_files if f.name not in seen and not seen.add(f.name)]
-
-        if log_files:
-            for lf in log_files:
-                scripts.append((
-                    pipeline_dir / "log_ingester.py",
-                    ["--log-file", str(lf)],
-                    f"Log Ingester ({lf.name})",
-                ))
-        else:
-            # Fallback: use pre-existing log_events.json if available
-            log_events = pipeline_dir / "output" / "log_events.json"
-            if log_events.exists():
-                scripts.append((pipeline_dir / "log_ingester.py", [], "Log Ingester (log_events)"))
-            else:
-                logger.warning("[RAG-Logs] Aucun fichier log trouvé — skip log_ingester")
-
-        scripts.append((pipeline_dir / "log_knowledge_extractor.py", [], "Log Knowledge Extractor"))
-        scripts.append((pipeline_dir / "knowledge_indexer.py", ["--collection", "logs"], "Knowledge Indexer (logs)"))
-
-        for script, args, label in scripts:
-            if not script.exists():
-                logger.warning(f"[RAG-Logs] Script introuvable: {script}")
-                continue
-            env_utf8 = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
-            r = subprocess.run(
-                [sys.executable, str(script)] + args,
-                cwd=str(pipeline_dir.parent),
-                capture_output=True, text=True, encoding="utf-8", timeout=600,
-                env=env_utf8,
-            )
-            if r.returncode != 0:
-                logger.error(f"[RAG-Logs] {label} failed: {r.stderr[-500:]}")
-                return
-            logger.info(f"[RAG-Logs] {label} OK")
-        logger.info("[RAG-Logs] Pipeline Logs terminé → brasil_log_patterns")
-    except Exception as e:
-        logger.error(f"[RAG-Logs] Pipeline failed: {e}")
+        logger.error(f"[RAG] Indexation failed: {e}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2183,3 +1929,430 @@ async def detect_distribution_drift():
         ),
     }
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /health — Statut global du module ML
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/health")
+async def ml_health():
+    """Santé globale du module ML : modèle, données, corrections, preprocessing."""
+    model_info = _ml_classifier.get_info()
+    n_corrections = 0
+    if CORRECTIONS_LOG.exists():
+        try:
+            with open(CORRECTIONS_LOG, "r", encoding="utf-8") as f:
+                n_corrections = sum(1 for line in f if line.strip())
+        except Exception:
+            pass
+
+    data_loaded = _uploaded_data is not None or bool(_uploaded_sessions)
+
+    try:
+        from app.services.ml_preprocessing import telecom_preprocessor
+        preprocessing_ok = True
+        preprocessing_test = telecom_preprocessor.preprocess("DSLAM OP49MAB11 bloqué erreur 1300")
+    except Exception:
+        preprocessing_ok = False
+        preprocessing_test = None
+
+    status = "healthy"
+    issues = []
+    if not model_info.get("exists"):
+        status = "degraded"
+        issues.append("Aucun modèle entraîné — veuillez uploader un CSV et entraîner le modèle")
+    if not data_loaded:
+        issues.append("Aucune donnée en mémoire — veuillez uploader un CSV")
+    if n_corrections >= AUTO_RETRAIN_THRESHOLD:
+        issues.append(f"{n_corrections} corrections en attente (seuil: {AUTO_RETRAIN_THRESHOLD})")
+
+    return {
+        "status": status,
+        "issues": issues,
+        "model": {
+            "exists": model_info.get("exists", False),
+            "trained_at": model_info.get("trained_at"),
+            "macro_f1": model_info.get("macro_f1"),
+            "training_count": model_info.get("training_count", 0),
+            "classes_count": len(model_info.get("classes", [])),
+            "recommended_threshold": model_info.get("recommended_threshold", 0.7),
+            "hybrid_embeddings": model_info.get("use_sentence_transformers", False),
+        },
+        "data": {
+            "loaded": data_loaded,
+            "sessions_count": len(_uploaded_sessions),
+            "rows": len(_uploaded_data) if _uploaded_data is not None else 0,
+        },
+        "corrections": {
+            "pending": n_corrections,
+            "auto_retrain_threshold": AUTO_RETRAIN_THRESHOLD,
+            "retrain_eligible": n_corrections >= AUTO_RETRAIN_THRESHOLD,
+        },
+        "preprocessing": {
+            "available": preprocessing_ok,
+            "sample_output": preprocessing_test,
+        },
+        "auto_retrain": _auto_retrain_status,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /stats — Statistiques consolidées du module ML
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/stats")
+async def ml_stats():
+    """Statistiques consolidées : modèle + données + drift + corrections."""
+    model_info = _ml_classifier.get_info()
+    current_dist: dict = {}
+    coverage = None
+
+    if _uploaded_data is not None:
+        label_col = model_info.get("label_col") or ""
+        if label_col and label_col in _uploaded_data.columns:
+            vc = _uploaded_data[label_col].value_counts(normalize=True)
+            current_dist = {str(k): round(float(v) * 100, 1) for k, v in vc.items()}
+        if "categorie_intelligente" in _uploaded_data.columns:
+            total = len(_uploaded_data)
+            predicted = _uploaded_data["categorie_intelligente"].replace("", pd.NA).dropna()
+            coverage = round(len(predicted) / total * 100, 1) if total > 0 else None
+
+    n_corrections = 0
+    corrections_by_label: dict = {}
+    if CORRECTIONS_LOG.exists():
+        try:
+            corrs = []
+            with open(CORRECTIONS_LOG, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        corrs.append(json.loads(line))
+                    except Exception:
+                        pass
+            n_corrections = len(corrs)
+            for c in corrs:
+                lbl = c.get("corrected_label", "?")
+                corrections_by_label[lbl] = corrections_by_label.get(lbl, 0) + 1
+        except Exception:
+            pass
+
+    return {
+        "model": {
+            "exists": model_info.get("exists", False),
+            "macro_f1": model_info.get("macro_f1"),
+            "training_count": model_info.get("training_count", 0),
+            "n_samples": model_info.get("n_samples"),
+            "classes": model_info.get("classes", []),
+            "trained_at": model_info.get("trained_at"),
+            "recommended_threshold": model_info.get("recommended_threshold", 0.7),
+            "label_distribution_training": model_info.get("label_distribution", {}),
+        },
+        "predictions": {
+            "coverage_pct": coverage,
+            "current_distribution": current_dist,
+        },
+        "corrections": {
+            "total": n_corrections,
+            "by_label": corrections_by_label,
+            "auto_retrain_threshold": AUTO_RETRAIN_THRESHOLD,
+            "retrain_eligible": n_corrections >= AUTO_RETRAIN_THRESHOLD,
+        },
+        "auto_retrain": _auto_retrain_status,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /model-versions — Historique et rollback
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/model-versions")
+async def list_model_versions():
+    """Liste des versions sauvegardées du modèle."""
+    versions = _ml_classifier.list_versions()
+    return {
+        "versions": versions,
+        "count": len(versions),
+        "current": _ml_classifier.model_card.get("training_count") if _ml_classifier.model_card else None,
+    }
+
+
+@router.post("/model-versions/{version_dir}/rollback")
+async def rollback_model(version_dir: str):
+    """Recharge le modèle depuis une version précédente (rollback)."""
+    success = _ml_classifier.rollback_to_version(version_dir)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Version '{version_dir}' introuvable ou rollback échoué")
+    return {
+        "message": f"Rollback vers '{version_dir}' effectué",
+        "model_info": _ml_classifier.get_info(),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /export-csv — Export dataset avec prédictions
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/export-csv")
+async def export_csv_endpoint(session_id: Optional[str] = Query(default=None)):
+    """Export CSV du dataset courant (avec categorie_intelligente si disponible)."""
+    global _uploaded_data, _uploaded_sessions
+    target_df = None
+    if session_id:
+        if session_id in _uploaded_sessions:
+            target_df = _uploaded_sessions[session_id]
+        else:
+            target_df = _reload_session_from_disk(session_id)
+    if target_df is None:
+        target_df = _uploaded_data
+    if target_df is None:
+        raise HTTPException(status_code=400, detail="No data loaded")
+    try:
+        buf = io.BytesIO()
+        target_df.fillna("").to_csv(buf, index=False, encoding="utf-8-sig")
+        buf.seek(0)
+        filename = f"tickets_ml_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.csv"
+        return StreamingResponse(
+            buf,
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /preprocessing/test — Débugger le preprocessor
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post("/preprocessing/test")
+async def test_preprocessing(payload: dict):
+    """Teste le TelecomPreprocessor sur un texte (pour debug et validation)."""
+    text = payload.get("text", "")
+    if not text:
+        raise HTTPException(status_code=400, detail="Field 'text' is required")
+    try:
+        from app.services.ml_preprocessing import TelecomPreprocessor
+        return TelecomPreprocessor().analyze(text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ACTIVE LEARNING QUEUE  /active-learning/...
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/active-learning/queue")
+async def get_active_learning_queue(
+    status: str = Query("pending", description="pending | reviewed | corrected | dismissed | all"),
+    max_items: int = Query(50, ge=1, le=200),
+):
+    """Retourne la file de review active learning (tickets à faible confiance)."""
+    try:
+        from app.services.ml_production import active_learning_queue
+        items = active_learning_queue.get_queue(status=status, max_items=max_items)
+        return {"items": items, "count": len(items), "status_filter": status}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/active-learning/{item_id}/review")
+async def review_active_learning_item(item_id: str, payload: dict):
+    """
+    Soumet une correction depuis la file active learning.
+    body: { corrected_label: str, status: "corrected" | "dismissed", reviewer?: str }
+    """
+    try:
+        from app.services.ml_production import active_learning_queue
+        status         = payload.get("status", "corrected")
+        corrected_label = payload.get("corrected_label")
+        reviewer       = payload.get("reviewer")
+        if status not in ("corrected", "dismissed", "reviewed"):
+            raise HTTPException(status_code=400, detail="status doit être corrected | dismissed | reviewed")
+        updated = active_learning_queue.update_item(
+            item_id=item_id,
+            status=status,
+            corrected_label=corrected_label,
+            reviewer=reviewer,
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail=f"Item '{item_id}' introuvable dans la file")
+        # Si correction validée, l'ajouter aux corrections ML
+        if status == "corrected" and corrected_label:
+            classifier.save_correction(
+                text=payload.get("text", ""),
+                predicted_label=payload.get("predicted_label", ""),
+                corrected_label=corrected_label,
+            )
+        return {"status": "ok", "item_id": item_id, "action": status}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/active-learning/stats")
+async def get_active_learning_stats():
+    """Statistiques de la file active learning."""
+    try:
+        from app.services.ml_production import active_learning_queue
+        return active_learning_queue.get_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGING RETRAINING  /staging/...
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post("/staging/train-candidate")
+async def staging_train_candidate(payload: dict):
+    """
+    Entraîne un modèle candidat dans staging/ (sans toucher à la production).
+    body: { session_id?: str, text_col?: str, label_col: str }
+    """
+    from app.services.ml_production import staging_retrainer
+
+    session_id = payload.get("session_id")
+    text_col   = payload.get("text_col", "text")
+    label_col  = payload.get("label_col", "label")
+
+    # Récupérer les données
+    df = None
+    if session_id and session_id in _uploaded_sessions:
+        df = _uploaded_sessions[session_id]
+    elif session_id:
+        df = _reload_session_from_disk(session_id)
+    if df is None:
+        df = _uploaded_data
+    if df is None:
+        raise HTTPException(status_code=400, detail="Aucune donnée disponible — uploader un CSV d'abord")
+    if label_col not in df.columns:
+        raise HTTPException(status_code=400, detail=f"Colonne '{label_col}' introuvable dans le dataset")
+
+    try:
+        # Corrections disponibles
+        corrections_log = Path("data/corrections_log.jsonl")
+        result = staging_retrainer.train_candidate(
+            df=df, text_col=text_col, label_col=label_col,
+            corrections_log=corrections_log if corrections_log.exists() else None,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/staging/compare")
+async def staging_compare():
+    """Compare le modèle candidat staging vs production et retourne la décision de promotion."""
+    try:
+        from app.services.ml_production import staging_retrainer
+        return staging_retrainer.compare()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/staging/promote")
+async def staging_promote():
+    """Promeut le candidat en production si les métriques le permettent."""
+    try:
+        from app.services.ml_production import staging_retrainer
+        result = staging_retrainer.promote()
+        if result.get("status") == "REJECTED":
+            raise HTTPException(status_code=409, detail={
+                "status": "REJECTED",
+                "reasons": result.get("reasons", []),
+            })
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/staging/history")
+async def staging_history(max_events: int = Query(20, ge=1, le=100)):
+    """Historique des opérations staging (train / compare / promote)."""
+    try:
+        from app.services.ml_production import staging_retrainer
+        return {"events": staging_retrainer.get_history(max_events=max_events)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ERROR ANALYSIS  /error-analysis
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/error-analysis")
+async def error_analysis(session_id: Optional[str] = Query(None)):
+    """
+    Analyse des erreurs de classification sur les données actuelles :
+    top FP/FN par classe, confusion hotspots, classes critiques.
+    Nécessite des colonnes 'predicted_label' et 'true_label' (ou équivalents) dans le session df.
+    """
+    from app.services.ml_production import error_analyzer
+
+    # Récupérer le DataFrame
+    df = None
+    if session_id and session_id in _uploaded_sessions:
+        df = _uploaded_sessions[session_id]
+    elif session_id:
+        df = _reload_session_from_disk(session_id)
+    if df is None:
+        df = _uploaded_data
+
+    if df is None:
+        raise HTTPException(status_code=400, detail="Aucune donnée chargée")
+
+    # Détecter automatiquement les colonnes true vs pred
+    TRUE_COLS = ["true_label", "label", "categorie", "category", "classe", "class"]
+    PRED_COLS = ["predicted_label", "prediction", "pred_label", "label_pred"]
+
+    true_col = next((c for c in TRUE_COLS if c in df.columns), None)
+    pred_col = next((c for c in PRED_COLS if c in df.columns), None)
+    text_col = next((c for c in ["text", "description", "resume", "summary"] if c in df.columns), None)
+    conf_col = next((c for c in ["confidence", "score", "proba"] if c in df.columns), None)
+
+    if true_col is None or pred_col is None:
+        # Tenter de retourner une analyse depuis les corrections loguées
+        corrections_file = Path("data/corrections_log.jsonl")
+        if corrections_file.exists():
+            rows = []
+            with open(corrections_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        rows.append(json.loads(line))
+                    except Exception:
+                        pass
+            if rows:
+                cdf = pd.DataFrame(rows)
+                cdf = cdf.dropna(subset=["predicted_label", "corrected_label"])
+                if len(cdf) >= 5:
+                    result = error_analyzer.analyze(
+                        y_true=cdf["corrected_label"].astype(str).tolist(),
+                        y_pred=cdf["predicted_label"].astype(str).tolist(),
+                        texts=cdf["text"].fillna("").astype(str).tolist() if "text" in cdf.columns else None,
+                    )
+                    result["source"] = "corrections_log"
+                    return result
+        raise HTTPException(
+            status_code=400,
+            detail=f"Colonnes true/pred introuvables dans le dataset. "
+                   f"Colonnes disponibles : {list(df.columns)[:10]}"
+        )
+
+    try:
+        result = error_analyzer.analyze_from_session(
+            df=df,
+            true_col=true_col,
+            pred_col=pred_col,
+            text_col=text_col,
+            conf_col=conf_col,
+        )
+        if result is None:
+            raise HTTPException(status_code=400, detail="Données insuffisantes pour l'analyse (min 5 exemples labélisés)")
+        result["source"] = f"session:{true_col}/{pred_col}"
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

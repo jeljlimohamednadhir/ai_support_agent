@@ -33,12 +33,42 @@ KNOWN_SYSTEMS = {
     "ADELIA":    ["adelia", "adélia"],
     "SCA":       ["sca"],
     "ORCHESTRA": ["orchestra", "orchestration"],
+    # Telecom network node types (abbreviated)
+    "NRO":       ["nro"],          # Nœud de Raccordement Optique
+    "OLT":       ["olt"],          # Optical Line Terminal
+    "SRO":       ["sro"],          # Sous-Répartiteur Optique
+    "OND":       ["ond"],          # Optical Network Device
+    "SL":        ["sl ", " sl"],   # Service Layer
+    "AVP":       ["avp"],          # Accès Very high speed Profile / AVP constraint code
+}
+
+# Telecom abbreviation → canonical entity label
+TELECOM_ALIASES: dict[str, str] = {
+    "avp": "AVP",
+    "nro": "NRO",
+    "olt": "OLT",
+    "sro": "SRO",
+    "ond": "OND",
+    "sl":  "SL",
+    "dslam": "DSLAM",
+    "ont": "ONT",
+    "bng": "BNG",
+    "bras": "BRAS",
+    "gpon": "GPON",
+    "xgspon": "XGSPON",
+    "ftth": "FTTH",
+    "ftto": "FTTO",
 }
 
 # ─────────────────────────────────────────────
 # Intent catalog + detection patterns
 # ─────────────────────────────────────────────
 INTENT_PATTERNS: Dict[str, List[str]] = {
+    # ── PRIORITY 0: Telecom node order / command blocked ────────────────────
+    "order_blocked":        ["avp", "nro", "olt", "sro", "ond",
+                              "bloque commande", "commande bloquée", "commande bloque",
+                              "ordre bloqué", "ordre bloque", "bloquée", "blocage commande",
+                              "commande en attente", "commande échouée", "commande échoue"],
     # ── PRIORITY 1: Diagnostic request ──────────────────────────────────────
     "diagnostic_request":   ["erreur", "error", "exception", "b4002", "4002", "1300", "1002", "42c",
                               "internal error", "ora-", "code retour", "bloqué", "blocage", "impossible",
@@ -157,6 +187,7 @@ INTENT_PATTERNS: Dict[str, List[str]] = {
 
 # Intent priority order (lower index = higher priority)
 INTENT_PRIORITY: List[str] = [
+    "order_blocked",            # PRIORITY 0 — telecom node command blocked
     "explain_data_model",       # PRIORITY 1 — specific table/schema requests
     "explain_jira",             # PRIORITY 2 — explain a specific Jira card
     "find_jira",                # PRIORITY 3 — search Jira
@@ -180,7 +211,18 @@ ENTITY_PATTERNS = {
     "equipment_id":     [
         r"\b([A-Z]{2,5}[A-Z0-9]{2,4}\d{3,6})\b",    # NBLIL701, DSLAM1234
         r"\b(NRO[-\s]?[A-Z0-9]{3,12})\b",             # NRO-XYZ
+        r"\b(SRO[-\s]?[A-Z0-9]{3,12})\b",             # SRO-XYZ
+        r"\b(OLT[-\s]?[A-Z0-9]{3,12})\b",             # OLT-XYZ
+        r"\b(OND[-\s]?[A-Z0-9]{3,12})\b",             # OND-XYZ
         r"\b(BAS[-\s]?[A-Z0-9]{3,12})\b",             # BAS-XYZ
+    ],
+    "telecom_node":     [
+        r"\b(avp)\b",                                   # AVP node/constraint
+        r"\b(nro)\b",                                   # Nœud Raccordement Optique
+        r"\b(olt)\b",                                   # Optical Line Terminal
+        r"\b(sro)\b",                                   # Sous-Répartiteur Optique
+        r"\b(ond)\b",                                   # Optical Network Device
+        r"\b(sl)\b",                                    # Service Layer
     ],
     "error_code":       [
         r"\b(B\d{4})\b",
@@ -388,7 +430,12 @@ class TicketEnricher:
                 for match in matches:
                     value = match.strip() if isinstance(match, str) else match[0].strip()
                     if value and len(value) >= 2:
-                        entities.append(ExtractedEntity(entity_type, value.upper(), 0.80))
+                        # Normalise telecom abbreviations to canonical label
+                        if entity_type == "telecom_node":
+                            value = TELECOM_ALIASES.get(value.lower(), value.upper())
+                        else:
+                            value = value.upper()
+                        entities.append(ExtractedEntity(entity_type, value, 0.80))
 
         # Action verbs
         action_verbs = ["supprimer", "créer", "modifier", "lancer", "vérifier",

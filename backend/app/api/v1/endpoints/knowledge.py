@@ -2,11 +2,31 @@
 Knowledge Graph Endpoints
 Manages the knowledge base
 """
+import json
+from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from app.schemas.knowledge import KnowledgeQuery, KnowledgeNode, GraphStats
 from app.services.knowledge_graph.graph_service import KnowledgeGraphService
 
 router = APIRouter()
+
+_DATA = Path(__file__).parents[4] / "data"
+
+
+@router.get("/brasil")
+async def get_brasil_presentation():
+    """
+    Retourne la présentation complète de BRASIL :
+    architecture, entités, processus métier, incidents fréquents,
+    procédures clés, systèmes connectés, contraintes techniques.
+    """
+    presentation_file = _DATA / "brasil_presentation.json"
+    if not presentation_file.exists():
+        raise HTTPException(status_code=404, detail="brasil_presentation.json introuvable")
+    try:
+        return json.loads(presentation_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/search")
@@ -48,13 +68,46 @@ async def get_relationships(entity: str, depth: int = 2):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/stats", response_model=GraphStats)
+@router.get("/stats")
 async def get_graph_stats():
-    """Get knowledge graph statistics"""
+    """Get knowledge graph statistics + vector store document count"""
     try:
+        from app.services.knowledge.manager import get_vector_service
+        vector_service = get_vector_service()
+        total_documents = 0
+        vector_collections = []
+        try:
+            if vector_service and vector_service.client:
+                col_info = vector_service.client.get_collections()
+                for col in col_info.collections:
+                    try:
+                        info = vector_service.client.get_collection(col.name)
+                        cnt = info.points_count or 0
+                        total_documents += cnt
+                        vector_collections.append({"name": col.name, "count": cnt})
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
         kg_service = KnowledgeGraphService()
-        stats = await kg_service.get_stats()
-        return stats
+        try:
+            graph_stats = await kg_service.get_stats()
+            total_nodes = graph_stats.total_nodes
+            total_relationships = graph_stats.total_relationships
+            node_types = graph_stats.node_types
+        except Exception:
+            total_nodes = 0
+            total_relationships = 0
+            node_types = {}
+
+        return {
+            "total_documents": total_documents,
+            "total_nodes": total_nodes,
+            "total_relationships": total_relationships,
+            "node_types": node_types,
+            "collections": vector_collections,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

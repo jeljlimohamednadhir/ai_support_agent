@@ -406,11 +406,19 @@ class DiagnosticEngine:
 
         # Infer additional codes from enriched entities
         if hasattr(enriched, "entities") and enriched.entities:
-            for ent_list in enriched.entities.values():
-                for ent in ent_list:
-                    if re.match(r"^\d{3,5}$|^B\d{4}$|^ORA-", str(ent)):
-                        if ent not in detected_codes:
-                            detected_codes.append(str(ent))
+            _ent_src = enriched.entities
+            # entities may be a List[ExtractedEntity] or Dict[str, List]
+            if isinstance(_ent_src, dict):
+                _flat_ents = [ent for ent_list in _ent_src.values() for ent in ent_list]
+            elif isinstance(_ent_src, list):
+                _flat_ents = _ent_src
+            else:
+                _flat_ents = []
+            for ent in _flat_ents:
+                _val = getattr(ent, 'value', ent) if hasattr(ent, 'value') else str(ent)
+                if re.match(r"^\d{3,5}$|^B\d{4}$|^ORA-", str(_val)):
+                    if str(_val) not in detected_codes:
+                        detected_codes.append(str(_val))
 
         # 3. Determine incident type
         incident_type = enriched.incident_type or ""

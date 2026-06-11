@@ -129,14 +129,28 @@ class IntelligenceOrchestrator:
         lines = [f"\n\n=== BASE DE CONNAISSANCE — {app_name} (Mode: {mode}) ===\n"]
         lines.append(f"Score de confiance global : {trust_val}/100\n")
 
+        # ── FR structurée : injecter la procédure en PREMIER et de façon saillante ─────
+        fr_blocks = [b for b in blocks if b.get("type") in ("partial_canonical", "ticket_cluster")
+                     and "fr_structured" in str(b.get("trust_badge", "") + str(b.get("content", "")[:50]))]
+        # Détecter les blocs contenant une vraie procédure FR structurée (résolution non vide)
+        procedure_blocks = [
+            b for b in blocks
+            if "Résolution" in b.get("content", "") or "Étapes de diagnostic" in b.get("content", "")
+               or "Requêtes SQL" in b.get("content", "")
+        ]
+        if procedure_blocks:
+            lines.append("⚠️ INSTRUCTION CRITIQUE : Une procédure N3 validée est disponible ci-dessous.")
+            lines.append("Tu DOIS l'utiliser comme base de ta réponse. Ne génère PAS de réponse générique.")
+            lines.append("Adapte les étapes à l'équipement mentionné par l'utilisateur.\n")
+
         for block in blocks:
             trust_badge = block.get("trust_badge", "")
             title = block.get("title", "")
             content = block.get("content", "")
 
-            lines.append(f"\n{'─' * 50}")
+            lines.append(f"\n{'\u2500' * 50}")
             lines.append(f"📌 {title} {trust_badge}")
-            lines.append(f"{'─' * 50}")
+            lines.append(f"{'\u2500' * 50}")
             lines.append(content)
 
         lines.append("\n=== FIN DU CONTEXTE ===\n")

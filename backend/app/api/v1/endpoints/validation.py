@@ -41,6 +41,18 @@ async def get_pending_validations(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/pending-count")
+async def get_pending_count(
+    service: ValidationService = Depends(get_validation_service)
+):
+    """Retourne le nombre de tâches de validation en attente (pour le dashboard)"""
+    try:
+        tasks = await service.get_pending_tasks(limit=500)
+        return {"count": len(tasks)}
+    except Exception as e:
+        return {"count": 0}
+
+
 @router.post("/submit")
 async def submit_validation(
     validation: ValidationResult,

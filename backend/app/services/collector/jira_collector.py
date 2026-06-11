@@ -290,7 +290,7 @@ class JiraCollector:
                 
                 # Tickets en cours
                 progress_result = self.jira_client.search_issues(
-                    'project = BRASIL AND status in ("In Progress", "In Development", "In Review") ORDER BY created DESC',
+                    'project = BRASIL AND status in ("In Progress", "In Development", "In Review", "Analysing", "Ready for test", "Ready for delivery") ORDER BY created DESC',
                     maxResults=1
                 )
                 stats.in_progress_issues = progress_result.total if hasattr(progress_result, 'total') else 0
@@ -298,7 +298,7 @@ class JiraCollector:
                 
                 # Tickets résolus
                 resolved_result = self.jira_client.search_issues(
-                    'project = BRASIL AND status = "Resolved" ORDER BY created DESC',
+                    'project = BRASIL AND status in ("Resolved", "Done") ORDER BY created DESC',
                     maxResults=1
                 )
                 stats.resolved_issues = resolved_result.total if hasattr(resolved_result, 'total') else 0
@@ -306,11 +306,31 @@ class JiraCollector:
                 
                 # Tickets fermés
                 closed_result = self.jira_client.search_issues(
-                    'project = BRASIL AND status in ("Closed", "Done", "Completed") ORDER BY created DESC',
+                    'project = BRASIL AND status in ("Closed", "Completed", "Cancelled") ORDER BY created DESC',
                     maxResults=1
                 )
                 stats.closed_issues = closed_result.total if hasattr(closed_result, 'total') else 0
                 logger.info(f"[SEARCH] {stats.closed_issues} tickets fermés")
+
+                # Répartition réelle par statut (status_breakdown)
+                try:
+                    # Récupérer jusqu'à 200 tickets pour calculer la distribution
+                    sample = self.jira_client.search_issues(
+                        'project = BRASIL ORDER BY updated DESC',
+                        maxResults=200,
+                        fields=['status']
+                    )
+                    breakdown: Dict[str, int] = {}
+                    for issue in sample:
+                        s = issue.fields.status.name if hasattr(issue.fields, 'status') else 'Unknown'
+                        breakdown[s] = breakdown.get(s, 0) + 1
+                    # Trier par count décroissant
+                    stats.status_breakdown = dict(
+                        sorted(breakdown.items(), key=lambda x: x[1], reverse=True)
+                    )
+                    logger.info(f"[SEARCH] Status breakdown: {stats.status_breakdown}")
+                except Exception as e_bd:
+                    logger.warning(f"[WARN] Status breakdown échoué: {e_bd}")
                 
             except Exception as e:
                 logger.error(f"[ERROR] Erreur comptage par statut: {e}")

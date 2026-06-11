@@ -1,0 +1,1 @@
+﻿2026-03-13 10:47:34,047 - app.core.llm_client - INFO - [OK] Client Groq initialise avec modele: qwen/qwen3-32b

@@ -67,7 +67,7 @@ class VectorService:
                 from qdrant_client.models import Distance, VectorParams
 
                 logger.info(f"Initialisation Qdrant sur {qdrant_host}:{qdrant_port}...")
-                VectorService._client = QdrantClient(host=qdrant_host, port=qdrant_port, timeout=5)
+                VectorService._client = QdrantClient(host=qdrant_host, port=qdrant_port, timeout=2)
                 
                 # Créer la collection pour le code si elle n'existe pas
                 try:
@@ -326,11 +326,26 @@ class VectorService:
 
             # Recherche fuzzy: extraire les mots-clés de la requête et chercher
             # les tables dont le nom contient ces mots-clés (FR→EN inclus)
+            # Blocklist: mots trop génériques qui matchent n'importe quelle table
+            _FUZZY_STOPWORDS = {
+                "date", "dates", "type", "types", "code", "codes", "nom", "noms",
+                "etat", "etats", "état", "états", "statut", "status", "label",
+                "liste", "listes", "list", "data", "info", "infos", "ligne",
+                "lignes", "valeur", "valeurs", "champ", "champs", "base",
+                "table", "tables", "numero", "numéro", "numero", "version",
+                "mode", "modes", "flag", "flags", "actif", "active",
+                "heure", "heures", "time", "year", "month", "jira", "ticket",
+                "carte", "message", "messages", "veux", "veut", "envoyé",
+                # bare years
+                *[str(y) for y in range(2000, 2035)],
+            }
             _fuzzy_keywords = set()
             for word in re.findall(r'\b\w{4,}\b', query_lower):
+                if word in _FUZZY_STOPWORDS:
+                    continue
                 _fuzzy_keywords.add(word)
                 en_word = _FR_TO_EN_TABLE_KEYWORDS.get(word)
-                if en_word:
+                if en_word and en_word not in _FUZZY_STOPWORDS:
                     _fuzzy_keywords.add(en_word)
 
             def _scroll_tables_by_keyword(keyword: str) -> list:
@@ -338,11 +353,15 @@ class VectorService:
                 try:
                     all_pts, _next = self.client.scroll(
                         collection_name="code_knowledge",
-                        scroll_filter={'must': [{'key': 'type', 'match': {'value': 'database_table'}}]},
+                        scroll_filter=None,
                         limit=200,
                         with_payload=True,
                     )
-                    return [p for p in all_pts if keyword in (p.payload.get('table_name') or '').lower()]
+                    return [
+                        p for p in all_pts
+                        if keyword in (p.payload.get('table_name') or '').lower()
+                        and (p.payload.get('table_name') or '').lower()
+                    ]
                 except Exception:
                     return []
 
@@ -474,10 +493,11 @@ class VectorService:
             True si succès
         """
         try:
+            from qdrant_client.models import Distance, VectorParams, PointStruct  # lazy
             # Créer collection documentation si elle n'existe pas
             try:
                 self.client.get_collection("documentation")
-            except:
+            except Exception:
                 self.client.create_collection(
                     collection_name="documentation",
                     vectors_config=VectorParams(size=384, distance=Distance.COSINE)

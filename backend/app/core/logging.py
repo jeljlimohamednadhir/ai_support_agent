@@ -17,12 +17,33 @@ _fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 
 class _SafeStreamHandler(logging.StreamHandler):
-    """StreamHandler qui ignore silencieusement les erreurs de flush (Windows/OneDrive)."""
+    """StreamHandler UTF-8 safe pour Windows (évite UnicodeEncodeError cp1252)."""
+    def __init__(self, stream=None):
+        super().__init__(stream)
+        # Forcer UTF-8 sur le stream si possible (Python 3.7+)
+        if hasattr(self.stream, 'reconfigure'):
+            try:
+                self.stream.reconfigure(encoding='utf-8', errors='replace')
+            except Exception:
+                pass
+
     def emit(self, record):
         try:
-            super().emit(record)
+            msg = self.format(record)
+            # Fallback : remplacer les caractères non-encodables
+            try:
+                stream = self.stream
+                stream.write(msg + self.terminator)
+                self.flush()
+            except UnicodeEncodeError:
+                safe_msg = msg.encode('utf-8', errors='replace').decode(
+                    self.stream.encoding or 'utf-8', errors='replace'
+                )
+                self.stream.write(safe_msg + self.terminator)
+                self.flush()
         except OSError:
             pass
+
     def flush(self):
         try:
             super().flush()

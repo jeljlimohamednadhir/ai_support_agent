@@ -52,11 +52,19 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"   [WARN] Jira init error: {e}")
 
-    # Initialiser le GraphService (Neo4j) — connexion lazy, pas de probe au démarrage
+    # Initialiser le GraphService (Neo4j) — probe TCP rapide au démarrage
     try:
         from app.services.knowledge.manager import get_graph_service
-        get_graph_service()  # instancie le singleton sans se connecter
-        print("   [OK] GraphService configuré (connexion lazy)")
+        _gs = get_graph_service()
+        if _gs:
+            import asyncio as _asyncio
+            _neo4j_ok = await _asyncio.get_event_loop().run_in_executor(None, _gs.is_available)
+            if _neo4j_ok:
+                print("   [OK] GraphService connecté à Neo4j")
+            else:
+                print("   [WARN] GraphService: Neo4j non disponible (mode dégradé)")
+        else:
+            print("   [WARN] GraphService non initialisé")
     except Exception as e:
         print(f"   [WARN] GraphService init error: {e}")
 
@@ -111,26 +119,32 @@ async def health_check():
 
 @app.get("/ready")
 async def readiness_check():
-    """Readiness check endpoint - vérifie si tous les services sont prêts"""
+    """Readiness check endpoint — retourne le statut mis en cache de chaque service.
+    N'effectue JAMAIS de nouvelle sonde bloquante : répond toujours en <50 ms."""
     from app.services.knowledge.vector_service import vector_service
     from app.services.collector.jira_collector import jira_collector
     from app.services.knowledge.manager import get_graph_service
-    
+
     graph_service = get_graph_service()
-    
+
+    # Read cached availability flags — no blocking I/O
+    qdrant_ok = getattr(vector_service, '_available', False)
+    jira_ok   = (jira_collector.jira_client is not None) if jira_collector else False
+    neo4j_ok  = getattr(graph_service, '_available', False) if graph_service else False
+
     services = {
-        "app": app_ready,
-        "qdrant": vector_service.is_available() if hasattr(vector_service, 'is_available') else False,
-        "jira": jira_collector.jira_client is not None if jira_collector else False,
-        "neo4j": graph_service.is_available() if graph_service else False
+        "app":    app_ready,
+        "qdrant": qdrant_ok,
+        "jira":   jira_ok,
+        "neo4j":  neo4j_ok,
     }
-    
+
     all_ready = all(services.values())
-    
+
     return {
         "ready": all_ready,
         "services": services,
-        "message": "All services ready" if all_ready else "Some services are still initializing..."
+        "message": "All services ready" if all_ready else "Some services are unavailable (degraded mode)",
     }
 
 

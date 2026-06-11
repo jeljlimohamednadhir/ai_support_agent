@@ -61,6 +61,7 @@ class JiraStats(BaseModel):
     closed_issues: int = 0
     total_projects: int = 0
     last_sync: Optional[datetime] = None
+    status_breakdown: Dict[str, int] = Field(default_factory=dict)
 
 
 class JiraSyncRequest(BaseModel):

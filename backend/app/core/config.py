@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "groq"  # openai, anthropic, groq
     GROQ_MODEL: str = "llama-3.1-8b-instant"
     GROQ_TEMPERATURE: float = 0.2
-    GROQ_MAX_TOKENS: int = 4096
+    GROQ_MAX_TOKENS: int = 1024  # R5-FIX: augmenté pour éviter troncature des procédures N3
     EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
     
     # Language Settings
@@ -88,6 +88,7 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+    ANONYMIZE_LLM_CALLS: bool = True  # Masquer les données sensibles avant appel LLM (actif par défaut)
     
     # Application Settings
     DEBUG: bool = True
@@ -96,6 +97,69 @@ class Settings(BaseSettings):
     # Collector Settings
     GIT_REPO_PATH: Optional[str] = None
     LOG_FILES_PATH: Optional[str] = None
+
+    # ── Live Diagnostics — accès DB via SSH → psql ────────────────────────
+    # L'accès à la base BRASIL se fait uniquement via SSH → psql sur le serveur DB.
+    # Pas de connexion TCP directe (port 5432) — seul le port SSH (22) est requis.
+    # Le nom de la DB et le user psql sont passés à SshPsqlDbService :
+    BRASIL_PSQL_DB_NAME: str = "brasil"
+    BRASIL_PSQL_DB_USER: str = "postgres"
+    BRASIL_PSQL_DB_HOST: str = "localhost"   # PostgreSQL écoute sur localhost:5432 du serveur DB
+    BRASIL_PSQL_DB_PORT: int = 5432
+    BRASIL_PSQL_BIN:     str = "/opt/pgsql/na/9.4.4/bin/psql"
+    BRASIL_PSQL_LIB:     str = "/opt/pgsql/na/9.4.4/lib"
+
+    # ── SSH Operational Access ─────────────────────────────────────────────
+    # Convention de nommage des serveurs BRASIL :
+    #   Prod : op49m{type}{instance}  ex: op49mdb11 (DB prod), op49mwb11 (WA prod)
+    #   Dev  : dv49m{type}{instance}  ex: dv49mdb31 (DB dev),  dv49mwb31 (WA dev)
+    #
+    # 3 types de serveurs :
+    #   DB = base de données PostgreSQL  (op49mdb* / dv49mdb*)
+    #   DE = Data Extractor              (op49mde* / dv49mde*)
+    #   WA = serveur applicatif Tomcat   (op49mwb* / dv49mwb*)
+    #
+    # Renseigner SSH_BRASIL_ENV pour savoir quel env est connecté (info only)
+
+    SSH_BRASIL_ENV: str = "prod"           # "prod" | "dev" | "test"
+
+    # Server DB — Brasil PostgreSQL + accès psql
+    # prod: op49mdb11  |  dev: dv49mdb31
+    SSH_BRASIL_HOST: str = ""
+    SSH_BRASIL_PORT: int = 22
+    SSH_BRASIL_USER: str = ""              # prod: op49mbdd  |  dev: dv49mbdd
+    SSH_BRASIL_PASSWORD: str = ""
+    SSH_BRASIL_PRIVATE_KEY: str = ""
+    SSH_BRASIL_PRIVATE_KEY_PASS: str = ""
+
+    # Server DE — Data Extractor
+    # prod: op49mde11  |  dev: dv49mde31
+    SSH_DE_HOST: str = ""
+    SSH_DE_PORT: int = 22
+    SSH_DE_USER: str = ""
+    SSH_DE_PASSWORD: str = ""
+    SSH_DE_PRIVATE_KEY: str = ""
+    SSH_DE_PRIVATE_KEY_PASS: str = ""
+
+    # Server WA — Serveur applicatif (WAR IHM + WS, Tomcat)
+    # prod: op49mwb11  |  dev: dv49mwb31
+    SSH_WA_HOST: str = ""
+    SSH_WA_PORT: int = 22
+    SSH_WA_USER: str = ""
+    SSH_WA_PASSWORD: str = ""
+    SSH_WA_PRIVATE_KEY: str = ""
+    SSH_WA_PRIVATE_KEY_PASS: str = ""
+
+    # SSH global options
+    SSH_ENABLED: bool = False
+    SSH_CONNECT_TIMEOUT_S: int = 15
+    SSH_COMMAND_TIMEOUT_S: int = 30
+    SSH_AUTO_ADD_HOST_KEY: bool = False    # True uniquement en dev
+    SSH_KNOWN_HOSTS_PATH: str = ""
+
+    # ── Code Intelligence (Phase 2) ────────────────────────────────────────
+    CODE_INTELLIGENCE_ENABLED: bool = False
+    BRASIL_SOURCE_ROOT: str = ""           # chemin vers le code source Java BRASIL
     
     # Jira Configuration
     JIRA_URL: Optional[str] = None

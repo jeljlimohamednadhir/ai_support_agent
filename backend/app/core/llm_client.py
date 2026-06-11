@@ -7,6 +7,7 @@ from typing import Optional, List, Dict, Any
 from groq import Groq
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.core.data_anonymizer import data_anonymizer, AnonymizationMapping
 
 logger = get_logger(__name__)
 
@@ -70,26 +71,70 @@ class LLMClient:
             if system_prompt is None:
                 system_prompt = self._get_default_system_prompt()
 
+            # ── Anonymize before building messages ────────────────────────
+            anon_mapping = AnonymizationMapping()
+            prompt        = data_anonymizer.anonymize(prompt, anon_mapping)
+            system_prompt = data_anonymizer.anonymize(system_prompt, anon_mapping)
+            if conversation_history:
+                conversation_history = data_anonymizer.anonymize_messages(
+                    conversation_history, anon_mapping
+                )
+            data_anonymizer.log_stats(anon_mapping, call_site="generate")
+            # ─────────────────────────────────────────────────────────────
+
             if system_prompt:
                 messages.append({"role": "system", "content": system_prompt})
 
-            # Injecter l'historique (6 derniers échanges = 12 messages max)
+            # Injecter l'historique (3 derniers échanges = 6 messages max)
+            # Réduit pour respecter la limite TPM de Groq (6000 tokens)
             if conversation_history:
-                messages.extend(conversation_history[-12:])
+                messages.extend(conversation_history[-6:])
 
             messages.append({"role": "user", "content": prompt})
-            
+
             # Paramètres
             temp = temperature if temperature is not None else settings.GROQ_TEMPERATURE
             max_tok = max_tokens if max_tokens is not None else settings.GROQ_MAX_TOKENS
-            
+
+            # ── Garde-fou TPM Groq : limiter la taille totale des messages ────
+            # Limite Groq on_demand qwen3-32b = 6000 TPM
+            # Budget input = 6000 - max_tok (output) - 500 (marge sécurité)
+            # Ratio conservateur : ~3 chars/token pour texte français
+            _INPUT_CHAR_BUDGET = (6000 - max_tok - 500) * 3
+            _total_chars = sum(len(m.get("content", "")) for m in messages)
+            if _total_chars > _INPUT_CHAR_BUDGET:
+                # Tronquer le message user en priorité, puis le system prompt
+                _user_msg = messages[-1]
+                _overflow = _total_chars - _INPUT_CHAR_BUDGET
+                if len(_user_msg["content"]) > _overflow + 200:
+                    messages[-1] = {
+                        **_user_msg,
+                        "content": _user_msg["content"][: len(_user_msg["content"]) - _overflow - 100]
+                        + "\n[...contexte tronqué - limite de tokens atteinte...]",
+                    }
+                elif system_prompt and len(messages) > 0 and messages[0]["role"] == "system":
+                    # Tronquer aussi le system prompt si user est trop court
+                    _sys_len = len(messages[0]["content"])
+                    _keep = max(500, _sys_len - _overflow - 100)
+                    messages[0] = {
+                        **messages[0],
+                        "content": messages[0]["content"][:_keep]
+                        + "\n[...system prompt tronqué...]",
+                    }
+                logger.warning(
+                    f"[LLM] Prompt tronqué : {_total_chars} chars → budget {_INPUT_CHAR_BUDGET} chars "
+                    f"(max_tok={max_tok})"
+                )
+            # ─────────────────────────────────────────────────────────────────
+
             if self.provider == "groq":
                 response = self.client.chat.completions.create(
                     model=settings.GROQ_MODEL,
                     messages=messages,
                     temperature=temp,
                     max_tokens=max_tok,
-                    stream=stream
+                    stream=stream,
+                    timeout=120.0,
                 )
                 
                 if stream:
@@ -107,6 +152,10 @@ class LLMClient:
                     else:
                         # Inline <think>...</think> — extract manually
                         thinking, clean = self._extract_thinking(raw)
+                    # ── Restore original values in LLM response ────────
+                    clean   = data_anonymizer.restore(clean, anon_mapping)
+                    thinking = data_anonymizer.restore(thinking, anon_mapping)
+                    # ─────────────────────────────────────────────────────
                     if with_thinking:
                         return clean, thinking
                     return clean

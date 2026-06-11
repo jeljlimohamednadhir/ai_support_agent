@@ -335,14 +335,32 @@ async def generate_conversation_title(
     # Ask LLM for a short title
     try:
         prompt = (
-            f"Génère un titre court (5 à 8 mots maximum, en français) pour une conversation "
-            f"dont la première question est : \"{first_message.content[:300]}\"\n"
-            f"Réponds uniquement avec le titre, sans guillemets ni ponctuation finale."
+            f"Génère un titre de récapitulatif très court (5 à 8 mots maximum, en français) "
+            f"pour une conversation dont la première question est : \"{first_message.content[:300]}\"\n"
+            f"Le titre doit résumer le sujet principal, sans guillemets ni ponctuation finale. "
+            f"Réponds UNIQUEMENT avec le titre, aucun autre texte, aucune explication, aucune réflexion."
         )
-        title = await llm_client.generate(prompt, max_tokens=30)
-        title = title.strip().strip('"').strip("'")
+        title = await llm_client.generate(prompt, max_tokens=200)
+        title = title.strip()
+        # Strip <think>...</think> reasoning blocks (qwen3 chain-of-thought)
+        import re as _re
+        # Remove full think blocks (may span multiple lines with leading/trailing \n)
+        title = _re.sub(r'<think>[\s\S]*?</think>', '', title, flags=_re.DOTALL).strip()
+        # Remove dangling open <think> block if </think> was cut off by max_tokens
+        title = _re.sub(r'<think>[\s\S]*$', '', title, flags=_re.DOTALL).strip()
+        # Remove any remaining XML-like tags
+        title = _re.sub(r'<[^>]+>', '', title).strip()
+        # Take only the first non-empty line
+        lines = [l.strip() for l in title.split('\n') if l.strip()]
+        title = lines[0] if lines else ''
+        title = title.strip('"').strip("'").strip()
         if len(title) > 80:
             title = title[:77] + "..."
+        # Fallback if empty after stripping
+        if not title:
+            title = first_message.content[:60].strip()
+            if len(first_message.content) > 60:
+                title += "..."
     except Exception as e:
         logger.warning(f"LLM title generation failed: {e} — using truncated message")
         title = first_message.content[:60].strip()
