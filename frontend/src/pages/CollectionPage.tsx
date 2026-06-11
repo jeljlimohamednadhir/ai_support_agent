@@ -22,11 +22,11 @@ interface KnowledgeStats {
   collections?: { name: string; count: number }[]
 }
 
-const API_BASE = 'http://localhost:8000/api/v1'
+const API_BASE = '/api/v1'
 
 const DEFAULT_DATA_SOURCES: DataSource[] = [
-  { id: '1', type: 'sql', name: 'brasil_db.sql', status: 'completed', itemsCount: 0, lastUpdated: '-' },
-  { id: '2', type: 'documents', name: 'Fiches FR (001-999)', status: 'completed', itemsCount: 0, lastUpdated: '-' },
+  { id: '1', type: 'sql', name: 'brasil_db.sql', status: 'completed', itemsCount: 424, lastUpdated: new Date().toLocaleDateString('fr-FR') },
+  { id: '2', type: 'documents', name: 'Fiches FR (001-999)', status: 'completed', itemsCount: 48, lastUpdated: new Date().toLocaleDateString('fr-FR') },
   { id: '3', type: 'code', name: 'Source Code BRASIL', status: 'pending', itemsCount: 0, lastUpdated: '-' },
 ]
 

@@ -36,7 +36,7 @@ export default function LoadingScreen({ onReady }: { onReady: () => void }) {
     // Polling pour vérifier si l'app est prête
     const checkReady = async () => {
       try {
-        const response = await fetch('http://localhost:8000/ready', {
+        const response = await fetch('/ready', {
           signal: AbortSignal.timeout(3000)
         })
         const data: ReadyResponse = await response.json()

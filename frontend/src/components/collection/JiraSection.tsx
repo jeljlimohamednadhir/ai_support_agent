@@ -10,6 +10,7 @@ interface JiraStats {
   closed_issues: number
   total_projects: number
   last_sync: string | null
+  status_breakdown?: Record<string, number>
 }
 
 interface JiraProject {
@@ -124,7 +125,9 @@ export default function JiraSection() {
       setLoading(true)
       
       // Load stats
-      const statsRes = await fetch('http://localhost:8000/api/v1/jira/stats')
+      const token = localStorage.getItem('auth_token')
+      const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
+      const statsRes = await fetch('/api/v1/jira/stats', { headers: authHeaders })
       if (statsRes.ok) {
         const statsData = await statsRes.json()
         setStats(statsData)
@@ -135,7 +138,7 @@ export default function JiraSection() {
       }
       
       // Load projects
-      const projectsRes = await fetch('http://localhost:8000/api/v1/jira/projects')
+      const projectsRes = await fetch('/api/v1/jira/projects', { headers: authHeaders })
       if (projectsRes.ok) {
         const projectsData = await projectsRes.json()
         setProjects(projectsData)
@@ -168,7 +171,7 @@ export default function JiraSection() {
         ? { jira_url: config.jira_url, email: '', api_token: config.api_token }
         : config
       
-      const response = await fetch('http://localhost:8000/api/v1/jira/test-connection', {
+      const response = await fetch('/api/v1/jira/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -222,7 +225,7 @@ export default function JiraSection() {
         payload.project_keys = projectsToSync
       }
       
-      const response = await fetch('http://localhost:8000/api/v1/jira/sync', {
+      const response = await fetch('/api/v1/jira/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -254,7 +257,7 @@ export default function JiraSection() {
     
     try {
       const startAt = page * ticketsPerPage
-      const response = await fetch('http://localhost:8000/api/v1/jira/search', {
+      const response = await fetch('/api/v1/jira/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -345,7 +348,7 @@ export default function JiraSection() {
 
     try {
       const token = localStorage.getItem('auth_token')
-      const response = await fetch('http://localhost:8000/api/v1/chatbot/chat', {
+      const response = await fetch('/api/v1/chatbot/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -608,23 +611,33 @@ export default function JiraSection() {
                 </div>
               )
             })
+          ) : stats?.status_breakdown && Object.keys(stats.status_breakdown).length > 0 ? (
+            // Real status breakdown from Jira
+            Object.entries(stats.status_breakdown).slice(0, 4).map(([status, count]) => {
+              const color = getStatusColor(status)
+              const colorMap: Record<string, string> = {
+                green: 'text-green-600 dark:text-green-400',
+                blue: 'text-blue-600 dark:text-blue-400',
+                gray: 'text-gray-600 dark:text-gray-400',
+                yellow: 'text-yellow-600 dark:text-yellow-400',
+                orange: 'text-orange-600 dark:text-orange-400',
+                red: 'text-red-600 dark:text-red-400',
+                purple: 'text-purple-600 dark:text-purple-400',
+              }
+              const textColor = colorMap[color] ?? 'text-gray-600 dark:text-gray-400'
+              return (
+                <div key={status} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                  <p className={`text-xs mb-1 ${textColor}`}>{status}</p>
+                  <p className={`text-2xl font-bold ${textColor}`}>{count}</p>
+                </div>
+              )
+            })
           ) : (
+            // Generic fallback when no breakdown available
             <>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                 <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Ouverts</p>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.open_issues}</p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <p className="text-xs text-yellow-600 dark:text-yellow-400 mb-1">En cours</p>
-                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.in_progress_issues}</p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <p className="text-xs text-green-600 dark:text-green-400 mb-1">Résolus</p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.resolved_issues}</p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Fermés</p>
-                <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.closed_issues}</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats?.open_issues ?? 0}</p>
               </div>
             </>
           )}

@@ -15,16 +15,12 @@ export default function Layout() {
   })
   
   useEffect(() => {
-    console.log('Dark mode state changed:', darkMode)
     if (darkMode) {
       document.documentElement.classList.add('dark')
-      console.log('Added dark class to html element')
     } else {
       document.documentElement.classList.remove('dark')
-      console.log('Removed dark class from html element')
     }
     localStorage.setItem('darkMode', JSON.stringify(darkMode))
-    console.log('HTML classList:', document.documentElement.classList.toString())
   }, [darkMode])
 
   const handleLogout = async () => {
@@ -42,7 +38,7 @@ export default function Layout() {
     { path: '/collection', icon: Database, label: 'Collection de données', roles: ['ADMIN'] },
     { path: '/validation', icon: CheckSquare, label: 'Validation', roles: ['EXPERT', 'ADMIN'] },
     { path: '/users', icon: Users, label: 'Utilisateurs', roles: ['ADMIN'] },
-    { path: '/settings', icon: Settings, label: 'Paramètres', roles: ['USER', 'EXPERT', 'ADMIN'] },
+    { path: '/settings', icon: Settings, label: 'Paramètres', roles: ['ADMIN'] },
   ]
 
   // Filter navigation items based on user role
@@ -63,7 +59,7 @@ export default function Layout() {
           {!sidebarCollapsed ? (
             <>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-blue-600 bg-clip-text text-transparent">
-                Agent IA Support
+                Support Pilot AI
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {user?.full_name || user?.username}

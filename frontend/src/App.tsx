@@ -24,7 +24,7 @@ function App() {
     // Vérifier immédiatement si le backend est prêt
     const checkBackend = async () => {
       try {
-        const response = await fetch('http://localhost:8000/ready', {
+        const response = await fetch('/ready', {
           signal: AbortSignal.timeout(1000)
         })
         const data = await response.json()

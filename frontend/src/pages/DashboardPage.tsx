@@ -78,9 +78,9 @@ export default function DashboardPage() {
     const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
     try {
       const [jiraRes, knowledgeRes, validationRes] = await Promise.allSettled([
-        fetch('http://localhost:8000/api/v1/jira/stats', { headers }),
-        fetch('http://localhost:8000/api/v1/knowledge/stats', { headers }),
-        fetch('http://localhost:8000/api/v1/validation/pending-count', { headers })
+        fetch('/api/v1/jira/stats', { headers }),
+        fetch('/api/v1/knowledge/stats', { headers }),
+        fetch('/api/v1/validation/pending-count', { headers })
       ])
       const jiraData = jiraRes.status === 'fulfilled' && jiraRes.value.ok ? await jiraRes.value.json() : null
       const knowledgeData = knowledgeRes.status === 'fulfilled' && knowledgeRes.value.ok ? await knowledgeRes.value.json() : null
@@ -202,8 +202,8 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 gap-3">
             {[
               { to: '/chat', icon: Bot, label: 'Chat IA', sub: 'Poser une question', color: 'blue' },
-              { to: '/collection', icon: Activity, label: 'Jira', sub: 'Voir les tickets', color: 'orange' },
-              { to: '/ml', icon: TrendingUp, label: 'Classification ML', sub: 'Analyser des tickets', color: 'purple' },
+              { to: '/jira', icon: Activity, label: 'Jira', sub: 'Voir les tickets', color: 'orange' },
+              { to: '/classification-ml', icon: TrendingUp, label: 'Classification ML', sub: 'Analyser des tickets', color: 'purple' },
               { to: '/knowledge', icon: Database, label: 'Base de données', sub: 'Gérer les données', color: 'green' },
             ].map(item => {
               const Icon = item.icon

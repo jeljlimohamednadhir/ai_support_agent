@@ -24,7 +24,11 @@ import {
   RefreshCw,
   BookOpen,
   History,
-  FolderOpen
+  FolderOpen,
+  Activity,
+  Shield,
+  RotateCcw,
+  Download
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePageStateStore } from '../stores/pageStateStore';
@@ -36,7 +40,7 @@ import { ConfusionMatrixDisplay } from '../components/ml/ConfusionMatrixDisplay'
 import { KeywordsConfigEditor } from '../components/ml/KeywordsConfigEditor';
 import { TopList } from '../components/ml/TopList';
 
-type Tab = 'resume' | 'synthese' | 'analyse' | 'training' | 'correction' | 'config' | 'export';
+type Tab = 'resume' | 'synthese' | 'analyse' | 'training' | 'correction' | 'config' | 'export' | 'monitoring';
 
 export const ClassificationMLPage: React.FC = () => {
   const { canCorrectML } = useAuth(); // Get permission to correct ML
@@ -147,7 +151,6 @@ export const ClassificationMLPage: React.FC = () => {
 
   const handleTrainModel = async (params: {
     labelCol: string;
-    textCol?: string;
     maxFeatures: number;
     useCauseHint: boolean;
   }) => {
@@ -157,7 +160,6 @@ export const ClassificationMLPage: React.FC = () => {
     try {
       const result = await classificationMLService.trainModel({
         label_col: params.labelCol,
-        text_col: params.textCol || undefined,
         max_features: params.maxFeatures,
         use_cause_hint: params.useCauseHint,
         session_id: sessionId || undefined, // Envoyer session_id pour restaurer données
@@ -281,6 +283,7 @@ export const ClassificationMLPage: React.FC = () => {
     { id: 'analyse' as const, label: 'Analyse Interactive', icon: PieChart },
     { id: 'training' as const, label: 'Entraînement ML', icon: Brain },
     { id: 'correction' as const, label: 'Correction Tickets', icon: FileCheck, requiresCorrection: true },
+    { id: 'monitoring' as const, label: 'Monitoring', icon: Activity },
     { id: 'config' as const, label: 'Configuration', icon: Settings },
     { id: 'export' as const, label: 'Export PDF', icon: FileDown }
   ];
@@ -326,17 +329,17 @@ export const ClassificationMLPage: React.FC = () => {
               {indexingStatus === 'indexing' ? (
                 <>
                   <Loader className="w-4 h-4 animate-spin" />
-                  Entraînement...
+                  Indexation...
                 </>
               ) : indexingStatus === 'done' ? (
                 <>
                   <CheckCircle className="w-4 h-4" />
-                  Entraîné ✓
+                  Indexé ✓
                 </>
               ) : (
                 <>
                   <Database className="w-4 h-4" />
-                  Entraîner
+                  Indexer pour RAG
                 </>
               )}
             </button>
@@ -443,21 +446,21 @@ export const ClassificationMLPage: React.FC = () => {
         </nav>
       </div>
 
-      {/* Tab Content */}
+      {/* Tab Content — kept mounted to preserve local state, hidden via CSS */}
       <div className="min-h-[600px]">
-        {activeTab === 'resume' && (
+        <div className={activeTab === 'resume' ? '' : 'hidden'}>
           <ResumeExecutifTab execSummary={execSummary} loading={loading} />
-        )}
+        </div>
 
-        {activeTab === 'synthese' && (
+        <div className={activeTab === 'synthese' ? '' : 'hidden'}>
           <SyntheseTab uploadedData={uploadedData} />
-        )}
+        </div>
 
-        {activeTab === 'analyse' && (
+        <div className={activeTab === 'analyse' ? '' : 'hidden'}>
           <AnalyseInteractiveTab uploadedData={uploadedData} />
-        )}
+        </div>
 
-        {activeTab === 'training' && (
+        <div className={activeTab === 'training' ? '' : 'hidden'}>
           <TrainingTab
             uploadedData={uploadedData}
             trainingResult={trainingResult}
@@ -465,9 +468,9 @@ export const ClassificationMLPage: React.FC = () => {
             onTrain={handleTrainModel}
             loading={loading}
           />
-        )}
+        </div>
 
-        {activeTab === 'correction' && (
+        <div className={activeTab === 'correction' ? '' : 'hidden'}>
           <CorrectionTab
             predictions={predictions}
             threshold={threshold}
@@ -478,15 +481,19 @@ export const ClassificationMLPage: React.FC = () => {
             modelInfo={modelInfo}
             uploadedData={uploadedData}
           />
-        )}
+        </div>
 
-        {activeTab === 'config' && (
+        <div className={activeTab === 'config' ? '' : 'hidden'}>
           <ConfigTab />
-        )}
+        </div>
 
-        {activeTab === 'export' && (
+        <div className={activeTab === 'export' ? '' : 'hidden'}>
           <ExportTab onExport={handleExportPDF} execSummary={execSummary} />
-        )}
+        </div>
+
+        <div className={activeTab === 'monitoring' ? '' : 'hidden'}>
+          <MonitoringTab sessionId={sessionId} />
+        </div>
       </div>
     </div>
   );
@@ -706,16 +713,50 @@ const ResumeExecutifTab: React.FC<{ execSummary: ExecSummary | null; loading: bo
 };
 
 const SyntheseTab: React.FC<{ uploadedData: UploadResponse | null }> = ({ uploadedData }) => {
-  const [paretoColumn, setParetoColumn] = useState<string>('cause_canonique');
+  // Auto-détection de la colonne : priorité à ce qui existe dans les données
+  const PARETO_CANDIDATES = ['cause_canonique', 'categorie_intelligente', 'predicted_label', 'application', 'groupe', 'label'];
+
+  // Colonnes à exclure du Pareto (identifiants, URLs, textes libres longs)
+  const EXCLUDE_PATTERNS = /^(id|inc_numero|numero|url|link|lien|href|uuid|key|ticket_id|_id|date|created|updated|timestamp)/i;
+  const EXCLUDE_EXACT = ['inc_link', 'inc_url', 'inc_id', 'inc_key', 'inc_numero', 'incident_id'];
+
+  const getUsableCols = (cols: string[]) =>
+    cols.filter(c => !EXCLUDE_PATTERNS.test(c) && !EXCLUDE_EXACT.includes(c.toLowerCase()));
+
+  const defaultCol = uploadedData
+    ? PARETO_CANDIDATES.find(c => uploadedData.columns.includes(c))
+      ?? getUsableCols(uploadedData.columns)[0]
+      ?? uploadedData.columns[0]
+      ?? 'cause_canonique'
+    : 'cause_canonique';
+
+  const [paretoColumn, setParetoColumn] = useState<string>(defaultCol);
   const [paretoData, setParetoData] = useState<any>(null);
+
+  // Mettre à jour la colonne sélectionnée si uploadedData change
+  useEffect(() => {
+    if (uploadedData) {
+      const col = PARETO_CANDIDATES.find(c => uploadedData.columns.includes(c))
+        ?? getUsableCols(uploadedData.columns)[0]
+        ?? uploadedData.columns[0];
+      if (col && col !== paretoColumn) setParetoColumn(col);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploadedData?.columns?.join(',')]);
 
   useEffect(() => {
     if (uploadedData && paretoColumn) {
-      classificationMLService.getPareto(paretoColumn).then(setParetoData);
+      classificationMLService.getPareto(paretoColumn).then(d => {
+        // Si le backend a fait un fallback, mettre à jour le select
+        if (d?.column && d.column !== paretoColumn) setParetoColumn(d.column);
+        setParetoData(d);
+      }).catch(() => setParetoData(null));
     }
   }, [paretoColumn, uploadedData]);
 
   if (!uploadedData) return <div className="text-center py-12 text-gray-500">Uploadez un fichier CSV d'abord</div>;
+
+  const usableCols = getUsableCols(uploadedData.columns);
 
   return (
     <div className="space-y-6">
@@ -726,11 +767,18 @@ const SyntheseTab: React.FC<{ uploadedData: UploadResponse | null }> = ({ upload
           onChange={(e) => setParetoColumn(e.target.value)}
           className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
         >
-          <option value="cause_canonique">Cause</option>
-          <option value="categorie_intelligente">Catégorie</option>
-          <option value="application">Application</option>
-          <option value="groupe">Groupe</option>
+          {usableCols.length > 0
+            ? usableCols.map(col => (
+                <option key={col} value={col}>{col}</option>
+              ))
+            : uploadedData.columns.map(col => (
+                <option key={col} value={col}>{col}</option>
+              ))
+          }
         </select>
+        {paretoData?.column && paretoData.column !== paretoColumn && (
+          <span className="text-xs text-yellow-600">→ fallback sur « {paretoData.column} »</span>
+        )}
       </div>
 
       {paretoData && <ParetoChart data={paretoData.items} />}
@@ -923,7 +971,6 @@ const TrainingTab: React.FC<{
   loading: boolean;
 }> = ({ uploadedData, trainingResult, modelInfo, onTrain, loading }) => {
   const [labelCol, setLabelCol] = useState('cause');
-  const [textCol, setTextCol] = useState('');
   const [maxFeatures, setMaxFeatures] = useState(5000);
   const [useCauseHint, setUseCauseHint] = useState(false);
   const [retraining, setRetraining] = React.useState(false);
@@ -946,12 +993,18 @@ const TrainingTab: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onTrain({ labelCol, textCol: textCol || undefined, maxFeatures, useCauseHint });
+    onTrain({ labelCol, maxFeatures, useCauseHint });
   };
 
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 space-y-4">
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4 border border-blue-200 dark:border-blue-800">
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            ℹ️ La colonne de texte sera automatiquement détectée (text_ml_postmortem, texte_complet, ou resume).
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Colonne à prédire (label)</label>
@@ -967,39 +1020,13 @@ const TrainingTab: React.FC<{
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Colonne texte source
-              <span className="ml-1 text-xs font-normal text-gray-500">(auto si vide)</span>
-            </label>
-            <select
-              value={textCol}
-              onChange={(e) => setTextCol(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
-            >
-              <option value="">— Auto-détection —</option>
-              {uploadedData?.columns.map(col => (
-                <option key={col} value={col}>{col}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Max Features (TF-IDF)
-              <span className="ml-1 text-xs font-normal text-gray-500">1 000 – 20 000</span>
-            </label>
+            <label className="block text-sm font-medium mb-2">Max Features</label>
             <input
               type="number"
-              min={1000}
-              max={20000}
-              step={1000}
               value={maxFeatures}
               onChange={(e) => setMaxFeatures(Number(e.target.value))}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
             />
-            <p className="mt-1 text-xs text-gray-500">
-              {maxFeatures <= 2000 ? '⚡ Rapide, moins précis' : maxFeatures <= 7000 ? '✅ Recommandé pour &lt;500 tickets' : '🎯 Optimal pour grands datasets'}
-            </p>
           </div>
 
           <div className="flex items-center col-span-2">
@@ -1128,8 +1155,8 @@ const CorrectionTab: React.FC<{
 
   // Key columns to display as ticket context (shown in expanded row)
   const CONTEXT_COLS = [
-    'user_sig', 'resume', 'description', 'inc_description',
-    'inc_cause', 'cause_canonique', 'inc_solution', 'categorie',
+    'inc_resume', 'resume', 'description', 'inc_description',
+    'inc_cause', 'cause_canonique', 'inc_solution', 'soution',
     'inc_date_creation', 'date', 'inc_numero', 'id',
     'composant', 'inc_composant', 'application',
   ];
@@ -1154,7 +1181,7 @@ const CorrectionTab: React.FC<{
   // Get a short summary of a ticket row for the table
   const getTicketSummary = (rowData: Record<string, any> | undefined): string => {
     if (!rowData) return '—';
-    const resumeKey = ['user_sig', 'resume', 'description', 'inc_description']
+    const resumeKey = ['inc_resume', 'resume', 'description', 'inc_description']
       .find(k => rowData[k] && String(rowData[k]).trim());
     if (!resumeKey) return '—';
     const text = String(rowData[resumeKey]);
@@ -1430,6 +1457,427 @@ const ExportTab: React.FC<{ onExport: () => void; execSummary: ExecSummary | nul
           Télécharger le rapport PDF
         </button>
       </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MonitoringTab — Observabilité ML production-grade
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MonitoringTab: React.FC<{ sessionId: string | null }> = ({ sessionId }) => {
+  const [health, setHealth] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [drift, setDrift] = useState<any>(null);
+  const [versions, setVersions] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [rollbackLoading, setRollbackLoading] = useState<string | null>(null);
+  const [retrainLoading, setRetrainLoading] = useState(false);
+  const [retrainMsg, setRetrainMsg] = useState<string | null>(null);
+
+  const loadAll = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [h, s, v] = await Promise.all([
+        classificationMLService.getHealth(),
+        classificationMLService.getStats(),
+        classificationMLService.getModelVersions(),
+      ]);
+      setHealth(h);
+      setStats(s);
+      setVersions(v);
+
+      // Drift seulement si modèle entraîné et données chargées
+      if (h.model.exists && h.data.loaded) {
+        try {
+          const d = await classificationMLService.getDriftDetection();
+          setDrift(d);
+        } catch {
+          // silencieux si pas de données
+        }
+      }
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || 'Erreur chargement monitoring');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadAll(); }, []);
+
+  const handleRollback = async (versionDir: string) => {
+    if (!confirm(`Rollback vers ${versionDir} ?`)) return;
+    setRollbackLoading(versionDir);
+    try {
+      const res = await classificationMLService.rollbackToVersion(versionDir);
+      alert(res.message);
+      await loadAll();
+    } catch (e: any) {
+      alert(e?.response?.data?.detail || 'Rollback échoué');
+    } finally {
+      setRollbackLoading(null);
+    }
+  };
+
+  const handleRetrain = async () => {
+    setRetrainLoading(true);
+    setRetrainMsg(null);
+    try {
+      const res = await classificationMLService.retrainWithCorrections();
+      setRetrainMsg(`✅ ${res.message} — F1: ${res.macro_f1?.toFixed(3) ?? 'N/A'}`);
+      await loadAll();
+    } catch (e: any) {
+      setRetrainMsg(`❌ ${e?.response?.data?.detail || 'Réentraînement échoué'}`);
+    } finally {
+      setRetrainLoading(false);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const blob = await classificationMLService.exportCSV(sessionId || undefined);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tickets_ml_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert(e?.response?.data?.detail || 'Export échoué');
+    }
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <Loader className="w-8 h-8 animate-spin text-blue-500" />
+      <span className="ml-3 text-gray-500">Chargement monitoring...</span>
+    </div>
+  );
+
+  if (error) return (
+    <div className="p-6 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center gap-3">
+      <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+      <span className="text-red-700 dark:text-red-300">{error}</span>
+      <button onClick={loadAll} className="ml-auto text-sm text-blue-600 hover:underline">Réessayer</button>
+    </div>
+  );
+
+  const statusColor = health?.status === 'healthy' ? 'green' : 'yellow';
+  const driftColor = drift?.alert_level === 'ok' ? 'green' : drift?.alert_level === 'warning' ? 'yellow' : 'red';
+
+  return (
+    <div className="space-y-6">
+      {/* Header + actions */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Activity className="w-6 h-6 text-blue-600" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Monitoring ML</h2>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={handleExportCSV} className="flex items-center gap-1 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
+            <Download className="w-4 h-4" /> Export CSV
+          </button>
+          <button onClick={loadAll} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100">
+            <RefreshCw className="w-4 h-4" /> Actualiser
+          </button>
+        </div>
+      </div>
+
+      {/* Row 1 — Health + Model + Corrections */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Santé globale */}
+        <div className={`p-4 rounded-xl border-2 ${statusColor === 'green' ? 'border-green-300 bg-green-50 dark:bg-green-900/20' : 'border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <Shield className={`w-5 h-5 ${statusColor === 'green' ? 'text-green-600' : 'text-yellow-600'}`} />
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Statut Global</span>
+          </div>
+          <div className={`text-2xl font-bold ${statusColor === 'green' ? 'text-green-700' : 'text-yellow-700'}`}>
+            {health?.status === 'healthy' ? '✅ Healthy' : '⚠️ Dégradé'}
+          </div>
+          {health?.issues?.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {health.issues.map((issue: string, i: number) => (
+                <li key={i} className="text-xs text-yellow-700 dark:text-yellow-300 flex items-start gap-1">
+                  <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />{issue}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Modèle actuel */}
+        <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex items-center gap-2 mb-2">
+            <Brain className="w-5 h-5 text-purple-600" />
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Modèle Actuel</span>
+          </div>
+          {health?.model?.exists ? (
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Macro F1</span>
+                <span className="font-semibold text-blue-600">
+                  {health.model.macro_f1 != null ? health.model.macro_f1.toFixed(3) : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Classes</span>
+                <span className="font-medium">{health.model.classes_count}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Version</span>
+                <span className="font-medium">v{health.model.training_count}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Seuil</span>
+                <span className="font-medium">{(health.model.recommended_threshold * 100).toFixed(0)}%</span>
+              </div>
+              {health.model.trained_at && (
+                <div className="text-xs text-gray-400 mt-1">
+                  {new Date(health.model.trained_at).toLocaleString('fr-FR')}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">Aucun modèle entraîné</p>
+          )}
+        </div>
+
+        {/* Corrections */}
+        <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex items-center gap-2 mb-2">
+            <FileCheck className="w-5 h-5 text-orange-600" />
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Corrections</span>
+          </div>
+          <div className="text-3xl font-bold text-orange-600 mb-1">
+            {stats?.corrections?.total ?? 0}
+          </div>
+          <div className="text-xs text-gray-500 mb-3">
+            Seuil réentraînement : {stats?.corrections?.auto_retrain_threshold ?? 20}
+          </div>
+          {stats?.corrections?.retrain_eligible && (
+            <div className="mb-2 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 rounded text-xs text-orange-700 dark:text-orange-300">
+              ⚡ Réentraînement éligible
+            </div>
+          )}
+          <button
+            onClick={handleRetrain}
+            disabled={retrainLoading || !stats?.corrections?.total}
+            className="w-full mt-1 py-1.5 text-xs bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 flex items-center justify-center gap-1"
+          >
+            {retrainLoading ? <Loader className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            Réentraîner avec corrections
+          </button>
+          {retrainMsg && (
+            <p className="text-xs mt-1 text-gray-600 dark:text-gray-400">{retrainMsg}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2 — Drift + Coverage */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Drift */}
+        <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="w-5 h-5 text-blue-600" />
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Drift Distribution</span>
+            {drift && (
+              <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full
+                ${driftColor === 'green' ? 'bg-green-100 text-green-700' :
+                  driftColor === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-red-100 text-red-700'}`}>
+                {drift.alert_level.toUpperCase()}
+              </span>
+            )}
+          </div>
+          {drift ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-4">
+                <div>
+                  <div className="text-xs text-gray-500">Divergence KL</div>
+                  <div className="text-2xl font-bold">{drift.kl_divergence.toFixed(4)}</div>
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 flex-1">
+                  {drift.alert_message}
+                </div>
+              </div>
+              {drift.drifted_labels?.length > 0 && (
+                <div>
+                  <div className="text-xs font-medium text-gray-500 mb-1">Labels dérivés (top {Math.min(5, drift.drifted_labels.length)})</div>
+                  <div className="space-y-1">
+                    {drift.drifted_labels.slice(0, 5).map((l: any) => (
+                      <div key={l.label} className="flex items-center gap-2 text-xs">
+                        <span className="truncate flex-1 text-gray-700 dark:text-gray-300">{l.label}</span>
+                        <span className={`${l.delta_pct > 0 ? 'text-red-600' : 'text-blue-600'} font-semibold`}>
+                          {l.delta_pct > 0 ? '▲' : '▼'} {Math.abs(l.delta_pct).toFixed(1)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {drift.training_date && (
+                <div className="text-xs text-gray-400">Référence entraînement : {new Date(drift.training_date).toLocaleDateString('fr-FR')}</div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">
+              {!health?.model?.exists ? 'Entraîner un modèle pour surveiller le drift' :
+               !health?.data?.loaded ? 'Importer des données pour surveiller le drift' :
+               'Calcul drift non disponible'}
+            </p>
+          )}
+        </div>
+
+        {/* Coverage + Distribution */}
+        <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="w-5 h-5 text-indigo-600" />
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Coverage & Distribution</span>
+          </div>
+          {stats?.predictions?.coverage_pct != null ? (
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-500">Coverage prédictions</span>
+                  <span className="font-semibold text-blue-600">{stats.predictions.coverage_pct}%</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all ${stats.predictions.coverage_pct >= 65 ? 'bg-green-500' : stats.predictions.coverage_pct >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                    style={{ width: `${Math.min(stats.predictions.coverage_pct, 100)}%` }}
+                  />
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">Cible ≥ 65%</div>
+              </div>
+              {Object.keys(stats.predictions.current_distribution).length > 0 && (
+                <div>
+                  <div className="text-xs font-medium text-gray-500 mb-1">Distribution actuelle (top 5)</div>
+                  <div className="space-y-1">
+                    {Object.entries(stats.predictions.current_distribution as Record<string,number>)
+                      .sort(([,a],[,b]) => b - a).slice(0, 5)
+                      .map(([label, pct]) => (
+                      <div key={label} className="flex items-center gap-2 text-xs">
+                        <span className="truncate flex-1 text-gray-700 dark:text-gray-300">{label}</span>
+                        <div className="flex items-center gap-1">
+                          <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded h-1.5">
+                            <div className="bg-indigo-500 h-1.5 rounded" style={{ width: `${Math.min(pct, 100)}%` }} />
+                          </div>
+                          <span className="text-gray-500 w-8 text-right">{pct}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">
+              Classifier les tickets pour voir la coverage
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Row 3 — Preprocessing + Versions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Preprocessing */}
+        <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="w-5 h-5 text-yellow-600" />
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Preprocessing Télécom</span>
+            <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-bold
+              ${health?.preprocessing?.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              {health?.preprocessing?.available ? '✓ Actif' : '✗ Inactif'}
+            </span>
+          </div>
+          {health?.preprocessing?.sample_output && (
+            <div className="space-y-2">
+              <div className="text-xs text-gray-500 font-medium">Exemple de normalisation :</div>
+              <div className="text-xs bg-gray-50 dark:bg-gray-900 rounded p-2 font-mono">
+                <span className="text-gray-400">→ </span>
+                <span className="text-green-600 dark:text-green-400">{health.preprocessing.sample_output}</span>
+              </div>
+              <div className="text-xs text-gray-400">
+                Entrée : "DSLAM OP49MAB11 bloqué erreur 1300"
+              </div>
+            </div>
+          )}
+          <div className="mt-3 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-1"><CheckCircle className="w-3 h-3 text-green-500" /> Normalisation équipements (EQUIPMENT_ID)</div>
+            <div className="flex items-center gap-1"><CheckCircle className="w-3 h-3 text-green-500" /> Normalisation codes erreur (ERROR_CODE_XXXX)</div>
+            <div className="flex items-center gap-1"><CheckCircle className="w-3 h-3 text-green-500" /> Synonymes télécom FR</div>
+            <div className="flex items-center gap-1"><CheckCircle className="w-3 h-3 text-green-500" /> Stopwords FR métier</div>
+          </div>
+        </div>
+
+        {/* Versions modèle */}
+        <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex items-center gap-2 mb-3">
+            <History className="w-5 h-5 text-gray-600" />
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Historique Modèles</span>
+            <span className="ml-auto text-xs text-gray-500">{versions?.count ?? 0} version(s)</span>
+          </div>
+          {versions?.versions?.length > 0 ? (
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {versions.versions.map((v: any, i: number) => (
+                <div key={v.version_dir} className={`flex items-center gap-2 p-2 rounded-lg text-xs
+                  ${i === 0 ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700' : 'bg-gray-50 dark:bg-gray-700/50'}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                      {i === 0 && <span className="text-blue-600">●</span>}
+                      v{v.training_count ?? '?'}
+                      {v.macro_f1 != null && <span className="text-blue-600 ml-1">F1:{v.macro_f1.toFixed(3)}</span>}
+                    </div>
+                    <div className="text-gray-400 truncate">
+                      {v.trained_at ? new Date(v.trained_at).toLocaleString('fr-FR') : v.created_at.slice(0, 16).replace('T', ' ')}
+                    </div>
+                    <div className="text-gray-400">
+                      {v.n_samples ? `${v.n_samples} tickets` : ''}{v.classes_count ? ` · ${v.classes_count} classes` : ''}
+                      {v.preprocessing ? ' · 🔧 prep' : ''}
+                    </div>
+                  </div>
+                  {i > 0 && (
+                    <button
+                      onClick={() => handleRollback(v.version_dir)}
+                      disabled={rollbackLoading === v.version_dir}
+                      className="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
+                      title="Rollback vers cette version"
+                    >
+                      {rollbackLoading === v.version_dir
+                        ? <Loader className="w-3 h-3 animate-spin" />
+                        : <RotateCcw className="w-3 h-3 text-gray-500" />}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">Aucune version sauvegardée. Entraîner un modèle pour créer la première version.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Corrections by label */}
+      {stats?.corrections?.total > 0 && Object.keys(stats.corrections.by_label).length > 0 && (
+        <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex items-center gap-2 mb-3">
+            <FileCheck className="w-5 h-5 text-orange-600" />
+            <span className="font-semibold text-gray-800 dark:text-gray-200">Corrections par Label</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {Object.entries(stats.corrections.by_label as Record<string,number>)
+              .sort(([,a],[,b]) => b - a).slice(0, 8)
+              .map(([label, count]) => (
+              <div key={label} className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-xs">
+                <div className="font-semibold text-orange-700 dark:text-orange-300 text-lg">{count}</div>
+                <div className="text-gray-600 dark:text-gray-400 truncate" title={label}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

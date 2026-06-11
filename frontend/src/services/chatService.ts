@@ -4,7 +4,7 @@
  */
 import axios, { AxiosInstance } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export interface ChatMessage {
   id: number;
@@ -103,8 +103,16 @@ class ChatService {
   async generateTitle(conversationId: number): Promise<ChatConversation> {
     const response = await this.api.post<ChatConversation>(
       `/chat/conversations/${conversationId}/generate-title`
-    );
-    return response.data;
+    )
+    return response.data
+  }
+
+  async updateTitle(conversationId: number, title: string): Promise<ChatConversation> {
+    const response = await this.api.put<ChatConversation>(
+      `/chat/conversations/${conversationId}`,
+      { title }
+    )
+    return response.data
   }
 
   async reportIrrelevantSource(payload: {

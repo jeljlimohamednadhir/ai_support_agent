@@ -4,7 +4,7 @@
  */
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 const BASE_URL = `${API_URL}/classification-ml`;
 
 export interface UploadResponse {
@@ -152,21 +152,6 @@ export interface ModelInfo {
   macro_f1?: number;
   recommended_threshold: number;
   weak_points: Array<{ type: string; detail: string; severity: string }>;
-}
-
-export interface IndexRAGLaunched {
-  source: string;
-  count?: number;
-  collection?: string;
-  parser?: string;
-  note?: string;
-}
-
-export interface IndexRAGResult {
-  source: string;
-  message: string;
-  launched: IndexRAGLaunched[];
-  errors: string[];
 }
 
 export const classificationMLService = {
@@ -359,24 +344,10 @@ export const classificationMLService = {
   },
 
   /**
-   * Index tickets for RAG chatbot (legacy single-source)
+   * Index tickets for RAG chatbot
    */
   async indexTickets(): Promise<{ message: string; ticket_count: number; text_columns: string[] }> {
     const { data } = await axios.post(`${BASE_URL}/index-tickets`);
-    return data;
-  },
-
-  /**
-   * RAG multi-source indexation : tickets (SmartN3Parser) | fr | logs | all
-   */
-  async indexRAG(
-    source: 'tickets' | 'fr' | 'logs' | 'all',
-    options?: { fr_dir?: string; log_file?: string },
-  ): Promise<IndexRAGResult> {
-    const { data } = await axios.post<IndexRAGResult>(`${BASE_URL}/index-rag`, {
-      source,
-      ...options,
-    });
     return data;
   },
 
@@ -400,5 +371,176 @@ export const classificationMLService = {
   }> {
     const { data } = await axios.post(`${BASE_URL}/retrain-with-corrections`);
     return data;
-  }
+  },
+
+  /** Santé globale du module ML */
+  async getHealth(): Promise<{
+    status: string;
+    issues: string[];
+    model: { exists: boolean; trained_at?: string; macro_f1?: number; training_count: number; classes_count: number; recommended_threshold: number; hybrid_embeddings: boolean };
+    data: { loaded: boolean; sessions_count: number; rows: number };
+    corrections: { pending: number; auto_retrain_threshold: number; retrain_eligible: boolean };
+    preprocessing: { available: boolean; sample_output?: string };
+    auto_retrain: { status: string; last_trigger?: string; corrections_at_trigger?: number };
+  }> {
+    const { data } = await axios.get(`${BASE_URL}/health`);
+    return data;
+  },
+
+  /** Statistiques consolidées ML */
+  async getStats(): Promise<{
+    model: { exists: boolean; macro_f1?: number; training_count: number; n_samples?: number; classes: string[]; trained_at?: string; recommended_threshold: number; label_distribution_training: Record<string, number> };
+    predictions: { coverage_pct?: number; current_distribution: Record<string, number> };
+    corrections: { total: number; by_label: Record<string, number>; auto_retrain_threshold: number; retrain_eligible: boolean };
+    auto_retrain: { status: string; last_trigger?: string };
+  }> {
+    const { data } = await axios.get(`${BASE_URL}/stats`);
+    return data;
+  },
+
+  /** Drift detection (KL divergence) */
+  async getDriftDetection(): Promise<{
+    kl_divergence: number;
+    drift_detected: boolean;
+    alert_level: 'ok' | 'warning' | 'critical';
+    alert_message: string;
+    drifted_labels: Array<{ label: string; current_pct: number; training_pct: number; delta_pct: number; direction: string }>;
+    current_distribution: Record<string, number>;
+    training_distribution: Record<string, number>;
+    training_date?: string;
+    recommendation: string;
+  }> {
+    const { data } = await axios.get(`${BASE_URL}/drift-detection`);
+    return data;
+  },
+
+  /** Statut corrections + auto-retrain */
+  async getCorrectionsStatus(): Promise<{
+    corrections_pending: number;
+    auto_retrain_threshold: number;
+    auto_retrain_eligible: boolean;
+    last_auto_retrain?: string;
+    auto_retrain_status: string;
+  }> {
+    const { data } = await axios.get(`${BASE_URL}/corrections-status`);
+    return data;
+  },
+
+  /** Liste des versions du modèle */
+  async getModelVersions(): Promise<{
+    versions: Array<{ version_dir: string; created_at: string; training_count?: number; macro_f1?: number; n_samples?: number; trained_at?: string; classes_count?: number; hybrid?: boolean; preprocessing?: boolean }>;
+    count: number;
+    current?: number;
+  }> {
+    const { data } = await axios.get(`${BASE_URL}/model-versions`);
+    return data;
+  },
+
+  /** Rollback vers une version précédente */
+  async rollbackToVersion(versionDir: string): Promise<{ message: string; model_info: ModelInfo }> {
+    const { data } = await axios.post(`${BASE_URL}/model-versions/${versionDir}/rollback`);
+    return data;
+  },
+
+  /** Export CSV du dataset avec prédictions */
+  async exportCSV(sessionId?: string): Promise<Blob> {
+    const { data } = await axios.get(`${BASE_URL}/export-csv`, {
+      params: sessionId ? { session_id: sessionId } : {},
+      responseType: 'blob',
+    });
+    return data;
+  },
+
+  /** Tester le preprocessor sur un texte */
+  async testPreprocessing(text: string): Promise<{ original: string; preprocessed: string; original_tokens: number; preprocessed_tokens: number; compression_ratio: number; equipment_ids_found: number; error_codes_found: number }> {
+    const { data } = await axios.post(`${BASE_URL}/preprocessing/test`, { text });
+    return data;
+  },
+
+  // ── Active Learning ────────────────────────────────────────────────────────
+
+  /** File de review active learning */
+  async getActiveLearningQueue(status = 'pending', maxItems = 50): Promise<{
+    items: Array<{
+      id: string; text: string; predicted_label: string; confidence: number;
+      confidence_tier: string; reason: string; priority: number;
+      top_k: Array<{ label: string; confidence: number }>;
+      status: string; corrected_label: string | null;
+      added_at: string; reviewed_at: string | null;
+    }>;
+    count: number; status_filter: string;
+  }> {
+    const { data } = await axios.get(`${BASE_URL}/active-learning/queue`, {
+      params: { status, max_items: maxItems },
+    });
+    return data;
+  },
+
+  /** Soumettre une correction depuis la file active learning */
+  async reviewActiveLearningItem(
+    itemId: string,
+    payload: { status: 'corrected' | 'dismissed' | 'reviewed'; corrected_label?: string; reviewer?: string; text?: string; predicted_label?: string }
+  ): Promise<{ status: string; item_id: string; action: string }> {
+    const { data } = await axios.post(`${BASE_URL}/active-learning/${itemId}/review`, payload);
+    return data;
+  },
+
+  /** Stats de la file active learning */
+  async getActiveLearningStats(): Promise<{
+    total: number; pending: number; reviewed: number; corrected: number;
+    by_reason: Record<string, number>; review_rate: number;
+  }> {
+    const { data } = await axios.get(`${BASE_URL}/active-learning/stats`);
+    return data;
+  },
+
+  // ── Staging Retraining ─────────────────────────────────────────────────────
+
+  /** Entraîner un modèle candidat en staging */
+  async stagingTrainCandidate(payload: { session_id?: string; text_col?: string; label_col: string }): Promise<{
+    status: string; metrics: { macro_f1: number; ece: number; coverage: number; trained_at: string; n_samples: number; classes_count: number };
+  }> {
+    const { data } = await axios.post(`${BASE_URL}/staging/train-candidate`, payload);
+    return data;
+  },
+
+  /** Comparer candidat vs production */
+  async stagingCompare(): Promise<{
+    decision: 'PROMOTE' | 'REJECT' | 'NO_CANDIDATE';
+    promote: boolean; reasons: string[];
+    candidate: Record<string, any>; production: Record<string, any>;
+  }> {
+    const { data } = await axios.get(`${BASE_URL}/staging/compare`);
+    return data;
+  },
+
+  /** Promouvoir le candidat en production */
+  async stagingPromote(): Promise<{ status: string; metrics: Record<string, any> }> {
+    const { data } = await axios.post(`${BASE_URL}/staging/promote`);
+    return data;
+  },
+
+  /** Historique des opérations staging */
+  async stagingHistory(maxEvents = 20): Promise<{ events: Array<{ event: string; at: string; [key: string]: any }> }> {
+    const { data } = await axios.get(`${BASE_URL}/staging/history`, { params: { max_events: maxEvents } });
+    return data;
+  },
+
+  // ── Error Analysis ─────────────────────────────────────────────────────────
+
+  /** Analyse FP/FN et confusion hotspots */
+  async getErrorAnalysis(sessionId?: string): Promise<{
+    accuracy: number; total_samples: number; error_count: number; error_rate: number;
+    per_class_metrics: Array<{ class: string; tp: number; fp: number; fn: number; precision: number; recall: number; f1: number; support: number }>;
+    confusion_hotspots: Array<{ pair: string; count: number }>;
+    critical_classes: Array<{ class: string; recall: number; support: number }>;
+    top_fp_examples: Record<string, Array<{ true: string; pred: string; text: string; conf: number | null }>>;
+    top_fn_examples: Record<string, Array<{ true: string; pred: string; text: string; conf: number | null }>>;
+    source?: string;
+  }> {
+    const { data } = await axios.get(`${BASE_URL}/error-analysis`, {
+      params: sessionId ? { session_id: sessionId } : {},
+    });
+    return data;
+  },
 };

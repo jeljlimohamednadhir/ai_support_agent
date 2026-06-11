@@ -1,6 +1,7 @@
-import { MessageSquare, Plus, Clock, Calendar, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { MessageSquare, Plus, Clock, Calendar, Trash2, Pencil, Check, X } from 'lucide-react'
+import { useState, useRef } from 'react'
 import { useChatStore } from '@/stores/chatStore'
+import { chatService } from '@/services/chatService'
 
 interface ChatHistoryProps {
   selectedConversation: string | null
@@ -20,7 +21,32 @@ export default function ChatHistory({
   onToggle
 }: ChatHistoryProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
-  const { conversations } = useChatStore()
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const editInputRef = useRef<HTMLInputElement>(null)
+  const { conversations, updateConversation } = useChatStore()
+
+  const startEdit = (id: number, currentTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingId(id)
+    setEditTitle(currentTitle)
+    setTimeout(() => editInputRef.current?.select(), 30)
+  }
+
+  const saveEdit = async (id: number) => {
+    const trimmed = editTitle.trim()
+    if (trimmed && trimmed !== conversations.find(c => c.id === id)?.title) {
+      try {
+        await chatService.updateTitle(id, trimmed)
+        updateConversation(id, { title: trimmed })
+      } catch (e) {
+        console.warn('Title update failed:', e)
+      }
+    }
+    setEditingId(null)
+  }
+
+  const cancelEdit = () => setEditingId(null)
   
   if (!visible) {
     return (
@@ -86,11 +112,41 @@ export default function ChatHistory({
                     <MessageSquare className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate mb-1 ${
-                      selectedConversation === String(conv.id) ? 'text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
-                    }`}>
-                      {conv.title}
-                    </p>
+                    {editingId === conv.id ? (
+                      <div className="flex items-center gap-1 mb-1" onClick={e => e.stopPropagation()}>
+                        <input
+                          ref={editInputRef}
+                          value={editTitle}
+                          onChange={e => setEditTitle(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') saveEdit(conv.id)
+                            if (e.key === 'Escape') cancelEdit()
+                          }}
+                          onBlur={() => saveEdit(conv.id)}
+                          className="flex-1 text-sm px-1.5 py-0.5 rounded border border-primary-400 dark:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-500 min-w-0"
+                          autoFocus
+                        />
+                        <button onClick={() => saveEdit(conv.id)} className="text-green-600 hover:text-green-700 flex-shrink-0"><Check className="w-3.5 h-3.5" /></button>
+                        <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 mb-1 group/title">
+                        <p className={`text-sm font-medium truncate ${
+                          selectedConversation === String(conv.id) ? 'text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
+                        }`}>
+                          {conv.title}
+                        </p>
+                        {hoveredId === String(conv.id) && (
+                          <button
+                            onClick={e => startEdit(conv.id, conv.title, e)}
+                            className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover/title:opacity-100 transition-opacity"
+                            title="Renommer"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {conv.message_count !== undefined && (
                       <p className="text-xs text-gray-500 truncate mb-1">
                         {conv.message_count} message{conv.message_count !== 1 ? 's' : ''}

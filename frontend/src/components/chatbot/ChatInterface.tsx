@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Sparkles, Bot, User, FileText, Database, Clock, ThumbsDown, Quote, Brain, ChevronDown, ChevronUp } from 'lucide-react'
+import { Send, Sparkles, Bot, User, FileText, Database, Clock, ThumbsDown, Quote } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { sendMessage } from '@/services/api'
 import { chatService } from '@/services/chatService'
@@ -22,7 +22,6 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
   // Track whether the current send is the very first message (for title generation)
   const isFirstMessageRef = useRef(false)
   const [dismissedSources, setDismissedSources] = useState<Set<string>>(new Set())
-  const [expandedThinking, setExpandedThinking] = useState<Set<number>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const { activeConversationId, updateConversation } = useChatStore()
@@ -95,10 +94,23 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
         role: 'assistant', 
         content: data.message, 
         sources: data.sources || [], 
-        thinking: data.thinking_content || null,
         timestamp: new Date() 
       }
-      setMessages(prev => [...prev, assistantMsg])
+      // If backend sent a follow-up evidence block, inject it as a second assistant bubble
+      const followUpMsg = data.follow_up_message
+        ? {
+            role: 'assistant',
+            content: data.follow_up_message,
+            sources: [],
+            timestamp: new Date(),
+            isEvidence: true,   // flag for special styling
+          }
+        : null
+
+      setMessages(prev => followUpMsg
+        ? [...prev, assistantMsg, followUpMsg]
+        : [...prev, assistantMsg]
+      )
       
       // Save both user and assistant messages to backend
       if (activeConversationId) {
@@ -141,8 +153,9 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
     if (!message.trim() || mutation.isPending) return
     
     const userMsg = { role: 'user', content: message, timestamp: new Date() }
-    // Capture whether this is the first message BEFORE state updates
-    isFirstMessageRef.current = messages.length === 0
+    // Trigger title generation after the 1st or 2nd user message
+    const userMsgCount = messages.filter(m => m.role === 'user').length
+    isFirstMessageRef.current = userMsgCount <= 1
     sentMessageRef.current = message
     setMessages(prev => [...prev, userMsg])
 
@@ -240,8 +253,15 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
             <div key={idx} className="space-y-3">
               <div className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'assistant' && (
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-white" />
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    msg.isEvidence
+                      ? 'bg-gray-800 border border-green-700'
+                      : 'bg-gradient-to-br from-primary-600 to-blue-600'
+                  }`}>
+                    {msg.isEvidence
+                      ? <Database className="w-4 h-4 text-green-400" />
+                      : <Bot className="w-4 h-4 text-white" />
+                    }
                   </div>
                 )}
                 
@@ -250,6 +270,8 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
                     className={`px-6 py-4 rounded-2xl shadow-sm ${
                       msg.role === 'user'
                         ? 'bg-gradient-to-r from-primary-600 to-blue-600 text-white'
+                        : msg.isEvidence
+                        ? 'bg-gray-900 dark:bg-gray-950 text-green-300 border border-green-800 font-mono text-xs'
                         : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
                     }`}
                   >
@@ -258,33 +280,6 @@ export default function ChatInterface({ conversationId, onToggleHistory, history
                     </div>
                   </div>
                   
-                  {/* Thinking toggle button */}
-                  {msg.role === 'assistant' && msg.thinking && (
-                    <div className="mt-1">
-                      <button
-                        onClick={() => setExpandedThinking(prev => {
-                          const next = new Set(prev)
-                          next.has(idx) ? next.delete(idx) : next.add(idx)
-                          return next
-                        })}
-                        className="flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors px-2 py-1 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                      >
-                        <Brain className="w-3.5 h-3.5" />
-                        <span>Raisonnement</span>
-                        {expandedThinking.has(idx) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                      </button>
-                      {expandedThinking.has(idx) && (
-                        <div className="mt-2 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-xl text-xs text-purple-800 dark:text-purple-200 font-mono whitespace-pre-wrap max-h-96 overflow-y-auto">
-                          <div className="flex items-center gap-1.5 mb-2 text-purple-500 font-sans font-semibold">
-                            <Brain className="w-3.5 h-3.5" />
-                            Raisonnement interne du modèle
-                          </div>
-                          {msg.thinking}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   {/* Sources Pills — inline in conversation only */}
                   {msg.sources && msg.sources.length > 0 && msg.role === 'assistant' && (
                     <div className="flex flex-wrap gap-2 mt-1">

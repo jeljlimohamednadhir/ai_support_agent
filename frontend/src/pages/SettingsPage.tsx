@@ -66,10 +66,17 @@ export default function SettingsPage() {
     loadConfig()
   }, [])
 
+  const getAuthHeaders = (): Record<string, string> => {
+    const token = localStorage.getItem('auth_token')
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  }
+
   const loadConfig = async () => {
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:8000/api/v1/config/')
+      const response = await fetch('/api/v1/config/', {
+        headers: getAuthHeaders() as HeadersInit
+      })
       if (response.ok) {
         const data = await response.json()
         setConfig(data)
@@ -87,10 +94,11 @@ export default function SettingsPage() {
   const saveConfig = async () => {
     setSaving(true)
     try {
-      const response = await fetch('http://localhost:8000/api/v1/config/bulk', {
+      const response = await fetch('/api/v1/config/bulk', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAuthHeaders(),
         },
         body: JSON.stringify(config)
       })
@@ -116,8 +124,9 @@ export default function SettingsPage() {
     
     setSaving(true)
     try {
-      const response = await fetch('http://localhost:8000/api/v1/config/reset', {
-        method: 'POST'
+      const response = await fetch('/api/v1/config/reset', {
+        method: 'POST',
+        headers: getAuthHeaders() as HeadersInit
       })
       
       if (response.ok) {
