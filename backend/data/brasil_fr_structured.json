@@ -1,0 +1,5071 @@
+[
+  {
+    "id": "FR-TOC-CALCULATION-001",
+    "application": "BRASIL",
+    "title": "Calcul TOC ADSL/SDSL/VDSL2 incorrect",
+    "intents": [
+      "calculate_toc"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_d_dslam_xdsl_cards",
+          "t_techno_on_card_nat_profiles",
+          "t_card_national_profiles",
+          "t_technology_types"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Valeur TOC ADSL/SDSL/VDSL2 incorrecte dans l'IHM BRASIL",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Valeur TOC ADSL/SDSL/VDSL2 incorrecte dans l'IHM BRASIL",
+        "to": "cause:Données dxcd_total_port_count nulles ou erronées dans t_d_dslam_xdsl_cards",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Données dxcd_total_port_count nulles ou erronées dans t_d_dslam_xdsl_cards",
+        "to": "cause:Incohérence entre t_d_dslam_xdsl_cards et t_techno_on_card_nat_profiles",
+        "confidence": 0.88
+      },
+      {
+        "from": "cause:Incohérence entre t_d_dslam_xdsl_cards et t_techno_on_card_nat_profiles",
+        "to": "root:Données orphelines dans les tables de configuration DSLAM",
+        "confidence": 0.95
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines dans les tables de configuration DSLAM",
+      "confidence": 0.93
+    },
+    "blocking_conditions": [
+      "Présence de dxcd_total_port_count NULL dans t_d_dslam_xdsl_cards",
+      "Incohérence entre t_techno_on_card_nat_profiles et t_card_national_profiles"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT dxcd_total_port_count, dxcd_total_used_port_count FROM t_d_dslam_xdsl_cards WHERE dslam_eqpt_id = ?",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_techno_on_card_nat_profiles tcnp JOIN t_card_national_profiles cnp ON tcnp.cnpr_id = cnp.cnpr_id WHERE tcnp.tcty_id IN (SELECT tcty_id FROM t_technology_types WHERE tcty_name LIKE 'ADSL%')",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier les jointures entre t_d_dslam_xdsl_cards et t_techno_on_card_nat_profiles",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_d_dslam_xdsl_cards SET dxcd_total_port_count = <valeur_correcte> WHERE dslam_eqpt_id = ?",
+        "type": "data_fix"
+      },
+      {
+        "action": "DELETE FROM t_techno_on_card_nat_profiles WHERE cnpr_id NOT IN (SELECT cnpr_id FROM t_card_national_profiles)",
+        "type": "data_fix"
+      },
+      {
+        "action": "Relancer ./CalculerTOC.ksh et vérifier les logs /opt/application/49mbdd/current/BrasilTools/logs/",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Les calculs TOC nécessitent des données non nulles dans t_d_dslam_xdsl_cards",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "dxcd_total_port_count",
+      "t_d_dslam_xdsl_cards",
+      "t_techno_on_card_nat_profiles",
+      "t_technology_types"
+    ],
+    "confidence_score": 0.93,
+    "pattern_signature": "calculate_toc|DSLAM|t_d_dslam_xdsl_cards|data_orphan",
+    "trigger_signals": [
+      "toc incorrect",
+      "calculer toc échoué",
+      "valeur port adsl erronée",
+      "incohérence dslam",
+      "log brasiltools erreur"
+    ],
+    "non_blocking_conditions": [
+      "dxcd_total_port_count > 0 dans t_d_dslam_xdsl_cards",
+      "Jointures valides entre t_techno_on_card_nat_profiles et t_card_national_profiles"
+    ],
+    "_source_file": "FR 001 CalculerToc",
+    "_qdrant_id": "0002542c-52ab-4a5b-9159-bfb380049de8"
+  },
+  {
+    "id": "FR-UMIDICO-BACKOUT-003",
+    "application": "BRASIL",
+    "title": "Reprise des messages Umi-Dico en file Rabbit Backout",
+    "intents": [
+      "process_backout_messages",
+      "analyze_data_inconsistency"
+    ],
+    "entities": [
+      {
+        "type": "DATABASE_TABLE",
+        "examples": []
+      },
+      {
+        "type": "SYSTEM",
+        "examples": [
+          "RabbitMQ",
+          "Patrol"
+        ]
+      },
+      {
+        "type": "QUEUE",
+        "examples": [
+          "umidico.backout",
+          "in.req.ebqxdsl.neto"
+        ]
+      },
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "EQUIPMENT_UNKNOWN"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Alarme Patrol déclenchée pour umidico.backout > 50 messages",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "Messages Umi-Dico persistants en file Rabbit Backout",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Alarme Patrol déclenchée pour umidico.backout > 50 messages",
+        "to": "cause:Messages non traités en raison d'erreurs BDD (insert/update/delete)",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Messages non traités en raison d'erreurs BDD (insert/update/delete)",
+        "to": "cause:Données orphelines non validées dans DicoBRnoeud/DicoBRsite",
+        "confidence": 0.88
+      },
+      {
+        "from": "cause:Données orphelines non validées dans DicoBRnoeud/DicoBRsite",
+        "to": "root:Données orphelines persistantes en file Rabbit Backout",
+        "confidence": 0.95
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines persistantes en file Rabbit Backout",
+      "confidence": 0.93
+    },
+    "blocking_conditions": [
+      "Nombre de messages > 50 dans umidico.backout",
+      "Présence de messages non validés dans DicoBRnoeud/DicoBRsite"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT COUNT(*) FROM RabbitMQ.umidico.backout WHERE status='error'",
+        "type": "query"
+      },
+      {
+        "step": "Exporter les messages en CSV avec les colonnes CodeInterne, Action, TypeMessage",
+        "type": "analysis"
+      },
+      {
+        "step": "Vérifier les erreurs BDD associées (insert/update/delete) dans les logs Brasil",
+        "type": "check"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Traiter les messages en BDD: UPDATE DicoBRsite SET status='validé' WHERE CodeInterne IN (liste)",
+        "type": "data_fix"
+      },
+      {
+        "action": "Purge de la file RabbitMQ.umidico.backout via l'interface admin",
+        "type": "cleanup"
+      },
+      {
+        "action": "Valider l'absence de messages en erreur via SELECT * FROM RabbitMQ.umidico.backout",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "File RabbitMQ.umidico.backout doit rester inférieure à 50 messages",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "umidico.backout",
+      "DicoBRnoeud",
+      "DicoBRsite",
+      "Patrol alarme P4"
+    ],
+    "confidence_score": 0.91,
+    "pattern_signature": "process_backout_messages|Umi-Dico|umidico.backout|data_orphan",
+    "trigger_signals": [
+      "alarme patrol backout",
+      "messages en corbeille rabbit",
+      "erreur traitement umidico",
+      "file backout débordante"
+    ],
+    "non_blocking_conditions": [
+      "Nombre de messages < 50 dans umidico.backout",
+      "Absence d'erreurs BDD dans les logs Brasil"
+    ],
+    "_source_file": "FR 003 Reprise des messages Umi-Dico stockés en MQ Backout",
+    "_qdrant_id": "f754306b-6b31-4d97-93f1-ba76771a4834"
+  },
+  {
+    "id": "FR-UMI-EPC-MASS-010",
+    "application": "BRASIL",
+    "title": "Erreur de configuration FARID lors de la migration ND vers CEV BITSTREAM",
+    "intents": [
+      "update_service",
+      "configure_equipment"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "ND",
+          "DSLAM"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_making_files",
+          "t_mrt_access_dslams",
+          "t_mrt_access_services"
+        ]
+      },
+      {
+        "type": "SYSTEM",
+        "examples": [
+          "ARTEMIS",
+          "SCA"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Erreur de configuration SCA : Paramètre Remote-Id non présent",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "Absence de FARID dans BRASIL pour le ND",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Erreur de configuration SCA : Paramètre Remote-Id non présent",
+        "to": "cause:Absence de FARID dans t_making_files.mkfl_far_id",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Absence de FARID dans t_making_files.mkfl_far_id",
+        "to": "cause:Données orphelines dans migration CEV BITSTREAM",
+        "confidence": 0.96
+      },
+      {
+        "from": "cause:Données orphelines dans migration CEV BITSTREAM",
+        "to": "root:Données orphelines persistantes en base",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines persistantes en base",
+      "confidence": 0.97
+    },
+    "blocking_conditions": [
+      "Absence de FARID dans t_making_files",
+      "Présence de CR non validé dans SCA"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT mkfl_far_id FROM t_making_files WHERE nd_id = '<ND_ID>'",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier t_mrt_access_dslams.mrt_farid = t_making_files.mkfl_far_id",
+        "type": "analysis"
+      },
+      {
+        "step": "Vérifier statut CR dans SCA pour le ND",
+        "type": "check"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_making_files SET mkfl_far_id = '<FARID_EUA>' WHERE nd_id = '<ND_ID>'",
+        "type": "data_fix"
+      },
+      {
+        "action": "Exécuter KO manuel du CR dans SCA",
+        "type": "config_fix"
+      },
+      {
+        "action": "Relancer tâche ARTEMIS avec Ré-execution",
+        "type": "retry"
+      },
+      {
+        "action": "Vérifier synchronisation FARID dans t_mrt_access_services",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "FARID obligatoire pour migration CEV BITSTREAM",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "mkfl_far_id",
+      "t_making_files",
+      "t_mrt_access_dslams",
+      "SCA CR status"
+    ],
+    "confidence_score": 0.96,
+    "pattern_signature": "update_service|ND|t_making_files|data_orphan",
+    "trigger_signals": [
+      "erreur remote-id",
+      "absence farid",
+      "migration cev bitstream",
+      "configuration ko",
+      "paramètre manquant"
+    ],
+    "non_blocking_conditions": [
+      "Présence de FARID valide dans t_making_files",
+      "CR validé dans SCA"
+    ],
+    "_source_file": "FR 010 Blocage SCA car manque de FARID ou RemoteID",
+    "_qdrant_id": "88ae5325-3344-4e02-bce5-16f69a0a3a7d"
+  },
+  {
+    "id": "FR-CONFIG-NEW-SERVICES-11",
+    "application": "BRASIL",
+    "title": "Bouton Configurer « Nouveaux Services » KO pour Orange",
+    "intents": [
+      "configure_new_services"
+    ],
+    "entities": [
+      {
+        "type": "SERVICE",
+        "examples": [
+          "GE",
+          "XD",
+          "VLAN"
+        ]
+      },
+      {
+        "type": "SYSTEM",
+        "examples": [
+          "BRASIL",
+          "SEBA"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_making_files",
+          "t_res_prod_controlers"
+        ]
+      },
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM",
+          "VC",
+          "VP"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Bouton Configurer bloqué pour clients ORANGE (XD→GE)",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "mkfl_is_compatible = 0 malgré conditions valides",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Bouton Configurer bloqué pour clients ORANGE (XD→GE)",
+        "to": "cause:mkfl_is_compatible = 0 en base",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:mkfl_is_compatible = 0 en base",
+        "to": "cause:Règles de compatibilité non respectées pour ORANGE",
+        "confidence": 0.96
+      },
+      {
+        "from": "cause:Règles de compatibilité non respectées pour ORANGE",
+        "to": "root:Configuration erronée des règles de compatibilité",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "A",
+      "label": "Configuration erronée des règles de compatibilité",
+      "confidence": 0.97
+    },
+    "blocking_conditions": [
+      "mkfl_is_compatible = 0",
+      "Dossier à état ECC",
+      "EPC Global Mode ≠ 'I'",
+      "Service cible non affecté",
+      "Balise compatibilité = true"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT mkfl_is_compatible FROM t_making_files WHERE mkfl_nd = '164038537'",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier état dossier dans Brasil (ECC)",
+        "type": "check"
+      },
+      {
+        "step": "Valider EPC Global Mode = 'I'",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_making_files SET mkfl_is_compatible = 1 WHERE mkfl_nd = '164038537'",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier état dossier ≠ ECC",
+        "type": "check"
+      },
+      {
+        "action": "Relancer bouton Configurer",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "mkfl_is_compatible = 1 requis pour activation bouton",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "Dossier ne doit pas être en ECC",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "mkfl_nd",
+      "mkfl_is_compatible",
+      "t_making_files",
+      "ECC",
+      "EPC Global Mode"
+    ],
+    "confidence_score": 0.96,
+    "pattern_signature": "configure_new_services|SERVICE|t_making_files|config_error",
+    "trigger_signals": [
+      "bouton configurer ko",
+      "orange client xd ge",
+      "compatibilité = 0",
+      "dossier ecc",
+      "epc mode i"
+    ],
+    "non_blocking_conditions": [
+      "mkfl_is_compatible = 1",
+      "Dossier état ≠ ECC",
+      "EPC Global Mode = 'I'",
+      "Service cible affecté"
+    ],
+    "_source_file": "FR 011 Bouton Configurer Nouveaux Services",
+    "_qdrant_id": "cf5c852c-b434-4f74-98ea-ea01dcd656ac"
+  },
+  {
+    "id": "FR-BRASIL-CLOSEFOLDER-12",
+    "application": "BRASIL",
+    "title": "Erreur BRASIL 1002 : Champ NIFolderID manquant lors de CloseFolder",
+    "intents": [
+      "close_folder",
+      "validate_data_integrity"
+    ],
+    "entities": [
+      {
+        "type": "DATABASE_TABLE",
+        "examples": []
+      },
+      {
+        "type": "SERVICE",
+        "examples": [
+          "CloseFolder",
+          "UpdateTechnicalConfigurationByOrder"
+        ]
+      },
+      {
+        "type": "ORDER",
+        "examples": [
+          "DLM_00150eeb6389507cf"
+        ]
+      },
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "EQUIPMENT_UNKNOWN"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Erreur 1002 : Champ obligatoire NIFolderID non présent",
+        "type": "data_inconsistency"
+      },
+      {
+        "text": "Statut dossier DLM incorrectement transmis à GAMBA",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Erreur 1002 : Champ obligatoire NIFolderID non présent",
+        "to": "cause:Absence de NIFolderID dans dossiers",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Absence de NIFolderID dans dossiers",
+        "to": "cause:Éléments mrtservice/epc non synchronisés",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Éléments mrtservice/epc non synchronisés",
+        "to": "root:Incohérence de données entre BRASIL et équipements",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Incohérence de données entre BRASIL et équipements",
+      "confidence": 0.97
+    },
+    "blocking_conditions": [
+      "Absence de NIFolderID dans la table dossiers",
+      "Éléments mrtservice/epc/epcvers non présents ou désynchronisés"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM dossiers WHERE NIFolderID IS NULL AND dossier_state='IN_PROGRESS'",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier l'existence de mrtservice_vers avec tsStatus='ConfiguredOK'",
+        "type": "analysis"
+      },
+      {
+        "step": "Cross-checker mrtservice/epc/mrtdslamvers avec équipements SCA",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Supprimer éléments orphelins: DELETE FROM mrtservice WHERE tsId NOT IN (SELECT tsId FROM dossiers)",
+        "type": "data_fix"
+      },
+      {
+        "action": "Corriger état mrtservicevers: UPDATE mrtservicevers SET state='C' WHERE state='A'",
+        "type": "data_fix"
+      },
+      {
+        "action": "Relancer CloseFolder avec NIFolderID correct: \n<soapenv:Body><g2:CloseFolderRequest><typ:orderId>{ORDER_ID}</typ:orderId><typ:attributeList><typ:simpleAttribute><typ:name>NIFolderID</typ:name><typ:value>{9DIGITS}</typ:value></typ:simpleAttribute></typ:attributeList></g2:CloseFolderRequest>",
+        "type": "retry"
+      },
+      {
+        "action": "Valider synchronisation avec SCA: SELECT * FROM t_sca_sync WHERE folder_id={NIFolderID}",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "NIFolderID obligatoire pour dossier en état 'IN_PROGRESS'",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "mrtservice/epc/mrtdslamvers doivent être synchronisés avec équipements",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "NIFolderID",
+      "mrtservice",
+      "epc",
+      "tsStatus",
+      "dossiers"
+    ],
+    "confidence_score": 0.96,
+    "pattern_signature": "close_folder|dossiers|mrtservice|data_orphan",
+    "trigger_signals": [
+      "erreur 1002 nifolderid",
+      "dossier non synchronisé",
+      "etat dossier incorrect",
+      "erreur closefolder brasil"
+    ],
+    "non_blocking_conditions": [
+      "NIFolderID présent dans dossiers",
+      "mrtservice/epc/mrtdslamvers synchronisés avec équipements",
+      "etat mrtservicevers='C'"
+    ],
+    "_source_file": "FR 012 Erreur BRASIL 1002 Champ obligatoire NIFolderID non present",
+    "_qdrant_id": "f49f9081-577d-43b1-9684-2bb6190c02ab"
+  },
+  {
+    "id": "FR-BRASIL-1002-013",
+    "application": "BRASIL",
+    "title": "Erreur BRASIL 1002: Champ updatedMRTList absent ou mal formaté",
+    "intents": [
+      "update_network_device",
+      "diagnose_incident"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "ND",
+          "MRT"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_making_files"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Erreur BRASIL 1002: Le champ obligatoire updatedMRTList est absent",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "ND bloqué dans SEBA",
+        "type": "state_lock"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Erreur BRASIL 1002: Le champ obligatoire updatedMRTList est absent",
+        "to": "cause:Absence du champ updatedMRTList dans la requête UpdateTCByOrder",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Absence du champ updatedMRTList dans la requête UpdateTCByOrder",
+        "to": "cause:Configuration incorrecte du ND dans SCA",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Configuration incorrecte du ND dans SCA",
+        "to": "root:Erreur de configuration des paramètres obligatoires",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "A",
+      "label": "Erreur de configuration des paramètres obligatoires",
+      "confidence": 0.97
+    },
+    "blocking_conditions": [
+      "Absence du champ updatedMRTList dans la requête UpdateTCByOrder",
+      "ND en état bloqué dans SEBA"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_making_files WHERE mkfl_nd='590838192'",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier les logs BRASIL pour l'appel UpdateTCByOrder",
+        "type": "analysis"
+      },
+      {
+        "step": "Valider la présence du champ updatedMRTList dans la requête",
+        "type": "check"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "update t_making_files set mkfl_status=4 where t_making_files.mkfl_nd='590838192'",
+        "type": "data_fix"
+      },
+      {
+        "action": "Mettre le ND en état 'EN SERVICE' sur SEBA",
+        "type": "config_fix"
+      },
+      {
+        "action": "Lancer la reconfiguration du ND (Casser/Recréer)",
+        "type": "retry"
+      },
+      {
+        "action": "Valider la configuration dans t_making_files",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Le champ updatedMRTList est obligatoire dans les requêtes UpdateTCByOrder",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "updatedMRTList",
+      "t_making_files",
+      "mkfl_nd",
+      "UpdateTCByOrder"
+    ],
+    "confidence_score": 0.96,
+    "pattern_signature": "update_network_device|ND|t_making_files|config_error",
+    "trigger_signals": [
+      "erreur 1002 format",
+      "champ updatedmrtlist absent",
+      "nd bloqué seba",
+      "erreur brasil format",
+      "configuration mrtlist"
+    ],
+    "non_blocking_conditions": [
+      "Présence du champ updatedMRTList dans la requête",
+      "ND en état 'EN SERVICE' sur SEBA"
+    ],
+    "_source_file": "FR 013  ERREUR BRASIL 1002 ERREUR DE FORMAT LE CHAMP UPDATEDMRTLIST EST ABSENT OU NE RESPECTE PAS LE FORMAT AUTORISE",
+    "_qdrant_id": "fa60f3a7-2953-480a-9f74-5e1e28524b14"
+  },
+  {
+    "id": "FR-UMI-EPC-LOG-076",
+    "application": "BRASIL",
+    "title": "Configuration des logs UMI-EPC incorrecte",
+    "intents": [
+      "diagnose_incident",
+      "retrieve_logs"
+    ],
+    "entities": [
+      {
+        "type": "DATABASE_TABLE",
+        "examples": []
+      },
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "wa11",
+          "wa12",
+          "wa21",
+          "wa22"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Niveau de log UMI-EPC configuré à INFO au lieu de DEBUG",
+        "type": "constraint_violation"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Niveau de log UMI-EPC configuré à INFO au lieu de DEBUG",
+        "to": "cause:Configuration MDCValueLevelPair incorrecte dans logback.xml",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Configuration MDCValueLevelPair incorrecte dans logback.xml",
+        "to": "cause:Logs UMI-EPC non disponibles en mode DEBUG",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Logs UMI-EPC non disponibles en mode DEBUG",
+        "to": "root:Configuration système non conforme aux exigences de diagnostic",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "A",
+      "label": "Configuration système non conforme aux exigences de diagnostic",
+      "confidence": 0.97
+    },
+    "blocking_conditions": [
+      "Niveau de log <value>connectorUMIepc</value> != DEBUG dans logback.xml"
+    ],
+    "diagnostic": [
+      {
+        "step": "Vérifier le fichier /opt/application/49mapp/current/tomcat/00/brasil-ear-configuration/logback.xml",
+        "type": "check"
+      },
+      {
+        "step": "Rechercher <MDCValueLevelPair><value>connectorUMIepc</value><level>DEBUG</level></MDCValueLevelPair>",
+        "type": "analysis"
+      },
+      {
+        "step": "Valider l'existence des fichiers connectorUMIepc_mouvement* dans /opt/application/49mapp/current/tomcat/00/logs/mvtumiepc",
+        "type": "query"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Modifier logback.xml pour forcer <level>DEBUG</level> sur <value>connectorUMIepc</value>",
+        "type": "config_fix"
+      },
+      {
+        "action": "Redémarrer le service Tomcat pour appliquer les changements",
+        "type": "retry"
+      },
+      {
+        "action": "Valider la présence de logs DEBUG avec zgrep -l 'DEBUG' connectorUMIepc_mouvement*.log",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Le niveau de log UMI-EPC doit être configuré à DEBUG pour les diagnostics",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "logback.xml",
+      "connectorUMIepc_mouvement*.log",
+      "MDCValueLevelPair",
+      "wa11/wa12/wa21/wa22"
+    ],
+    "confidence_score": 0.96,
+    "pattern_signature": "diagnose_incident|connectorUMIepc|logback.xml|config_error",
+    "trigger_signals": [
+      "logs umi-epc non disponibles",
+      "niveau de log info au lieu de debug",
+      "configuration logback.xml incorrecte",
+      "absence de logs debug pour umi-epc"
+    ],
+    "non_blocking_conditions": [
+      "Niveau de log <value>connectorUMIepc</value> = DEBUG dans logback.xml",
+      "Fichiers connectorUMIepc_mouvement* contenant des entrées DEBUG"
+    ],
+    "_source_file": "FR 076 Recherche mouvement UMIEPC",
+    "_qdrant_id": "381658ce-8b2d-465c-959f-a7eb6692de39"
+  },
+  {
+    "id": "FR-DSLAM-MUTATION-100",
+    "application": "BRASIL",
+    "title": "Mutation de lien DSLAM avec incompatibilités VLAN",
+    "intents": [
+      "update_equipment",
+      "validate_configuration",
+      "diagnose_incident"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM_01",
+          "DSLAM_02",
+          "DSLAM_03",
+          "DSLAM_04",
+          "DSLAM_05",
+          "DSLAM_06"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_vlan_config",
+          "t_fst_mappings",
+          "t_dslam_grappe",
+          "t_service_continuity"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Incompatibilités de services persistantes malgré vérifications préalables",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "Échec de mutation en raison de FST non synchronisées",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Incompatibilités de services persistantes malgré vérifications préalables",
+        "to": "cause:Absence de vérification TST dans pré-traitement",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Absence de vérification TST dans pré-traitement",
+        "to": "cause:FST non synchronisées entre DSLAM source et cible",
+        "confidence": 0.88
+      },
+      {
+        "from": "cause:FST non synchronisées entre DSLAM source et cible",
+        "to": "root:Bogue BRASIL - Contrôle TST manquant",
+        "confidence": 0.95
+      }
+    ],
+    "root_cause": {
+      "class": "B",
+      "label": "Bogue BRASIL - Contrôle TST manquant",
+      "confidence": 0.94
+    },
+    "blocking_conditions": [
+      "Présence de FST non synchronisées entre DSLAM_02 et DSLAM_03",
+      "VLAN avec configurations FST incohérentes dans t_vlan_config"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_fst_mappings WHERE dslam_id IN ('DSLAM_01', 'DSLAM_02', 'DSLAM_03')",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier continuité TST entre DSLAM_05 → DSLAM_01 → DSLAM_02 → DSLAM_06",
+        "type": "analysis"
+      },
+      {
+        "step": "Comparer FST entre DSLAM_02 (source) et DSLAM_03 (cible) dans t_dslam_grappe",
+        "type": "check"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "SUPPRIMER FST non synchronisées dans t_vlan_config pour VLAN 2017, 1213, 1220, 1226, 1227, 1230, 1232, 1238, 1240, 1251, 1262, 1265, 1267, 1271, 1277, 1304, 1306, 1341, 2341, 2704",
+        "type": "data_fix"
+      },
+      {
+        "action": "AJOUTER FST FFTE Sup1G pour VLAN 1227 dans t_fst_mappings",
+        "type": "data_fix"
+      },
+      {
+        "action": "Valider continuité TST post-correction",
+        "type": "check"
+      },
+      {
+        "action": "Relancer mutation après correction FST",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Continuité TST requise avant mutation de grappe DSLAM",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "Synchronisation FST obligatoire entre DSLAM source et cible",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "t_vlan_config",
+      "t_fst_mappings",
+      "t_dslam_grappe",
+      "FST",
+      "VLAN"
+    ],
+    "confidence_score": 0.93,
+    "pattern_signature": "update_equipment|DSLAM|t_fst_mappings|system_bug",
+    "trigger_signals": [
+      "mutation lien impossible",
+      "incompatibilités services",
+      "fst non synchronisées",
+      "erreur mutation dslam",
+      "vlan mal configurés"
+    ],
+    "non_blocking_conditions": [
+      "Continuité TST validée dans t_service_continuity",
+      "FST synchronisées entre DSLAM source et cible"
+    ],
+    "_source_file": "FR 100 Mutation de Liens",
+    "_qdrant_id": "1e0836c7-ba3e-4b87-9139-64fecffde29b"
+  },
+  {
+    "id": "FR-DLM-RECOVERY-101",
+    "application": "BRASIL",
+    "title": "Reprise des DLM bloqués en cours dans BRASIL",
+    "intents": [
+      "diagnose_incident",
+      "manage_data_cleanup"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "ND",
+          "DSLAM"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_making_files",
+          "t_mrt_access_dslams",
+          "t_mrt_access_dslam_vers"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Dossiers DLM non clos avec erreur BRASIL (err13000) >1 mois",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "Date de création de dossier antérieure à la date actuelle",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Dossiers DLM non clos avec erreur BRASIL (err13000) >1 mois",
+        "to": "cause:Présence de dossiers DLM ouverts sans closeFolder",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Présence de dossiers DLM ouverts sans closeFolder",
+        "to": "cause:Données orphelines dans t_making_files et t_mrt_access_dslams",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Données orphelines dans t_making_files et t_mrt_access_dslams",
+        "to": "root:Données orphelines persistantes en base",
+        "confidence": 0.98
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines persistantes en base",
+      "confidence": 0.96
+    },
+    "blocking_conditions": [
+      "Présence de dossiers DLM ouverts sans closeFolder",
+      "mrtdv.mrdv_current_state <> 'C'"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT mkfl_creation_date_date, count(*) FROM t_making_files WHERE mkfl_business_process=4 AND mkfl_creation_date_date < current_date GROUP BY 1 ORDER BY 1 DESC",
+        "type": "query"
+      },
+      {
+        "step": "SELECT DISTINCT mkfl_nd, mkfl_creation_date_date FROM t_making_files WHERE mkfl_business_process=4 AND mkfl_creation_date_date < current_date ORDER BY 2 ASC",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier l'état des dossiers via IHM SCA (openFolder vs closeFolder)",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "DELETE FROM t_making_files WHERE mkfl_file_id IN (SELECT mkfl_file_id FROM t_making_files WHERE mkfl_business_process=4 AND mkfl_creation_date_date < current_date)",
+        "type": "data_fix"
+      },
+      {
+        "action": "Nettoyer éléments epc, mrt et versions non à 'C' via BrasilCorrecteur",
+        "type": "data_fix"
+      },
+      {
+        "action": "Recréer et envoyer WS closeFolder pour dossiers oubliés",
+        "type": "data_fix"
+      },
+      {
+        "action": "Relancer openFolder via WS ou CASTA",
+        "type": "retry"
+      },
+      {
+        "action": "Utiliser FR 138 pour relancer WS créés",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Un DLM doit enchainer openFolder puis closeFolder",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "mkfl_file_id",
+      "t_making_files",
+      "t_mrt_access_dslams",
+      "mrtd_current_state"
+    ],
+    "confidence_score": 0.94,
+    "pattern_signature": "diagnose_incident|ND|t_making_files|data_orphan",
+    "trigger_signals": [
+      "dossiers dlm bloqués",
+      "erreur brasil 13000",
+      "dossiers non clos",
+      "relance echouée",
+      "donnees orphelines"
+    ],
+    "non_blocking_conditions": [
+      "mrtdv.mrdv_current_state = 'C'",
+      "absence de dossiers DLM ouverts sans closeFolder"
+    ],
+    "_source_file": "FR 101 Reprise des DLM bloqués en cours dans brasil",
+    "_qdrant_id": "2816c048-69f6-40f7-92f6-307aa3a92966"
+  },
+  {
+    "id": "FR-NOEUD-IP-ABSENT-1300",
+    "application": "BRASIL",
+    "title": "Erreur 1300 : Noeud_IP absent dans services techniques",
+    "intents": [
+      "diagnose_incident",
+      "validate_configuration"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "Noeud_IP"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_services_techniques",
+          "t_res_prod_controlers"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Erreur 1300 : Noeud_IP absent dans liste services techniques",
+        "type": "system_error"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Erreur 1300 : Noeud_IP absent dans liste services techniques",
+        "to": "cause:Noeud_IP non référencé dans t_services_techniques",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Noeud_IP non référencé dans t_services_techniques",
+        "to": "cause:Configuration incomplète du service technique",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Configuration incomplète du service technique",
+        "to": "root:Configuration manquante dans services techniques",
+        "confidence": 0.92
+      }
+    ],
+    "root_cause": {
+      "class": "A",
+      "label": "Configuration manquante dans services techniques",
+      "confidence": 0.93
+    },
+    "blocking_conditions": [
+      "Absence de Noeud_IP dans t_services_techniques"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_services_techniques WHERE noeud_ip = '<IP>'",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier correspondance avec t_res_prod_controlers",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Demander au métier d'ajouter Noeud_IP dans t_services_techniques",
+        "type": "config_fix"
+      },
+      {
+        "action": "Relancer IAR dans op ORRAHD",
+        "type": "retry"
+      },
+      {
+        "action": "Valider correspondance avec t_res_prod_controlers",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Service non traitable sans Noeud_IP dans t_services_techniques",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "noeud_ip",
+      "t_services_techniques",
+      "t_res_prod_controlers"
+    ],
+    "confidence_score": 0.94,
+    "pattern_signature": "validate_configuration|Noeud_IP|t_services_techniques|config_error",
+    "trigger_signals": [
+      "erreur 1300",
+      "noeud ip absent",
+      "service technique non référencé",
+      "configuration incomplète"
+    ],
+    "non_blocking_conditions": [
+      "Présence de Noeud_IP dans t_services_techniques",
+      "Correspondance validée avec t_res_prod_controlers"
+    ],
+    "_source_file": "FR 130 Les types d'erreur 1300",
+    "_qdrant_id": "33894be2-7973-4cd0-a1ab-73f01b1b0215"
+  },
+  {
+    "id": "FR-VC-OCCUPATION-135",
+    "application": "BRASIL",
+    "title": "Affectation VC bloquée par occupation erronée",
+    "intents": [
+      "check_vc_availability",
+      "update_resource_status",
+      "diagnose_data_inconsistency"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM",
+          "CCL"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_res_prod_controlables",
+          "t_d_rsc_vcis",
+          "t_resource_usages"
+        ]
+      },
+      {
+        "type": "RESOURCE",
+        "examples": [
+          "VC",
+          "CCL"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Affectation VC impossible (erreur 4002) malgré absence de client",
+        "type": "data_inconsistency"
+      },
+      {
+        "text": "VC marqué comme occupé (OQP) mais sans enregistrement actif",
+        "type": "state_lock"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Affectation VC impossible (erreur 4002) malgré absence de client",
+        "to": "cause:Statut VC incorrect dans t_d_rsc_vcis (O au lieu de F)",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Statut VC incorrect dans t_d_rsc_vcis (O au lieu de F)",
+        "to": "cause:Absence de synchronisation entre t_d_rsc_vcis et t_resource_usages",
+        "confidence": 0.96
+      },
+      {
+        "from": "cause:Absence de synchronisation entre t_d_rsc_vcis et t_resource_usages",
+        "to": "root:Données fantômes persistantes dans t_d_rsc_vcis",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données fantômes persistantes dans t_d_rsc_vcis",
+      "confidence": 0.97
+    },
+    "blocking_conditions": [
+      "rscv_status='O' dans t_d_rsc_vcis sans correspondance dans t_resource_usages",
+      "Présence d'enregistrements orphelins dans t_resource_usages"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_d_rsc_vcis WHERE rscv_vci=205 AND rscv_status='O'",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_resource_usages WHERE rsus_vci=205",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier cohérence entre t_d_rsc_vcis.rscv_status et t_resource_usages.rsus_vci",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_d_rsc_vcis SET rscv_status='F' WHERE rpct_id=<ID> AND rscv_vci=205",
+        "type": "data_fix"
+      },
+      {
+        "action": "DELETE FROM t_resource_usages WHERE rsus_vci=205 AND rsus_id NOT IN (SELECT rsus_id FROM t_d_rsc_vcis)",
+        "type": "cleanup"
+      },
+      {
+        "action": "Vérifier absence d'enregistrements orphelins dans t_resource_usages",
+        "type": "check"
+      },
+      {
+        "action": "Relancer affectation VC via interface",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "VC non affectable si rscv_status='O' sans correspondance dans t_resource_usages",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "rscv_vci",
+      "rscv_status",
+      "t_d_rsc_vcis",
+      "t_resource_usages",
+      "rpct_id"
+    ],
+    "confidence_score": 0.96,
+    "pattern_signature": "check_vc_availability|VC|t_d_rsc_vcis|data_orphan",
+    "trigger_signals": [
+      "vc occupé à tort",
+      "erreur 4002 affectation",
+      "statut oqp erroné",
+      "vc marqué occupé sans client",
+      "occupation vc fantôme"
+    ],
+    "non_blocking_conditions": [
+      "rscv_status='F' dans t_d_rsc_vcis",
+      "Absence d'enregistrements orphelins dans t_resource_usages"
+    ],
+    "_source_file": "FR 135  AFFECTATION SUR CCL VC DEJA OCCUPE",
+    "_qdrant_id": "974e55cb-3a1d-426d-a79c-a023f912c9c4"
+  },
+  {
+    "id": "FR-PORT-RELEASE-136",
+    "application": "BRASIL",
+    "title": "Libération de ports incorrectement occupés",
+    "intents": [
+      "delete_equipment",
+      "update_service"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM",
+          "carte",
+          "port"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_ports",
+          "t_cards",
+          "t_slots",
+          "t_shelfs",
+          "t_equipments"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Port marqué comme occupé sans client associé",
+        "type": "data_inconsistency"
+      },
+      {
+        "text": "Champs port_occup_ont ≠ port_logical_occup_cpt",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "port_occupation_status et port_occup_status désynchronisés",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Port marqué comme occupé sans client associé",
+        "to": "cause:Données orphelines dans t_ports",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Données orphelines dans t_ports",
+        "to": "cause:Échec de synchronisation des triggers de calcul",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Échec de synchronisation des triggers de calcul",
+        "to": "root:Incohérence persistante dans les champs d'occupation",
+        "confidence": 0.95
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Incohérence persistante dans les champs d'occupation",
+      "confidence": 0.94
+    },
+    "blocking_conditions": [
+      "port_occup_ont ≠ port_logical_occup_cpt",
+      "port_occupation_status ∉ {0,1,2} aligné avec port_occup_status"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT port_id, port_occup_ont, port_logical_occup_cpt FROM t_ports WHERE port_occup_ont != port_logical_occup_cpt",
+        "type": "query"
+      },
+      {
+        "step": "SELECT port_occupation_status, port_occup_status FROM t_ports WHERE port_id = <ID>",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier les triggers de synchronisation dans t_ports",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_ports SET port_occup_ont = port_logical_occup_cpt WHERE port_id = <ID>",
+        "type": "data_fix"
+      },
+      {
+        "action": "UPDATE t_ports SET port_occup_status = CASE WHEN port_occupation_status = 0 THEN 0 ELSE 1 END WHERE port_id = <ID>",
+        "type": "data_fix"
+      },
+      {
+        "action": "Valider l'alignement des champs après modification",
+        "type": "check"
+      },
+      {
+        "action": "Relancer la suppression de la carte/DSLAM",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "port_occup_ont = port_logical_occup_cpt pour ports clients et liens",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "port_occupation_status ∈ {0,1,2} aligné avec port_occup_status",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "port_occup_ont",
+      "port_logical_occup_cpt",
+      "port_occupation_status",
+      "t_ports"
+    ],
+    "confidence_score": 0.93,
+    "pattern_signature": "delete_equipment|DSLAM|t_ports|data_orphan",
+    "trigger_signals": [
+      "port occupé à tort",
+      "champs désynchronisés",
+      "suppression de carte bloquée",
+      "incohérence port_occup_ont",
+      "port marqué comme occupé sans client"
+    ],
+    "non_blocking_conditions": [
+      "port_occup_ont = port_logical_occup_cpt",
+      "port_occupation_status aligné avec port_occup_status"
+    ],
+    "_source_file": "FR 136 Définition ports - Libérer les ports occupés à tort",
+    "_qdrant_id": "fb3e03f9-f010-4b76-8081-d9ea0bd01591"
+  },
+  {
+    "id": "FR-VC-COUNTERS-136B",
+    "application": "BRASIL",
+    "title": "Problème de Compteurs de Ressources Logiques (VP, VLAN, VC)",
+    "intents": [
+      "delete_resource",
+      "update_resource"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_d_controlable_rscs",
+          "t_d_rsc_vcis",
+          "t_resource_usages",
+          "t_vc_lock_ranges"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Erreur interne BRASIL à l'IHM",
+        "type": "system_error"
+      },
+      {
+        "text": "Impossible de réduire le nombre de VC sur un VP",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "Compteurs VP/VLAN erronés",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Erreur interne BRASIL à l'IHM",
+        "to": "cause:Incohérence entre IHM et t_d_controlable_rscs",
+        "confidence": 0.95
+      },
+      {
+        "from": "symptom:Impossible de réduire le nombre de VC sur un VP",
+        "to": "cause:VC occupés a tort dans t_d_rsc_vcis",
+        "confidence": 0.92
+      },
+      {
+        "from": "symptom:Compteurs VP/VLAN erronés",
+        "to": "cause:Présence de VC interdits non comptabilisés",
+        "confidence": 0.9
+      },
+      {
+        "from": "cause:Incohérence entre IHM et t_d_controlable_rscs",
+        "to": "root:Données orphelines en base",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:VC occupés a tort dans t_d_rsc_vcis",
+        "to": "cause:Données orphelines en base",
+        "confidence": 0.97
+      },
+      {
+        "from": "cause:Présence de VC interdits non comptabilisés",
+        "to": "cause:Configuration incorrecte des plages VC",
+        "confidence": 0.94
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines ou configuration incorrecte des plages VC",
+      "confidence": 0.96
+    },
+    "blocking_conditions": [
+      "Incohérence entre IHM et t_d_controlable_rscs",
+      "Présence de VC occupés a tort dans t_d_rsc_vcis",
+      "Présence de VC interdits non comptabilisés"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_d_controlable_rscs WHERE a_eqpt_id = (SELECT eqpt_id FROM t_equipments WHERE eqpt_name = 'DSLPL103')",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_d_rsc_vcis WHERE rpct_id = 670930366 AND rscv_vci = 197",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_vc_lock_ranges WHERE rpct_id = <id_vp>",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier l'état des compteurs entre IHM et t_d_controlable_rscs",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_d_controlable_rscs SET ctrs_occupied_count = 100 WHERE rpct_id = 332638807",
+        "type": "data_fix"
+      },
+      {
+        "action": "UPDATE t_d_rsc_vcis SET rscv_status = 'F' WHERE rpct_id = 670930366 AND rscv_vci = 197",
+        "type": "data_fix"
+      },
+      {
+        "action": "DELETE FROM t_vc_lock_ranges WHERE rpct_id = <id_vp>",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier suppression des VC interdits",
+        "type": "check"
+      },
+      {
+        "action": "Relancer suppression via IHM",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Ressource non supprimable si présence de données orphelines en base",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "Capacité = occupé + disponible + interdits",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "t_d_controlable_rscs.ctr_occupied_count",
+      "t_d_rsc_vcis.rscv_status",
+      "t_vc_lock_ranges.vckr_vc_min",
+      "t_vc_lock_ranges.vckr_vc_max"
+    ],
+    "confidence_score": 0.94,
+    "pattern_signature": "delete_resource|VP|t_d_controlable_rscs|data_orphan",
+    "trigger_signals": [
+      "erreur suppression vc",
+      "compteurs vp erronés",
+      "ihm brasil interne",
+      "vlan non modifiable",
+      "ressources logiques incohérentes"
+    ],
+    "non_blocking_conditions": [
+      "cohérence entre IHM et t_d_controlable_rscs",
+      "absence de VC occupés a tort",
+      "absence de VC interdits non comptabilisés"
+    ],
+    "_source_file": "FR 136b PROBLEME SUR COMPTEURS de RESSOURCES LOGIQUES",
+    "_qdrant_id": "079a94c1-2bc9-4fd0-b963-c2dbf944dc1e"
+  },
+  {
+    "id": "FR-VC-RESOURCE-COUNTER-136C",
+    "application": "BRASIL",
+    "title": "Incohérence compteurs ressources logiques VP/VLAN/VC",
+    "intents": [
+      "diagnose_resource_counter",
+      "fix_resource_counter"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_d_controlable_rscs",
+          "t_d_rsc_vcis",
+          "t_resource_usages",
+          "t_vc_lock_ranges"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Erreur interne BRASIL à l'IHM",
+        "type": "system_error"
+      },
+      {
+        "text": "Impossible de réduire le nombre de VC sur un VP",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "Compteurs VP/VLAN erronés",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Impossible de réduire le nombre de VC sur un VP",
+        "to": "cause:Incohérence entre IHM et t_d_controlable_rscs",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Incohérence entre IHM et t_d_controlable_rscs",
+        "to": "cause:Présence de VC occupés a tort dans t_d_rsc_vcis",
+        "confidence": 0.88
+      },
+      {
+        "from": "cause:Présence de VC occupés a tort dans t_d_rsc_vcis",
+        "to": "root:Données orphelines persistantes en base",
+        "confidence": 0.95
+      },
+      {
+        "from": "symptom:Compteurs VP/VLAN erronés",
+        "to": "cause:Présence de VC interdits non comptabilisés",
+        "confidence": 0.85
+      },
+      {
+        "from": "cause:Présence de VC interdits non comptabilisés",
+        "to": "cause:Données orphelines persistantes en base",
+        "confidence": 0.93
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines persistantes en base",
+      "confidence": 0.94
+    },
+    "blocking_conditions": [
+      "Incohérence entre IHM et t_d_controlable_rscs",
+      "Présence de VC occupés a tort dans t_d_rsc_vcis",
+      "Présence de VC interdits non comptabilisés dans t_vc_lock_ranges"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_d_controlable_rscs WHERE eqpt_id=(SELECT eqpt_id FROM t_equipments WHERE eqpt_name='DSMDM120')",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_d_rsc_vcis WHERE rpct_id = 670930366 AND rscv_vci=197",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_vc_lock_ranges WHERE rpct_id = id_vp",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier correspondance entre IHM et t_d_controlable_rscs",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_d_controlable_rscs SET ctrs_occupied_count=100 WHERE rpct_id = 332638807",
+        "type": "data_fix"
+      },
+      {
+        "action": "UPDATE t_d_rsc_vcis SET rscv_status='F' WHERE rpct_id = 670930366 AND rscv_vci=197",
+        "type": "data_fix"
+      },
+      {
+        "action": "DELETE FROM t_resource_usages WHERE rpct_id = 670930366 AND rsus_vci=197",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier absence de routages orphelins",
+        "type": "check"
+      },
+      {
+        "action": "Relancer suppression via IHM",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Équipement non modifiable si incohérence entre IHM et t_d_controlable_rscs",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "VC non supprimable si présence dans t_d_rsc_vcis avec statut 'O' ou 'C'",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "eqpt_id",
+      "t_d_controlable_rscs",
+      "t_d_rsc_vcis",
+      "t_resource_usages",
+      "t_vc_lock_ranges"
+    ],
+    "confidence_score": 0.93,
+    "pattern_signature": "fix_resource_counter|DSLAM|t_d_controlable_rscs|data_orphan",
+    "trigger_signals": [
+      "erreur suppression vp",
+      "compteurs vlan erronés",
+      "vc interdits non comptabilisés",
+      "ihm brasil incohérent",
+      "suppression vp bloquée"
+    ],
+    "non_blocking_conditions": [
+      "correspondance IHM/t_d_controlable_rscs",
+      "absence de VC occupés a tort",
+      "absence de VC interdits non comptabilisés"
+    ],
+    "_source_file": "FR 136c compteurs VC VP VLAN OCCUPE A TORT",
+    "_qdrant_id": "45c04cdc-98ed-474e-a6bc-705e42f8a633"
+  },
+  {
+    "id": "FR-ROUTAGE-RESSOURCES-137",
+    "application": "BRASIL",
+    "title": "Incohérence de routage entre DSLAMs physiques et logiques",
+    "intents": [
+      "update_service",
+      "diagnose_incident"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_resource_usages",
+          "t_equipments",
+          "t_res_prod_controlables",
+          "t_mrt_access_dslams",
+          "t_res_prod_roles"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "ND incohérent entre ressources physiques et logiques de DSLAMs",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:ND incohérent entre ressources physiques et logiques de DSLAMs",
+        "to": "cause:Routage des services incorrect dans t_resource_usages",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Routage des services incorrect dans t_resource_usages",
+        "to": "cause:rpct_id incorrects associés aux DSLAMs sources",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:rpct_id incorrects associés aux DSLAMs sources",
+        "to": "root:Configuration de routage mal synchronisée",
+        "confidence": 0.98
+      }
+    ],
+    "root_cause": {
+      "class": "A",
+      "label": "Configuration de routage mal synchronisée",
+      "confidence": 0.96
+    },
+    "blocking_conditions": [
+      "Présence de rpct_id incorrects dans t_resource_usages",
+      "Incohérence entre mrtd_nd et mras_id dans t_mrt_access_dslams"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT eqpt_id FROM t_equipments WHERE eqpt_name IN ('DSFOUA02', 'DSFOUA03')",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_mrt_access_dslams WHERE mrtd_nd = '546042223'",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_resource_usages WHERE mrtd_id = 742348540",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_res_prod_controlables WHERE a_eqpt_id IN (SELECT eqpt_id FROM t_equipments WHERE eqpt_name IN ('DSFOUA02', 'DSFOUA03')) AND rpct_point_a_interface_id = '2314'",
+        "type": "query"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_resource_usages SET rpct_id = 737645715 WHERE rsus_id = 1410504182",
+        "type": "data_fix"
+      },
+      {
+        "action": "SELECT * FROM t_res_prod_roles WHERE rpct_id = '415438126'",
+        "type": "check"
+      },
+      {
+        "action": "Vérifier cohérence des tsft dans t_res_prod_roles",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Les ressources logiques doivent être associées au DSLAM cible via rpct_id valide",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "mrtd_nd",
+      "mras_id",
+      "rsus_id",
+      "rpct_id",
+      "t_resource_usages",
+      "t_res_prod_controlables"
+    ],
+    "confidence_score": 0.94,
+    "pattern_signature": "update_service|DSLAM|t_resource_usages|config_error",
+    "trigger_signals": [
+      "incohérence nd dslam",
+      "routage ressources logiques incorrect",
+      "erreur d'association vlan dslam",
+      "mismatch dslam physique/logique"
+    ],
+    "non_blocking_conditions": [
+      "rpct_id corrects dans t_resource_usages",
+      "tsft cohérents dans t_res_prod_roles"
+    ],
+    "_source_file": "FR 137 PROBLEME DE ROUTAGE RESSOURCES LOGIQUES VP VLAN",
+    "_qdrant_id": "e8e45c47-b928-4de6-89bc-668754e3c4f8"
+  },
+  {
+    "id": "FR-WEB-REPLAY-138",
+    "application": "BRASIL",
+    "title": "Rejouer des webservices en masse via soapUI et curl",
+    "intents": [
+      "replay_web_service",
+      "test_web_service"
+    ],
+    "entities": [
+      {
+        "type": "SERVICE",
+        "examples": [
+          "AccessManagementService",
+          "RetrofitService"
+        ]
+      },
+      {
+        "type": "RESOURCE",
+        "examples": [
+          "was IHM wb",
+          "op49mwb11",
+          "kshsoutien"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": []
+      },
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "EQUIPMENT_UNKNOWN"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Réponse WS non OK avec <ErrorCode>1300</ErrorCode>",
+        "type": "system_error"
+      },
+      {
+        "text": "Réponse WS non OK avec <ErrorCode>1102</ErrorCode>",
+        "type": "data_inconsistency"
+      },
+      {
+        "text": "Accès direct au WAS impossible en production",
+        "type": "constraint_violation"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Réponse WS non OK avec <ErrorCode>1300</ErrorCode>",
+        "to": "cause:Configuration URL incorrecte dans l'environnement de production",
+        "confidence": 0.92
+      },
+      {
+        "from": "symptom:Réponse WS non OK avec <ErrorCode>1102</ErrorCode>",
+        "to": "cause:Données XML d'entrée incohérentes avec la base de données",
+        "confidence": 0.88
+      },
+      {
+        "from": "symptom:Accès direct au WAS impossible en production",
+        "to": "cause:Contrainte de sécurité bloquant l'accès direct",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Configuration URL incorrecte dans l'environnement de production",
+        "to": "cause:Configuration incorrecte des endpoints WS",
+        "confidence": 0.9
+      },
+      {
+        "from": "cause:Données XML d'entrée incohérentes avec la base de données",
+        "to": "cause:Données fantômes dans les fichiers XML d'entrée",
+        "confidence": 0.85
+      },
+      {
+        "from": "cause:Contrainte de sécurité bloquant l'accès direct",
+        "to": "root:Violation des règles de sécurité d'accès aux WAS",
+        "confidence": 0.93
+      }
+    ],
+    "root_cause": {
+      "class": "A",
+      "label": "Configuration incorrecte des endpoints WS",
+      "confidence": 0.89
+    },
+    "blocking_conditions": [
+      "Accès direct au WAS en production",
+      "Utilisation d'URL non validées dans l'environnement de production"
+    ],
+    "diagnostic": [
+      {
+        "step": "Vérifier les URLs des endpoints dans les commandes curl",
+        "type": "check"
+      },
+      {
+        "step": "Analyser le fichier res.txt avec grep -i -v '<statusCode>0'",
+        "type": "analysis"
+      },
+      {
+        "step": "Valider la conformité des données XML avec la base de données BRASIL",
+        "type": "query"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Remplacer les URLs par https://brasil.sso.infra.ftgroup/brasil/services/<ServiceName>",
+        "type": "config_fix"
+      },
+      {
+        "action": "Relancer les appels WS via l'IHM wb avec les URLs corrigées",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Les appels WS en production doivent utiliser les endpoints validés par l'IHM wb",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "ErrorCode 1300",
+      "ErrorCode 1102",
+      "AccessManagementService",
+      "RetrofitService"
+    ],
+    "confidence_score": 0.89,
+    "pattern_signature": "replay_web_service|AccessManagementService|ErrorCode 1300|config_error",
+    "trigger_signals": [
+      "erreur 1300 soapui",
+      "rejouer web service",
+      "url ws non valide",
+      "dossier inconnu erreur",
+      "soapui production"
+    ],
+    "non_blocking_conditions": [
+      "URLs des endpoints validées par l'IHM wb",
+      "Absence d'erreurs <ErrorCode> dans les réponses WS"
+    ],
+    "_source_file": "FR 138 INSTALLATION ET UTILISATION DE SOAPUI POUR REJOUER DES WEBSERVICES",
+    "_qdrant_id": "37e373d5-2171-4ecd-b2af-76684de761da"
+  },
+  {
+    "id": "FR-DSLAM-AFFECTATION-147B",
+    "application": "BRASIL",
+    "title": "Affectation ND bloquée par incohérence BRASIL/42C",
+    "intents": [
+      "assign_equipment"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_res_prod_controlers"
+        ]
+      },
+      {
+        "type": "SYSTEM",
+        "examples": [
+          "42C",
+          "SEBA"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Affectation ND impossible via IHM SEBA",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Affectation ND impossible via IHM SEBA",
+        "to": "cause:Incohérence DSLAM entre BRASIL et 42C",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Incohérence DSLAM entre BRASIL et 42C",
+        "to": "cause:Données orphelines post-migration",
+        "confidence": 0.96
+      },
+      {
+        "from": "cause:Données orphelines post-migration",
+        "to": "root:Données orphelines persistantes en base",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines persistantes en base",
+      "confidence": 0.97
+    },
+    "blocking_conditions": [
+      "Incohérence DSLAM entre BRASIL et 42C",
+      "Présence de données orphelines post-migration"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM AGENT_01 WHERE dslam_id NOT IN (SELECT dslam_id FROM 42C_dslam)",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier les logs de migration pour identifier les ND orphelins",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Modifier le message XML en supprimant <CodeBase42C> et <CodeCentre42C>, ajouter <Sans42C/>",
+        "type": "data_fix"
+      },
+      {
+        "action": "Réinjecter le message via MQJ Explorer dans la file 49O.IHM1.IN.QL",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "ND non affectable si incohérence DSLAM entre BRASIL et 42C",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "CodeBase42C",
+      "CodeCentre42C",
+      "AGENT_01",
+      "42C_dslam"
+    ],
+    "confidence_score": 0.96,
+    "pattern_signature": "assign_equipment|DSLAM|AGENT_01|data_orphan",
+    "trigger_signals": [
+      "affectation bloquée",
+      "incohérence brasil/42c",
+      "erreur 42c",
+      "nd non affectable",
+      "migration mal passée"
+    ],
+    "non_blocking_conditions": [
+      "Consistance DSLAM entre BRASIL et 42C",
+      "Absence de données orphelines post-migration"
+    ],
+    "_source_file": "FR 147B PROBLEME A L AFFECTATION ERR 42C msg sans 42C",
+    "_qdrant_id": "a7a7d39e-05ab-4318-9a11-ba6620aa684f"
+  },
+  {
+    "id": "FR-NOEUD-ABSENT-148",
+    "application": "BRASIL",
+    "title": "Nœud présent dans Référentiel Sites et absent dans BRASIL",
+    "intents": [
+      "diagnose_data_synchronization",
+      "validate_node_configuration"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "TORCY:71 2TF/2TFM",
+          "DSLAM_01"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_local_areas",
+          "t_nodes",
+          "t_sites"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Nœud TORCY:71 2TF/2TFM absent dans BRASIL malgré sa présence dans Référentiel Sites",
+        "type": "data_inconsistency"
+      },
+      {
+        "text": "Aucun mouvement UMI-DICO détecté pour le nœud TORCY:71 2TF/2TFM",
+        "type": "constraint_violation"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Nœud TORCY:71 2TF/2TFM absent dans BRASIL malgré sa présence dans Référentiel Sites",
+        "to": "cause:Aucun mouvement UMI-DICO généré via E-Basiliq",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Aucun mouvement UMI-DICO généré via E-Basiliq",
+        "to": "cause:Configuration incorrecte des règles de synchronisation E-Basiliq",
+        "confidence": 0.88
+      },
+      {
+        "from": "cause:Configuration incorrecte des règles de synchronisation E-Basiliq",
+        "to": "root:Data inconsistency between Référentiel Sites and BRASIL",
+        "confidence": 0.95
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Data inconsistency between Référentiel Sites and BRASIL",
+      "confidence": 0.94
+    },
+    "blocking_conditions": [
+      "Absence de mouvement UMI-DICO dans brasilUmidico*.log",
+      "Nœud non trouvé dans t_nodes avec loca_id = 73676"
+    ],
+    "diagnostic": [
+      {
+        "step": "grep 'TORCY:71 2TF/2TFM' /opt/application/49mapp/current/umidico/logs/brasilUmidico_messages_*.log",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_local_areas WHERE loca_local_area_short_name LIKE '%TORCY%';",
+        "type": "query"
+      },
+      {
+        "step": "SELECT tn.* FROM t_nodes tn JOIN t_sites ts ON tn.site_id = ts.site_id WHERE ts.loca_id = 73676;",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier le statut 'Actif' du nœud dans Référentiel Sites",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Valider la configuration des règles E-Basiliq dans le Contrat d'Interface E-Basiliq-Brasil",
+        "type": "config_fix"
+      },
+      {
+        "action": "Forcer la génération d'un mouvement UMI-DICO via l'interface d'administration E-Basiliq",
+        "type": "retry"
+      },
+      {
+        "action": "Vérifier la conformité du Code Insee + Code Centre dans Référentiel Sites (format 715402TF)",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Synchronisation automatique des nœuds via UMI-DICO lors de modifications dans Référentiel Sites",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "brasilUmidico_messages_*.log",
+      "t_local_areas.loca_id",
+      "t_nodes.node_id",
+      "Référentiel Sites - Code Insee"
+    ],
+    "confidence_score": 0.93,
+    "pattern_signature": "validate_node_configuration|TORCY:71 2TF/2TFM|t_nodes|data_orphan",
+    "trigger_signals": [
+      "nœud absent de brasil",
+      "mouvement umi-dico absent",
+      "synchronisation échouée",
+      "référentiel sites vs brasil"
+    ],
+    "non_blocking_conditions": [
+      "Présence de mouvements UMI-DICO dans les logs",
+      "Nœud trouvé dans t_nodes avec status Actif"
+    ],
+    "_source_file": "FR 148 Noeud ou site présent dans Référentiel Sites et absent dans BRASIL",
+    "_qdrant_id": "e5a10576-b7bf-467d-a40f-39892c863510"
+  },
+  {
+    "id": "FR-REGLETTE-REPROCESS-149",
+    "application": "BRASIL",
+    "title": "Reprise manuelle de réglettes non descendues",
+    "intents": [
+      "process_file",
+      "validate_data_format",
+      "redeploy_configuration"
+    ],
+    "entities": [
+      {
+        "type": "RESOURCE",
+        "examples": [
+          "réglette",
+          "BRADJ4DOC.VDYYYYMMDD2230"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": []
+      },
+      {
+        "type": "SYSTEM",
+        "examples": [
+          "op49mwa12",
+          "42C"
+        ]
+      },
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "EQUIPMENT_UNKNOWN"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Réglettes non descendues dans BRASIL après correction système",
+        "type": "data_inconsistency"
+      },
+      {
+        "text": "Fichier BRAD mal formaté ou incomplet",
+        "type": "constraint_violation"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Réglettes non descendues dans BRASIL après correction système",
+        "to": "cause:Date du fichier 42C antérieure à 5 jours",
+        "confidence": 0.85
+      },
+      {
+        "from": "cause:Date du fichier 42C antérieure à 5 jours",
+        "to": "cause:Historique des réglettes non synchronisé",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Historique des réglettes non synchronisé",
+        "to": "root:Incohérence entre système source et BRASIL",
+        "confidence": 0.98
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Incohérence entre système source et BRASIL",
+      "confidence": 0.96
+    },
+    "blocking_conditions": [
+      "Date du fichier 42C > 5 jours",
+      "Modèle de réglette H01 absent de t_model_réglettes"
+    ],
+    "diagnostic": [
+      {
+        "step": "Vérifier la date du dernier fichier SIAMDx2230YYYYMMDD",
+        "type": "check"
+      },
+      {
+        "step": "Valider l'existence du modèle H01 dans t_model_réglettes",
+        "type": "query"
+      },
+      {
+        "step": "Analyser le format du fichier BRADJ4DOC.VDYYYYMMDD2230",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Extraire BRADJ4DOC.VDYYYYMMDD2230 du tar.gz",
+        "type": "data_fix"
+      },
+      {
+        "action": "Nettoyer les lignes non pertinentes en conservant S| et C|",
+        "type": "data_fix"
+      },
+      {
+        "action": "Recompresser en mode tar avec date J-1",
+        "type": "data_fix"
+      },
+      {
+        "action": "Déposer dans /var/opt/data/flat/49mapp/cft/MCLUSTER/incft/42C",
+        "type": "config_fix"
+      },
+      {
+        "action": "Valider l'absence d'erreurs dans le journal de traitement",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Date du fichier 42C doit être <= 5 jours",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "Modèle de réglette doit exister dans t_model_réglettes",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "SIAMDx2230YYYYMMDD",
+      "BRADJ4DOC.VDYYYYMMDD2230",
+      "t_model_réglettes",
+      "H01"
+    ],
+    "confidence_score": 0.93,
+    "pattern_signature": "process_file|réglette|t_model_réglettes|data_orphan",
+    "trigger_signals": [
+      "réglettes non descendues",
+      "fichier 42c non traité",
+      "erreur de synchronisation réglette",
+      "historique réglette obsolète"
+    ],
+    "non_blocking_conditions": [
+      "Date du fichier 42C <= 5 jours",
+      "Modèle H01 présent dans t_model_réglettes"
+    ],
+    "_source_file": "FR 149 Reprise d'une création de réglettes en manuel",
+    "_qdrant_id": "f06ec261-87b3-449d-b90e-2f0c5e99a213"
+  },
+  {
+    "id": "FR-REPARTITEUR-NOEUD-150",
+    "application": "BRASIL",
+    "title": "Contrainte répartiteur nœud inexistante",
+    "intents": [
+      "assign_resource"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "NODE",
+          "DSLAM"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_nodes",
+          "t_distributors",
+          "t_sites",
+          "t_local_areas"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Erreur de contrainte d'intégrité lors de l'affectation ND",
+        "type": "constraint_violation"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Erreur de contrainte d'intégrité lors de l'affectation ND",
+        "to": "cause:Absence d'entrée dans t_distributors pour node_id",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Absence d'entrée dans t_distributors pour node_id",
+        "to": "cause:Double node_id dans t_nodes avec même code 42C",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Double node_id dans t_nodes avec même code 42C",
+        "to": "root:Données orphelines ou doublons dans t_nodes/t_distributors",
+        "confidence": 0.98
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines ou doublons dans t_nodes/t_distributors",
+      "confidence": 0.96
+    },
+    "blocking_conditions": [
+      "Présence de node_id dans t_nodes sans entrée correspondante dans t_distributors",
+      "Doublon de code_base_42C/code_centre_42C dans t_nodes"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_nodes WHERE node_base_code42c='DOC.WR' AND node_center_code42c='ZTA'",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_distributors WHERE node_id IN (SELECT node_id FROM t_nodes WHERE node_base_code42c='DOC.WR' AND node_center_code42c='ZTA')",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier la cohérence des jointures t_nodes-t_sites-t_local_areas",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "DELETE FROM t_nodes WHERE node_id NOT IN (SELECT node_id FROM t_distributors) AND node_base_code42c='DOC.WR' AND node_center_code42c='ZTA'",
+        "type": "data_fix"
+      },
+      {
+        "action": "INSERT INTO t_distributors (node_id, dist_id) VALUES (65031, 1300259)",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier l'unicité des codes 42C dans t_nodes",
+        "type": "check"
+      },
+      {
+        "action": "Relancer l'affectation ND via BRASIL",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Un node_id doit avoir une entrée unique dans t_distributors",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "node_id",
+      "t_nodes",
+      "t_distributors",
+      "node_base_code42c",
+      "node_center_code42c"
+    ],
+    "confidence_score": 0.95,
+    "pattern_signature": "assign_resource|NODE|t_nodes|data_orphan",
+    "trigger_signals": [
+      "erreur contrainte répartiteur",
+      "nœud non trouvé",
+      "code 42c incohérent",
+      "doublon node_id",
+      "affectation nd bloquée"
+    ],
+    "non_blocking_conditions": [
+      "unicité des node_id dans t_nodes",
+      "présence d'entrée dans t_distributors pour chaque node_id"
+    ],
+    "_source_file": "FR 150 La contrainte sur le répartiteur sur le noeud n existe pas",
+    "_qdrant_id": "0c83ab6b-911f-4fd2-912f-5a940e0039a6"
+  },
+  {
+    "id": "FR-NODE-VALIDATION-151",
+    "application": "BRASIL",
+    "title": "Contrôle de constitution des nœuds dans BRASIL et Référentiel Sites",
+    "intents": [
+      "validate_node_configuration",
+      "diagnose_node_issue",
+      "check_data_consistency"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM",
+          "DS%",
+          "PTRG",
+          "CDM"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_nodes",
+          "t_res_nodes",
+          "t_loca_local_area",
+          "t_sites"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Nœud non fonctionnel en raison de champs manquants (Identifiant 42C, Libellé 42C)",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "Type de nœud non conforme au type d'équipement dans BRASIL",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "Code DR non associé au code base 42C",
+        "type": "data_inconsistency"
+      },
+      {
+        "text": "Statut nœud non actif dans Référentiel Sites",
+        "type": "state_lock"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Nœud non fonctionnel en raison de champs manquants (Identifiant 42C, Libellé 42C)",
+        "to": "cause:Absence de flux UMI-DICO pour mise à jour des champs 42C",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Absence de flux UMI-DICO pour mise à jour des champs 42C",
+        "to": "root:Données orphelines dans Référentiel Sites",
+        "confidence": 0.95
+      },
+      {
+        "from": "symptom:Type de nœud non conforme au type d'équipement dans BRASIL",
+        "to": "cause:Configuration erronée dans t_nodes.node_nra_type",
+        "confidence": 0.88
+      },
+      {
+        "from": "cause:Configuration erronée dans t_nodes.node_nra_type",
+        "to": "cause:Configuration incorrecte des nœuds",
+        "confidence": 0.91
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines dans Référentiel Sites",
+      "confidence": 0.93
+    },
+    "blocking_conditions": [
+      "Champs Identifiant 42C et Libellé 42C non renseignés",
+      "Code DR non associé au code base 42C",
+      "Statut nœud non actif"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT node_id, node_center_code42c, node_dr_code FROM t_nodes WHERE node_status != 'active'",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier correspondance entre t_nodes.node_nra_type et équipements DS% en BDD",
+        "type": "analysis"
+      },
+      {
+        "step": "Cross-checker t_nodes.node_center_code42c avec flux UMI-DICO",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_nodes SET node_center_code42c = '<CODE42C>' WHERE node_id = '<NODE_ID>'",
+        "type": "data_fix"
+      },
+      {
+        "action": "Valider association Code DR/Code 42C via t_loca_local_area",
+        "type": "check"
+      },
+      {
+        "action": "Activer le statut du nœud dans Référentiel Sites",
+        "type": "config_fix"
+      },
+      {
+        "action": "Relancer le flux UMI-DICO pour synchronisation",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Champs Identifiant 42C et Libellé 42C obligatoires pour nœud actif",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "Type de nœud doit correspondre aux codes PTRG/CDM/CDMP/CDMK/SHT/CDMT/DEGR",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "node_center_code42c",
+      "node_dr_code",
+      "t_nodes",
+      "t_loca_local_area",
+      "UMI-DICO"
+    ],
+    "confidence_score": 0.91,
+    "pattern_signature": "validate_node_configuration|NODE|t_nodes|data_orphan",
+    "trigger_signals": [
+      "nœud non fonctionnel",
+      "champs 42c manquants",
+      "type nœud incorrect",
+      "code dr non associé",
+      "statut nœud inactif"
+    ],
+    "non_blocking_conditions": [
+      "Champs Identifiant 42C et Libellé 42C correctement renseignés",
+      "Code DR associé au code base 42C",
+      "Statut nœud actif"
+    ],
+    "_source_file": "FR 151 Contrôler un noeud dans Brasil et dans Referentiel Sites",
+    "_qdrant_id": "d21577df-a5c9-4e44-bd07-b3a400ff7fea"
+  },
+  {
+    "id": "FR-DSLAM-NODE-CHANGE-152",
+    "application": "BRASIL",
+    "title": "Changement de nœud pour DSLAM incorrect",
+    "intents": [
+      "update_equipment_node"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM_01"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_nodes",
+          "t_equipments",
+          "t_distributors"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "DSLAM attaché à un nœud incorrect WALY/WALEGL au lieu de WALY/WALY",
+        "type": "constraint_violation"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:DSLAM attaché à un nœud incorrect WALY/WALEGL au lieu de WALY/WALY",
+        "to": "cause:Configuration nœud incorrecte dans t_equipments",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Configuration nœud incorrecte dans t_equipments",
+        "to": "cause:Asynchronisation entre Dico et 42C",
+        "confidence": 0.85
+      },
+      {
+        "from": "cause:Asynchronisation entre Dico et 42C",
+        "to": "root:Configuration erronée du nœud",
+        "confidence": 0.98
+      }
+    ],
+    "root_cause": {
+      "class": "A",
+      "label": "Configuration erronée du nœud",
+      "confidence": 0.93
+    },
+    "blocking_conditions": [
+      "Nœud cible WALY/WALY non validé dans REFERENTIEL SITES",
+      "Présence d'erreurs de synchronisation entre Dico et 42C"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_nodes WHERE node_base_code42c = 'WALY'",
+        "type": "query"
+      },
+      {
+        "step": "SELECT eqpt_id, node_id FROM t_equipments WHERE eqpt_name = 'DSWLY102'",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier cohérence node_id avec t_distributors.dist_id",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_equipments SET node_id = 330481 WHERE eqpt_id = 5058041",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier eqpt_prod_status = 'F' après modification",
+        "type": "check"
+      },
+      {
+        "action": "Relancer validation via FR 151 Contrôler un nœud",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Nœud cible doit être validé dans Referentiel Sites avant modification",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "node_id",
+      "eqpt_id",
+      "t_nodes",
+      "t_equipments"
+    ],
+    "confidence_score": 0.91,
+    "pattern_signature": "update_equipment_node|DSLAM|t_equipments|config_error",
+    "trigger_signals": [
+      "changer le nœud dslam",
+      "nœud incorrect dslam",
+      "erreur de synchronisation dico 42c",
+      "rattachement nœud erroné"
+    ],
+    "non_blocking_conditions": [
+      "node_id cible valide dans t_nodes",
+      "absence d'erreurs de synchronisation Dico-42C"
+    ],
+    "_source_file": "FR 152 Modifier le noeud sur lequel est rattaché un DSLAM",
+    "_qdrant_id": "40e2c693-61ec-4fe3-aaff-970f44c2b9e7"
+  },
+  {
+    "id": "FR-VLAN-UPDATE-FAILURE-001",
+    "application": "BRASIL",
+    "title": "Échec de mise à jour VLAN depuis BBC",
+    "intents": [
+      "update_vlan",
+      "create_network_link"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM",
+          "VLAN"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_vlan_config",
+          "t_network_links",
+          "t_mq_messages"
+        ]
+      },
+      {
+        "type": "SYSTEM",
+        "examples": [
+          "BBC",
+          "BRASIL",
+          "MQ"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Modifications VLAN non appliquées malgré mouvements BBC",
+        "type": "data_inconsistency"
+      },
+      {
+        "text": "Création de lien réseau non traitée par BRASIL",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Modifications VLAN non appliquées malgré mouvements BBC",
+        "to": "cause:Paramètres XML incompatibles avec BRASIL (ex: chassisEL numero=1 vs BRASIL=2)",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Paramètres XML incompatibles avec BRASIL (ex: chassisEL numero=1 vs BRASIL=2)",
+        "to": "cause:Validation des balises XML non conforme aux règles SFD",
+        "confidence": 0.88
+      },
+      {
+        "from": "cause:Validation des balises XML non conforme aux règles SFD",
+        "to": "root:Incohérence entre données source (BBC) et BRASIL",
+        "confidence": 0.95
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Incohérence entre données source (BBC) et BRASIL",
+      "confidence": 0.94
+    },
+    "blocking_conditions": [
+      "Paramètres XML ne correspondant pas aux valeurs BRASIL",
+      "Absence de journalisation complète des messages XML"
+    ],
+    "diagnostic": [
+      {
+        "step": "Extraire message XML depuis file MQ /opt/application/49mapp/current/tomcat/00/logsconnectorCreationVlan_*.log",
+        "type": "query"
+      },
+      {
+        "step": "Valider correspondance <chassisEL numero=\"...\"> avec t_vlan_config.chassis_id",
+        "type": "check"
+      },
+      {
+        "step": "Analyser logs MQ pour erreurs de validation XML",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Corriger balises XML avec valeurs BRASIL (ex: <chassisEL numero=\"2\">)",
+        "type": "data_fix"
+      },
+      {
+        "action": "Réinjecter message corrigé dans file MQ BRASIL22",
+        "type": "retry"
+      },
+      {
+        "action": "Valider synchronisation via SELECT * FROM t_vlan_config WHERE idVLAN=46619",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Validation des balises XML selon spécifications auto-creation-vlan-2.0.doc",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "chassisEL",
+      "t_vlan_config",
+      "MQ BRASIL22",
+      "XML validation"
+    ],
+    "confidence_score": 0.93,
+    "pattern_signature": "update_vlan|VLAN|t_vlan_config|data_orphan",
+    "trigger_signals": [
+      "modification seuil non appliquée",
+      "vlan déjà existant avec paramètres différents",
+      "message xml non traité par brasil"
+    ],
+    "non_blocking_conditions": [
+      "Correspondance paramètres XML/BRASIL",
+      "Journalisation complète des messages XML"
+    ],
+    "_source_file": "FR 156 MOUVEMENT BBC SANS ACTION DANS BRASIL",
+    "_qdrant_id": "d4176752-180b-4787-aa75-a838739417e0"
+  },
+  {
+    "id": "FR-BROCHE-PORTATTRIBUTABLE-1583",
+    "application": "BRASIL",
+    "title": "Recherche de broche échouée en raison de port_attribuable erroné",
+    "intents": [
+      "diagnose_equipment_state",
+      "update_resource_status",
+      "validate_database_integrity"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM",
+          "DSLAM_01"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_ports",
+          "t_mrt_access_dslams",
+          "t_cards"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Erreur 300/327 lors de la recherche de broche '114'",
+        "type": "system_error"
+      },
+      {
+        "text": "Champ port_attribuable incorrect (0 au lieu de 4 ou 1)",
+        "type": "data_inconsistency"
+      },
+      {
+        "text": "Taux d'occupation ADSL calculé à 100% malgré des ports disponibles",
+        "type": "state_lock"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Erreur 300/327 lors de la recherche de broche '114'",
+        "to": "cause:Port_attribuable incorrect dans t_ports",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Port_attribuable incorrect dans t_ports",
+        "to": "cause:Incohérence entre t_mrt_access_dslams et t_ports",
+        "confidence": 0.97
+      },
+      {
+        "from": "cause:Incohérence entre t_mrt_access_dslams et t_ports",
+        "to": "root:Données corrompues dans les tables de gestion des ports",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données corrompues dans les tables de gestion des ports",
+      "confidence": 0.98
+    },
+    "blocking_conditions": [
+      "Présence de port_attribuable=0 pour des ports logiquement occupés",
+      "Présence de port_attribuable=0 pour des ports libres"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT port_id, port_attribuable FROM t_ports WHERE port_id IN (SELECT a_port_id FROM t_mrt_access_dslams WHERE a_eqpt_id = 5060074)",
+        "type": "query"
+      },
+      {
+        "step": "SELECT card_num, port_id, port_attribuable FROM t_ports JOIN t_cards ON t_ports.card_id = t_cards.card_id WHERE card_id IN (5928932, 5933319, ...) AND port_id NOT IN (SELECT a_port_id FROM t_mrt_access_dslams WHERE a_eqpt_id = 5060074)",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier le statut port_out_status et port_type dans t_ports",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_ports SET port_attribuable = 4 WHERE port_id IN (SELECT a_port_id FROM t_mrt_access_dslams WHERE a_eqpt_id = 5060074)",
+        "type": "data_fix"
+      },
+      {
+        "action": "UPDATE t_ports SET port_attribuable = 1 FROM t_cards WHERE t_ports.card_id = t_cards.card_id AND card_id IN (...) AND port_id NOT IN (SELECT a_port_id FROM t_mrt_access_dslams WHERE a_eqpt_id = 5060074)",
+        "type": "data_fix"
+      },
+      {
+        "action": "Exécuter corrige_ports_dslams.ksh avec le fichier dslam.txt contenant le nom du DSLAM",
+        "type": "data_fix"
+      },
+      {
+        "action": "Lancer ./CalculerTOC.ksh dans /opt/application/49mbdd/current/BrasilTools",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "port_attribuable=4 pour ports occupés logiquement, port_attribuable=1 pour ports libres",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "port_attribuable",
+      "t_ports",
+      "t_mrt_access_dslams",
+      "t_cards",
+      "CalculerTOC.ksh"
+    ],
+    "confidence_score": 0.97,
+    "pattern_signature": "update_resource_status|DSLAM|t_ports|data_orphan",
+    "trigger_signals": [
+      "recherche de broche en echec",
+      "port_attribuable erroné",
+      "taux d'occupation 100%",
+      "impossible d'affecter client",
+      "erreur 300/327"
+    ],
+    "non_blocking_conditions": [
+      "port_attribuable=4 pour ports occupés",
+      "port_attribuable=1 pour ports libres",
+      "absence d'erreurs dans t_mrt_access_dslams"
+    ],
+    "_source_file": "FR 1583 RECHERCHE DE BROCHE EN ECHEC -  COMPTEURS DSLAM 100%  CHAMPS PORT_ATTRIBUABLE ERRONE",
+    "_qdrant_id": "d7daeaae-53d4-4a92-b671-3a8502e6fcf9"
+  },
+  {
+    "id": "FR-BROCHE-ERROR-1583",
+    "application": "BRASIL",
+    "title": "Recherche de BROCHE en échec 300/327 sur DSLAM",
+    "intents": [
+      "diagnose_incident",
+      "validate_resource_availability"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM",
+          "BROCHE",
+          "ADSL Port"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_ports",
+          "t_d_dslam_xdsl_cards",
+          "t_cards",
+          "t_equipments"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Échec de la recherche de broche '114' avec erreur 300/327",
+        "type": "system_error"
+      },
+      {
+        "text": "Taux d'occupation ADSL calculé à 100% malgré des broches disponibles",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "Port_attribuable=0 pour des ports logiquement occupés (devrait être 4)",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Échec de la recherche de broche '114' avec erreur 300/327",
+        "to": "cause:dxcd_mnl_available_port_count=0 dans t_d_dslam_xdsl_cards",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:dxcd_mnl_available_port_count=0 dans t_d_dslam_xdsl_cards",
+        "to": "cause:port_attribuable=0 pour ports logiquement occupés",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:port_attribuable=0 pour ports logiquement occupés",
+        "to": "root:Incohérence de données dans t_ports",
+        "confidence": 0.98
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Incohérence de données dans t_ports (port_attribuable incorrect)",
+      "confidence": 0.96
+    },
+    "blocking_conditions": [
+      "dxcd_mnl_available_port_count=0 dans t_d_dslam_xdsl_cards",
+      "port_attribuable=0 pour ports logiquement occupés"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_d_dslam_xdsl_cards WHERE dxcd_mnl_available_port_count=0",
+        "type": "query"
+      },
+      {
+        "step": "SELECT port_id, port_attribuable FROM t_ports WHERE card_id IN (SELECT card_id FROM t_cards WHERE eqpt_id=5060074)",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier les valeurs de port_attribuable (0=shadow, 1=libre, 4=occupé)",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_ports SET port_attribuable=4 WHERE port_id IN (SELECT a_port_id FROM t_mrt_access_dslams WHERE a_eqpt_id=5060074)",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier dxcd_mnl_available_port_count dans t_d_dslam_xdsl_cards après correction",
+        "type": "check"
+      },
+      {
+        "action": "Relancer la recherche de broche via SEBA",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "port_attribuable=4 pour ports logiquement occupés",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "dxcd_mnl_available_port_count doit refléter le nombre de ports libres",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "port_attribuable",
+      "dxcd_mnl_available_port_count",
+      "t_ports",
+      "t_d_dslam_xdsl_cards"
+    ],
+    "confidence_score": 0.94,
+    "pattern_signature": "validate_resource_availability|DSLAM|t_ports|data_orphan",
+    "trigger_signals": [
+      "recherche broche echec 300",
+      "broche non disponible malgré dispo",
+      "port_attribuable=0",
+      "dxcd_mnl_available_port_count=0",
+      "taux occupation 100% faux"
+    ],
+    "non_blocking_conditions": [
+      "port_attribuable=4 pour ports occupés",
+      "dxcd_mnl_available_port_count>0 dans t_d_dslam_xdsl_cards"
+    ],
+    "_source_file": "FR 1583B RECHERCHE DE BROCHE EN ECHEC 300 ou 327",
+    "_qdrant_id": "e1191fd0-a48f-4b56-8418-d55049f8c239"
+  },
+  {
+    "id": "FR-SCRIPT-CONNECTION-163",
+    "application": "BRASIL",
+    "title": "Connexion impossible à la plateforme lors de l'exécution de scripts",
+    "intents": [
+      "update_script",
+      "diagnose_connection_issue"
+    ],
+    "entities": [
+      {
+        "type": "SCRIPT",
+        "examples": [
+          "Modification modèle de carte",
+          "Envoi de mouvements UMI-EPC"
+        ]
+      },
+      {
+        "type": "PLATFORM",
+        "examples": [
+          "op49mdb11",
+          "op49mwa12"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_es_connexions"
+        ]
+      },
+      {
+        "type": "USER_CREDENTIAL",
+        "examples": [
+          "op49mbdd",
+          "op49mapp"
+        ]
+      },
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "EQUIPMENT_UNKNOWN"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Message d'erreur 'La connexion à la plateforme n'est pas possible' lors de l'exécution de scripts",
+        "type": "system_error"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Message d'erreur 'La connexion à la plateforme n'est pas possible' lors de l'exécution de scripts",
+        "to": "cause:Mot de passe non synchronisé dans t_es_connexions",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Mot de passe non synchronisé dans t_es_connexions",
+        "to": "cause:Changement de mot de passe non propagé vers Cactus",
+        "confidence": 0.88
+      },
+      {
+        "from": "cause:Changement de mot de passe non propagé vers Cactus",
+        "to": "root:Configuration incorrecte des identifiants d'authentification",
+        "confidence": 0.95
+      }
+    ],
+    "root_cause": {
+      "class": "A",
+      "label": "Configuration incorrecte des identifiants d'authentification",
+      "confidence": 0.94
+    },
+    "blocking_conditions": [
+      "Mot de passe obsolète dans t_es_connexions pour esc_user='op49mbdd' ou 'op49mapp'",
+      "Champ esc_version non incrémenté après modification"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_es_connexions WHERE esc_user = 'op49mbdd' AND esc_platform_ip = 'op49mdb11'",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier correspondance avec Cactus pour le login 'op49mbdd' sur op49mdb11",
+        "type": "check"
+      },
+      {
+        "step": "Inspecter le fichier BrasilCorrecteur_params2.txt pour le champ Pwd (pour FTP)",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Modifier le mot de passe dans t_es_connexions via UPDATE t_es_connexions SET esc_password = 'nouveau_pwd', esc_version = esc_version + 1 WHERE esc_user = 'op49mbdd'",
+        "type": "data_fix"
+      },
+      {
+        "action": "Mettre à jour le champ 'mot de passe' dans l'IHM Brasil pour le script concerné",
+        "type": "config_fix"
+      },
+      {
+        "action": "Modifier le fichier BrasilCorrecteur_params2.txt avec le nouveau mot de passe",
+        "type": "config_fix"
+      },
+      {
+        "action": "Relancer l'exécution du script après vérification des modifications",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Les identifiants d'authentification doivent être synchronisés entre Cactus, t_es_connexions et les fichiers de configuration",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "t_es_connexions.esc_password",
+      "BrasilCorrecteur_params2.txt.Pwd",
+      "Cactus.password_store"
+    ],
+    "confidence_score": 0.93,
+    "pattern_signature": "update_script|SCRIPT|t_es_connexions|config_error",
+    "trigger_signals": [
+      "connexion impossible plateforme",
+      "erreur exécution script",
+      "mot de passe non synchronisé",
+      "script bloqué connexion"
+    ],
+    "non_blocking_conditions": [
+      "esc_password valide dans t_es_connexions",
+      "esc_version incrémenté après modification",
+      "mot de passe cohérent dans BrasilCorrecteur_params2.txt"
+    ],
+    "_source_file": "FR 163 IHM Lancement de Script - Connexion impossible à la plateforme",
+    "_qdrant_id": "65e420cc-27f1-4223-a34d-4510ea5a87e1"
+  },
+  {
+    "id": "FR-SCRIPT-LOCK-164",
+    "application": "BRASIL",
+    "title": "Script bloqué en cours d'exécution à l'IHM",
+    "intents": [
+      "execute_script",
+      "update_script_status",
+      "diagnose_incident"
+    ],
+    "entities": [
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_es",
+          "t_es_logs",
+          "t_es_connexion",
+          "t_es_habilitations"
+        ]
+      },
+      {
+        "type": "SYSTEM",
+        "examples": [
+          "BRASIL IHM",
+          "BRASIL backend"
+        ]
+      },
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "EQUIPMENT_UNKNOWN"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Script reste bloqué en 'en cours' malgré actualisation IHM",
+        "type": "state_lock"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Script reste bloqué en 'en cours' malgré actualisation IHM",
+        "to": "cause:État 'en cours' persistant dans t_es.es_status=1",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:État 'en cours' persistant dans t_es.es_status=1",
+        "to": "cause:Absence de mise à jour automatique du statut post-échec",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Absence de mise à jour automatique du statut post-échec",
+        "to": "root:Données fantômes dans t_es avec es_status=1",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données fantômes dans t_es avec es_status=1",
+      "confidence": 0.97
+    },
+    "blocking_conditions": [
+      "Présence d'entrée avec es_status=1 dans t_es"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_es WHERE es_status=1",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier correspondance es_id avec logs dans t_es_logs",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_es SET es_status=2 WHERE es_id=<id_du_script> AND es_status=1",
+        "type": "data_fix"
+      },
+      {
+        "action": "UPDATE t_es SET es_message='Reprise N3' WHERE es_id=<id_du_script>",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier actualisation de l'IHM après modification",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Script non terminé si es_status≠3",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "es_status",
+      "t_es",
+      "t_es_logs",
+      "es_message"
+    ],
+    "confidence_score": 0.96,
+    "pattern_signature": "execute_script|t_es|t_es|data_orphan",
+    "trigger_signals": [
+      "script bloqué en cours",
+      "état en cours persistant",
+      "script non terminé",
+      "erreur d'exécution non marquée"
+    ],
+    "non_blocking_conditions": [
+      "es_status=3 dans t_es",
+      "absence d'entrée avec es_status=1"
+    ],
+    "_source_file": "FR 164 IHM LANCEMENT DE SCRIPT - SCRIPT BLOQUE «EN COURS D’EXECUTION» ",
+    "_qdrant_id": "88acbbaf-1d6e-4b71-9839-f01f09582f81"
+  },
+  {
+    "id": "FR-BAS-DELETION-188",
+    "application": "BRASIL",
+    "title": "Suppression BAS/ROUTER bloquée par données résiduelles",
+    "intents": [
+      "delete_equipment"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "BAS",
+          "ROUTER"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_equipments",
+          "t_res_prod_roles",
+          "t_d_rsc_dslam_tsfs"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Suppression BAS/ROUTER impossible via IHM malgré absence de clients et de liens",
+        "type": "constraint_violation"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Suppression BAS/ROUTER impossible via IHM malgré absence de clients et de liens",
+        "to": "cause:Présence de données résiduelles dans t_res_prod_roles",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Présence de données résiduelles dans t_res_prod_roles",
+        "to": "cause:Références non nettoyées dans t_d_rsc_dslam_tsfs",
+        "confidence": 0.96
+      },
+      {
+        "from": "cause:Références non nettoyées dans t_d_rsc_dslam_tsfs",
+        "to": "root:Données orphelines persistantes en base",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines persistantes en base",
+      "confidence": 0.97
+    },
+    "blocking_conditions": [
+      "Présence de données dans t_res_prod_roles liées à l'équipement",
+      "Références dans t_d_rsc_dslam_tsfs non nettoyées"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT eqpt_id,eqpt_name FROM t_equipments WHERE eqpt_name = 'NOM_EQPT'",
+        "type": "query"
+      },
+      {
+        "step": "SELECT table_name,column_name,'select * from ' || table_name ||' where ' || column_name ||' =<ID>;' FROM information_schema.columns WHERE table_catalog='brasil' AND table_schema='public' AND column_name like '%eqpt_id%'",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier les résultats des requêtes générées pour identifier les données résiduelles",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "DELETE FROM t_res_prod_roles WHERE nip_eqpt_id = <ID>",
+        "type": "data_fix"
+      },
+      {
+        "action": "DELETE FROM t_d_rsc_dslam_tsfs WHERE nip_eqpt_id = <ID>",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier l'absence de données résiduelles dans les tables identifiées",
+        "type": "check"
+      },
+      {
+        "action": "Relancer la suppression via l'IHM BRASIL",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Équipement non supprimable si présence de références dans t_res_prod_roles ou t_d_rsc_dslam_tsfs",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "eqpt_id",
+      "t_res_prod_roles",
+      "t_d_rsc_dslam_tsfs",
+      "t_equipments"
+    ],
+    "confidence_score": 0.96,
+    "pattern_signature": "delete_equipment|BAS|t_res_prod_roles|data_orphan",
+    "trigger_signals": [
+      "suppression impossible bas",
+      "erreur suppression équipement",
+      "donnees residuelles bloque suppression",
+      "equipement non supprimable brasil"
+    ],
+    "non_blocking_conditions": [
+      "absence de données dans t_res_prod_roles pour l'eqpt_id",
+      "aucune référence dans t_d_rsc_dslam_tsfs liée à l'équipement"
+    ],
+    "_source_file": "FR 188 Suppression d'un BAS ou ROUTEUR impossible",
+    "_qdrant_id": "fa131ebc-04bf-4bb6-b657-90155f937757"
+  },
+  {
+    "id": "FR-DSLAM-DELETION-189",
+    "application": "BRASIL",
+    "title": "Suppression DSLAM impossible malgré état vide",
+    "intents": [
+      "delete_equipment"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_equipments",
+          "t_cards",
+          "t_d_dslam_logical_shelfs",
+          "t_d_dslam_manelems",
+          "t_d_dslam_xdsl_cards",
+          "t_d_xdsl_card_stripes",
+          "t_res_prod_controlers"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Suppression DSLAM impossible via IHM BRASIL",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "Message d'erreur 'Le DSLAM n’a pas pu être supprimé'",
+        "type": "system_error"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Suppression DSLAM impossible via IHM BRASIL",
+        "to": "cause:Présence de données orphelines dans t_cards ou t_d_dslam_logical_shelfs",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Présence de données orphelines dans t_cards ou t_d_dslam_logical_shelfs",
+        "to": "cause:Références eqpt_id persistantes dans tables de production",
+        "confidence": 0.96
+      },
+      {
+        "from": "cause:Références eqpt_id persistantes dans tables de production",
+        "to": "root:Données orphelines non nettoyées en base",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines non nettoyées en base",
+      "confidence": 0.97
+    },
+    "blocking_conditions": [
+      "Présence d'entrées eqpt_id dans t_cards",
+      "Présence d'entrées eqpt_id dans t_d_dslam_logical_shelfs",
+      "Présence d'entrées eqpt_id dans t_d_dslam_manelems"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT eqpt_id,eqpt_name,eqpt_status FROM t_equipments WHERE eqpt_name = 'NOM-DSLAM'",
+        "type": "query"
+      },
+      {
+        "step": "SELECT table_name,column_name,'select * from ' || table_name ||' where ' || column_name ||' = <ID>;' FROM information_schema.columns WHERE table_catalog='brasil' AND table_schema='public' AND column_name like '%eqpt_id%' ORDER BY table_name",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier les requêtes retournant des résultats non nuls (ex: t_cards, t_d_dslam_xdsl_cards)",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "DELETE FROM t_cards WHERE eqpt_id_delocalized = <ID>",
+        "type": "data_fix"
+      },
+      {
+        "action": "DELETE FROM t_d_dslam_logical_shelfs WHERE eqpt_id = <ID>",
+        "type": "data_fix"
+      },
+      {
+        "action": "DELETE FROM t_d_dslam_manelems WHERE dslam_eqpt_id = <ID>",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier absence de références dans toutes les tables",
+        "type": "check"
+      },
+      {
+        "action": "Relancer suppression via IHM BRASIL",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Équipement non supprimable si présence de références eqpt_id dans tables de production",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "eqpt_id",
+      "t_cards",
+      "t_d_dslam_logical_shelfs",
+      "t_d_dslam_manelems"
+    ],
+    "confidence_score": 0.96,
+    "pattern_signature": "delete_equipment|DSLAM|t_cards|data_orphan",
+    "trigger_signals": [
+      "suppression dslam impossible",
+      "erreur suppression dslam",
+      "dslam bloqué suppression",
+      "équipement non supprimable",
+      "références eqpt_id persistantes"
+    ],
+    "non_blocking_conditions": [
+      "absence d'entrées eqpt_id dans t_cards",
+      "absence d'entrées eqpt_id dans t_d_dslam_logical_shelfs",
+      "absence d'entrées eqpt_id dans t_d_dslam_manelems"
+    ],
+    "_source_file": "FR 189 Suppression d'un DSLAM impossible",
+    "_qdrant_id": "df34f743-82fb-42d2-b566-72f7317651e7"
+  },
+  {
+    "id": "FR-VLAN-DELETION-190",
+    "application": "BRASIL",
+    "title": "Suppression VLAN impossible avec erreur 'La ressource logique n'a pas pu être modifiée'",
+    "intents": [
+      "delete_vlan"
+    ],
+    "entities": [
+      {
+        "type": "RESOURCE",
+        "examples": [
+          "VLAN"
+        ]
+      },
+      {
+        "type": "SERVICE",
+        "examples": [
+          "TST Sup1G",
+          "CEL FTTE SUP1G"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_res_prod_roles",
+          "t_d_controlable_rscs",
+          "t_net_resource_rels",
+          "t_resource_usages"
+        ]
+      },
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Suppression VLAN impossible via IHM avec erreur 'La ressource logique n'a pas pu être modifiée'",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "VLAN occupé par des services techniques (TST Sup1G)",
+        "type": "state_lock"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Suppression VLAN impossible via IHM avec erreur 'La ressource logique n'a pas pu être modifiée'",
+        "to": "cause:Présence de TST Sup1G liée au VLAN",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Présence de TST Sup1G liée au VLAN",
+        "to": "root:Bogue BRASIL lié à la suppression de TST Sup1G",
+        "confidence": 0.98
+      },
+      {
+        "from": "symptom:Suppression VLAN impossible via IHM avec erreur 'La ressource logique n'a pas pu être modifiée'",
+        "to": "cause:Données orphelines persistantes dans t_res_prod_roles",
+        "confidence": 0.89
+      },
+      {
+        "from": "cause:Données orphelines persistantes dans t_res_prod_roles",
+        "to": "root:Données orphelines persistantes en base",
+        "confidence": 0.95
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines persistantes en base",
+      "confidence": 0.93
+    },
+    "blocking_conditions": [
+      "Présence de TST Sup1G liée au VLAN",
+      "Présence d'entrées rpct_id dans t_res_prod_roles",
+      "Références persistantes dans t_d_controlable_rscs"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_res_prod_roles WHERE rpct_id = <VLAN_ID>",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_d_controlable_rscs WHERE rpct_id = <VLAN_ID>",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier l'existence de TST Sup1G via l'onglet Liste services",
+        "type": "check"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "DELETE FROM t_res_prod_roles WHERE rpct_id = <VLAN_ID>",
+        "type": "data_fix"
+      },
+      {
+        "action": "DELETE FROM t_d_controlable_rscs WHERE rpct_id = <VLAN_ID>",
+        "type": "data_fix"
+      },
+      {
+        "action": "Supprimer les TST Sup1G via l'IHM en priorisant l'ordre de priorité",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier l'absence de références dans t_net_resource_rels",
+        "type": "check"
+      },
+      {
+        "action": "Relancer la suppression via l'IHM",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "VLAN non supprimable si présence de TST Sup1G",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "VLAN non supprimable si références persistantes en base",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "rpct_id",
+      "t_res_prod_roles",
+      "t_d_controlable_rscs",
+      "TST Sup1G"
+    ],
+    "confidence_score": 0.92,
+    "pattern_signature": "delete_vlan|VLAN|t_res_prod_roles|data_orphan",
+    "trigger_signals": [
+      "suppression vlan impossible",
+      "erreur ressource logique non modifiable",
+      "vlan occupé ne peut être supprimé",
+      "bogue suppression vlan",
+      "donnees orphelines brasil"
+    ],
+    "non_blocking_conditions": [
+      "absence de TST Sup1G liée au VLAN",
+      "aucune entrée rpct_id dans t_res_prod_roles",
+      "absence de références dans t_d_controlable_rscs"
+    ],
+    "_source_file": "FR 190 Suppression VLAN IMPOSSIBLE",
+    "_qdrant_id": "0c6b33a1-63c1-447b-bd17-a7ac85a95100"
+  },
+  {
+    "id": "FR-DSLAM-DELETION-191",
+    "application": "BRASIL",
+    "title": "Suppression en masse de cartes FTTE bloquée",
+    "intents": [
+      "delete_equipment"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM",
+          "OLT"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_ports",
+          "t_mrt_access_dslams",
+          "t_res_prod_controlables",
+          "t_d_controlable_rscs"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Suppression de cartes FTTE impossible malgré état 'Fermé'",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "Présence de références orphelines dans t_ports et t_mrt_access_dslams",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Suppression de cartes FTTE impossible malgré état 'Fermé'",
+        "to": "cause:Présence de ports actifs dans t_ports",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Présence de ports actifs dans t_ports",
+        "to": "cause:Références orphelines dans t_mrt_access_dslams",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Références orphelines dans t_mrt_access_dslams",
+        "to": "root:Données orphelines persistantes en base",
+        "confidence": 0.98
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines persistantes en base",
+      "confidence": 0.96
+    },
+    "blocking_conditions": [
+      "Présence de ports non supprimés dans t_ports",
+      "Références client dans t_mrt_access_dslams",
+      "Références logiques dans t_res_prod_controlables"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_ports WHERE card_id IN (SELECT card_id FROM temp_table)",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_mrt_access_dslams WHERE port_id IN (SELECT port_id FROM t_ports WHERE card_id IN (SELECT card_id FROM temp_table))",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier l'état des cartes dans temp_table (doivent être 'F')",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "DELETE FROM t_res_prod_controlables WHERE port_id IN (SELECT port_id FROM t_ports WHERE card_id IN (SELECT card_id FROM temp_table))",
+        "type": "data_fix"
+      },
+      {
+        "action": "DELETE FROM t_mrt_access_dslams WHERE port_id IN (SELECT port_id FROM t_ports WHERE card_id IN (SELECT card_id FROM temp_table))",
+        "type": "data_fix"
+      },
+      {
+        "action": "DELETE FROM t_ports WHERE card_id IN (SELECT card_id FROM temp_table)",
+        "type": "data_fix"
+      },
+      {
+        "action": "DELETE FROM t_cards WHERE card_id IN (SELECT card_id FROM temp_table)",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier absence de références dans t_d_controlable_rscs",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Carte non supprimable si ports associés existent",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "Carte non supprimable si clients associés existent",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "card_id",
+      "port_id",
+      "temp_table",
+      "t_ports",
+      "t_mrt_access_dslams"
+    ],
+    "confidence_score": 0.94,
+    "pattern_signature": "delete_equipment|DSLAM|t_ports|data_orphan",
+    "trigger_signals": [
+      "suppression en masse cartes",
+      "cartes non supprimées état f",
+      "erreur suppression olt",
+      "références orphelines ports"
+    ],
+    "non_blocking_conditions": [
+      "aucun port actif dans t_ports pour les cartes",
+      "aucune référence client dans t_mrt_access_dslams",
+      "état des cartes = 'F'"
+    ],
+    "_source_file": "FR 191 Suppression en masse de cartes",
+    "_qdrant_id": "ba2f41a3-919e-4bc1-abe4-10bd9a31989e"
+  },
+  {
+    "id": "FR-OPERATOR-DELETION-192",
+    "application": "BRASIL",
+    "title": "Suppression Opérateur Impossible en raison de liens MRTAccessServices",
+    "intents": [
+      "delete_operator"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "Operateur",
+          "MRTAccessServices"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_mrt_access_services",
+          "t_mrt_access_dslams",
+          "t_resource_usages",
+          "t_operators"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Suppression opérateur impossible avec message 'Operateur associe a au moins un MRT acces Services'",
+        "type": "constraint_violation"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Suppression opérateur impossible avec message 'Operateur associe a au moins un MRT acces Services'",
+        "to": "cause:Présence de mras_id avec oper_id=214 dans t_mrt_access_services",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Présence de mras_id avec oper_id=214 dans t_mrt_access_services",
+        "to": "cause:Incohérence entre oper_id dans t_mrt_access_services et t_mrt_access_dslams",
+        "confidence": 0.97
+      },
+      {
+        "from": "cause:Incohérence entre oper_id dans t_mrt_access_services et t_mrt_access_dslams",
+        "to": "root:Données orphelines persistantes en base",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines persistantes en base",
+      "confidence": 0.98
+    },
+    "blocking_conditions": [
+      "Présence de mras_id avec oper_id=214 dans t_mrt_access_services",
+      "Absence de correspondance oper_id dans t_mrt_access_dslams"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT oper_id FROM t_operators WHERE oper_name = '00AXST'",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_mrt_access_services WHERE oper_id = 214",
+        "type": "query"
+      },
+      {
+        "step": "JOIN t_mrt_access_services mras JOIN t_resource_usages ru ON ru.mras_id = mras.mras_id JOIN t_mrt_access_dslams dslam ON dslam.mrtd_id = ru.mrtd_id WHERE mras.oper_id = 214",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_mrt_access_services SET oper_id = dslam.oper_id FROM t_resource_usages ru JOIN t_mrt_access_dslams dslam ON dslam.mrtd_id = ru.mrtd_id WHERE mras.mras_id = ru.mras_id AND mras.oper_id = 214",
+        "type": "data_fix"
+      },
+      {
+        "action": "UPDATE t_mrt_access_services SET oper_id = NULL WHERE mras_id IN (SELECT mras_id FROM t_mrt_access_services WHERE oper_id = 214 AND NOT EXISTS (SELECT 1 FROM t_mrt_access_dslams dslam JOIN t_resource_usages ru ON dslam.mrtd_id = ru.mrtd_id WHERE ru.mras_id = mras.mras_id))",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier l'absence de mras_id avec oper_id=214 dans t_mrt_access_services",
+        "type": "check"
+      },
+      {
+        "action": "Relancer le script delete_operator.ksh",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Opérateur non supprimable si présence de liens dans t_mrt_access_services",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "oper_id",
+      "mras_id",
+      "t_mrt_access_services",
+      "t_mrt_access_dslams",
+      "t_resource_usages"
+    ],
+    "confidence_score": 0.97,
+    "pattern_signature": "delete_operator|Operateur|t_mrt_access_services|data_orphan",
+    "trigger_signals": [
+      "suppression operateur impossible",
+      "operateur associe a mrt acces services",
+      "erreur suppression operateur",
+      "lien operateur mrtaccessservices"
+    ],
+    "non_blocking_conditions": [
+      "Absence de mras_id avec oper_id=214 dans t_mrt_access_services",
+      "Correspondance oper_id entre t_mrt_access_services et t_mrt_access_dslams"
+    ],
+    "_source_file": "FR 192 Suppression Operateur impossible",
+    "_qdrant_id": "2eabfa2f-6a24-4f25-9d8f-e290dfedab4e"
+  },
+  {
+    "id": "FR-REGLETTE-DOUBLE-193",
+    "application": "BRASIL",
+    "title": "Double Declaration de Reglette AD/RF sur Slot",
+    "intents": [
+      "data_correction",
+      "equipment_management"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM",
+          "Châssis",
+          "Réglette AD",
+          "Réglette RF"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_mrt_access_dslams",
+          "t_ports"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Double association AD/RF sur même slot",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Double association AD/RF sur même slot",
+        "to": "cause:Associations incorrectes dans t_ports",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Associations incorrectes dans t_ports",
+        "to": "cause:Données orphelines non synchronisées",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Données orphelines non synchronisées",
+        "to": "root:Données orphelines persistantes en base",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines persistantes en base",
+      "confidence": 0.97
+    },
+    "blocking_conditions": [
+      "Présence de clients sur réglettes AD dans t_mrt_access_dslams"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM tmp_stripes_ad WHERE dslam = 'DS1BE105'",
+        "type": "query"
+      },
+      {
+        "step": "SELECT COUNT(*) FROM t_mrt_access_dslams WHERE dslam_id IN (SELECT dslam FROM tmp_stripes_ad)",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier associations dans t_ports pour les slots concernés",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "CREATE TABLE tmp_stripes_ad (dslam CHARACTER VARYING NOT NULL, num_chassis BIGINT NOT NULL, num_slot BIGINT NOT NULL)",
+        "type": "data_fix"
+      },
+      {
+        "action": "INSERT INTO tmp_stripes_ad VALUES ('DS1BE105', 0, 6)",
+        "type": "data_fix"
+      },
+      {
+        "action": "DELETE FROM t_ports WHERE dslam_id IN (SELECT dslam FROM tmp_stripes_ad) AND stripe_type = 'AD'",
+        "type": "data_fix"
+      },
+      {
+        "action": "DROP TABLE tmp_stripes_ad",
+        "type": "cleanup"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Un slot ne peut contenir qu'une seule réglette active (AD ou RF)",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "tmp_stripes_ad",
+      "t_ports",
+      "t_mrt_access_dslams",
+      "num_chassis",
+      "num_slot"
+    ],
+    "confidence_score": 0.96,
+    "pattern_signature": "data_correction|DSLAM|t_ports|data_orphan",
+    "trigger_signals": [
+      "double declaration reglette",
+      "reglette ad et rf meme slot",
+      "anomalie eligibilite brasil",
+      "correction masse reglettes"
+    ],
+    "non_blocking_conditions": [
+      "Aucune entrée dans t_mrt_access_dslams pour les réglettes AD",
+      "tmp_stripes_ad correctement alimentée"
+    ],
+    "_source_file": "FR 193 Double déclaration de réglette sur un slot (correction en masse)",
+    "_qdrant_id": "7313777f-9239-41aa-bb24-c8688bcf41d9"
+  },
+  {
+    "id": "FR-BRASIL-4002-194",
+    "application": "BRASIL",
+    "title": "Erreur interne BRASIL 4002 lors de la mise en service ND",
+    "intents": [
+      "diagnose_incident",
+      "update_service",
+      "validate_configuration"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM",
+          "BAS",
+          "VLAN"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_equipments",
+          "t_res_prod_controlables",
+          "t_res_prod_controlers"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Erreur interne BRASIL 4002 lors de la mise en service ND via SEBA",
+        "type": "system_error"
+      },
+      {
+        "text": "VLAN configuré incorrectement pointant vers le mauvais DSLAM/BAS",
+        "type": "data_inconsistency"
+      },
+      {
+        "text": "Champ 'client' vide dans la commande XML d'Artémis",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Erreur interne BRASIL 4002 lors de la mise en service ND via SEBA",
+        "to": "cause:VLAN mal associé au DSLAM dans t_res_prod_controlables",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:VLAN mal associé au DSLAM dans t_res_prod_controlables",
+        "to": "cause:Configuration incorrecte du Nœud IP dans l'IHM Brasil",
+        "confidence": 0.88
+      },
+      {
+        "from": "cause:Configuration incorrecte du Nœud IP dans l'IHM Brasil",
+        "to": "root:Configuration utilisateur erronée",
+        "confidence": 0.95
+      },
+      {
+        "from": "symptom:Champ 'client' vide dans la commande XML d'Artémis",
+        "to": "cause:Nettoyage automatique de caractères parasites dans Artémis",
+        "confidence": 0.9
+      },
+      {
+        "from": "cause:Nettoyage automatique de caractères parasites dans Artémis",
+        "to": "root:Dépendance externe Artémis/SEBA",
+        "confidence": 0.93
+      }
+    ],
+    "root_cause": {
+      "class": "A",
+      "label": "Configuration utilisateur erronée",
+      "confidence": 0.94
+    },
+    "blocking_conditions": [
+      "VLAN non associé au DSLAM correct dans t_res_prod_controlables",
+      "a_port_id incohérent dans t_res_prod_controlables",
+      "Champ 'client' vide dans commande Artémis"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT eqpt_id FROM t_equipments WHERE eqpt_name = 'NOM-DSLAM'",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM t_res_prod_controlables WHERE rpct_vlan_interne = 3257",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier correspondance a_port_id avec port physique dans t_cards",
+        "type": "analysis"
+      },
+      {
+        "step": "Analyser le XML de commande Artémis pour vérifier le champ 'client'",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_res_prod_controlables SET a_port_id = 342758405 WHERE rpct_vlan_interne = 2700",
+        "type": "data_fix"
+      },
+      {
+        "action": "Corriger le Nœud IP dans l'IHM Brasil pour le VLAN concerné",
+        "type": "config_fix"
+      },
+      {
+        "action": "Valider la configuration dans l'IHM Brasil via le menu 'Service'",
+        "type": "check"
+      },
+      {
+        "action": "Relancer la mise en service via SEBA",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Un VLAN doit pointer vers le DSLAM/BAS configuré dans la topologie",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "Les champs XML des commandes Artémis doivent être validés avant traitement",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "eqpt_id",
+      "a_port_id",
+      "rpct_vlan_interne",
+      "t_res_prod_controlables",
+      "t_equipments"
+    ],
+    "confidence_score": 0.93,
+    "pattern_signature": "diagnose_incident|VLAN|t_res_prod_controlables|config_error",
+    "trigger_signals": [
+      "erreur interne brasil 4002",
+      "vlan non présent dans dslam",
+      "port_id incohérent",
+      "champ client vide",
+      "configuration nœud ip erronée"
+    ],
+    "non_blocking_conditions": [
+      "VLAN associé correctement au DSLAM dans t_res_prod_controlables",
+      "a_port_id cohérent avec port physique",
+      "Champ 'client' correctement rempli dans commande Artémis"
+    ],
+    "_source_file": "FR 194 ERREUR B4002 INTERNE BRASIL   ( RECEPTION DEMANDE )",
+    "_qdrant_id": "87b4f277-7681-4bea-ac21-7722f4a7eeb4"
+  },
+  {
+    "id": "FR-UPD_ICC_OPE-196",
+    "application": "BRASIL",
+    "title": "MAJ Code Opérateur via DataRecovery",
+    "intents": [
+      "update_operator_code"
+    ],
+    "entities": [
+      {
+        "type": "SERVICE",
+        "examples": [
+          "UPD_ICC_OPE"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_nd",
+          "t_mrts",
+          "t_nd_codop"
+        ]
+      },
+      {
+        "type": "SYSTEM",
+        "examples": [
+          "DataRecovery",
+          "Seba"
+        ]
+      },
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "EQUIPMENT_UNKNOWN"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Code opérateur perdu après mutation via tablette",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Code opérateur perdu après mutation via tablette",
+        "to": "cause:NDs avec codes opérateurs incohérents dans t_nd",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:NDs avec codes opérateurs incohérents dans t_nd",
+        "to": "cause:Doublons ND avec codes opérateurs différents",
+        "confidence": 0.88
+      },
+      {
+        "from": "cause:Doublons ND avec codes opérateurs différents",
+        "to": "root:Données orphelines dans t_nd_codop",
+        "confidence": 0.95
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Données orphelines dans t_nd_codop",
+      "confidence": 0.94
+    },
+    "blocking_conditions": [
+      "Présence de doublons ND dans t_nd",
+      "Absence de code opérateur dans t_nd_codop"
+    ],
+    "diagnostic": [
+      {
+        "step": "Lancer TASK-Controle Presence code operateur dans l'IHM",
+        "type": "check"
+      },
+      {
+        "step": "Vérifier le rapport de cohérence ND/CodeOp",
+        "type": "analysis"
+      },
+      {
+        "step": "Rechercher doublons ND dans t_nd",
+        "type": "query"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Déposer fichier formaté ND|CodeOp dans /opt/application/49mapp/InputDatarecovery",
+        "type": "data_fix"
+      },
+      {
+        "action": "Exécuter Data_recovery.sh en mode 1 (production)",
+        "type": "data_fix"
+      },
+      {
+        "action": "Exécuter Data_recovery.sh en mode 0 (test)",
+        "type": "check"
+      },
+      {
+        "action": "Valider logs dans report/*.report",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Code opérateur requis pour ND dans t_nd_codop",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "ND",
+      "CodeOp",
+      "t_nd",
+      "t_mrts",
+      "report/*.report"
+    ],
+    "confidence_score": 0.93,
+    "pattern_signature": "update_operator_code|ND|t_nd_codop|data_orphan",
+    "trigger_signals": [
+      "code opérateur perdu",
+      "nds incohérents",
+      "mutation tablette",
+      "datarecovery",
+      "codeopg8"
+    ],
+    "non_blocking_conditions": [
+      "Absence de doublons ND dans t_nd",
+      "Code opérateur valide dans t_nd_codop"
+    ],
+    "_source_file": "FR 196 MAJ CODE OPÉRATEUR – UPD_ICC_OPE (DATARECOVERY)",
+    "_qdrant_id": "5273824e-962e-49b1-a5db-85b5332a2336"
+  },
+  {
+    "id": "FR-ARTEMIS-THD-201",
+    "application": "BRASIL",
+    "title": "Demande ARTEMIS affectation THD FTTH bloquée",
+    "intents": [
+      "assign_service",
+      "resolve_blockage"
+    ],
+    "entities": [
+      {
+        "type": "SYSTEM",
+        "examples": [
+          "ARTEMIS",
+          "BRASIL"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": []
+      },
+      {
+        "type": "ORDER",
+        "examples": [
+          "ND",
+          "orderId"
+        ]
+      },
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "EQUIPMENT_UNKNOWN"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "ND bloqué sur ARTEMIS en attente de réponse BRASIL",
+        "type": "state_lock"
+      },
+      {
+        "text": "Réception d’un AVP sans traitement possible",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:ND bloqué sur ARTEMIS en attente de réponse BRASIL",
+        "to": "cause:Absence de réponse BRASIL dans MESSAGEBRASILIN",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Absence de réponse BRASIL dans MESSAGEBRASILIN",
+        "to": "cause:Commande non traitée par BRASIL (timeout ou erreur)",
+        "confidence": 0.88
+      },
+      {
+        "from": "cause:Commande non traitée par BRASIL (timeout ou erreur)",
+        "to": "root:External dependency failure ARTEMIS-BRASIL",
+        "confidence": 0.95
+      }
+    ],
+    "root_cause": {
+      "class": "D",
+      "label": "External dependency failure ARTEMIS-BRASIL",
+      "confidence": 0.94
+    },
+    "blocking_conditions": [
+      "ND en état 'en bleu foncé' avec date CMD > 10 jours",
+      "Présence d’AVP non traité dans MESSAGEBRASILIN"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM MESSAGEBRASILOUT WHERE ND = '<ND>' AND date_message > <timestamp>",
+        "type": "query"
+      },
+      {
+        "step": "SELECT * FROM MESSAGEBRASILIN WHERE ND = '<ND>'",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier l’état 'Aff/Désaff' dans l'IHM ARTEMIS",
+        "type": "check"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Envoyer webservice Abort via SOAP UI avec <ND> et <orderId>",
+        "type": "data_fix"
+      },
+      {
+        "action": "Réémettre commande Prepare/Commit après nettoyage des messages",
+        "type": "retry"
+      },
+      {
+        "action": "Contacter support ARTEMIS (Cyril Couturier/Dominique Losapio)",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Commande non réexpédiable sans validation du statut BRASIL",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "ND",
+      "orderId",
+      "MESSAGEBRASILOUT",
+      "MESSAGEBRASILIN",
+      "AVP"
+    ],
+    "confidence_score": 0.93,
+    "pattern_signature": "assign_service|ND|MESSAGEBRASILOUT|external_dependency",
+    "trigger_signals": [
+      "demande artemis affectation thd bloquée",
+      "nd en attente réponse brasil",
+      "avp non traité",
+      "commande non envoyée brasil",
+      "erreur d'affectation ftth"
+    ],
+    "non_blocking_conditions": [
+      "ND en état 'en bleu foncé' avec date CMD < 10 jours",
+      "Absence d’AVP dans MESSAGEBRASILIN"
+    ],
+    "_source_file": "FR 201 Demandes ARTEMIS affectation THD bloqués en attente Réponse",
+    "_qdrant_id": "52e5a603-8aa2-4f44-b864-bd13b556dc51"
+  },
+  {
+    "id": "FR-VLAN-CONFIG-123",
+    "application": "BRASIL",
+    "title": "Service VOD/Multiservice KO suite à mauvaise affectation VLAN",
+    "intents": [
+      "update_service",
+      "diagnose_incident"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM",
+          "TST MULTISERVICE"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_res_prod_controlers"
+        ]
+      },
+      {
+        "type": "SERVICE",
+        "examples": [
+          "VOD",
+          "MULTISERVICE"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Session PPP au lieu de DHCP en raison de VLAN VOD non configuré",
+        "type": "constraint_violation"
+      },
+      {
+        "text": "Clients avec VP/VC 8/32 vers VLAN VOD ne peuvent accéder à VOD/Multiservice",
+        "type": "state_lock"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Session PPP au lieu de DHCP en raison de VLAN VOD non configuré",
+        "to": "cause:Configuration VP/VC 8/32 vers VLAN VOD incorrecte",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Configuration VP/VC 8/32 vers VLAN VOD incorrecte",
+        "to": "cause:Bug BRASIL - suppression service sans reconfiguration VLAN",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Bug BRASIL - suppression service sans reconfiguration VLAN",
+        "to": "root:Bug système BRASIL lors de réaffectation VLAN via SEBA",
+        "confidence": 0.98
+      }
+    ],
+    "root_cause": {
+      "class": "B",
+      "label": "Bug système BRASIL lors de réaffectation VLAN via SEBA",
+      "confidence": 0.96
+    },
+    "blocking_conditions": [
+      "Présence de configuration VP/VC 8/32 vers VLAN VOD incorrecte",
+      "Absence de commande SCA pour création VLAN 2800"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT aid, farId FROM eua LEFT JOIN lieneuaaid ON eua.farIdCompteur=lieneuaaid.farIdCompteur WHERE eua.farId IN (...)",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier configuration VP/VC dans SEBA pour VLAN 2800",
+        "type": "check"
+      },
+      {
+        "step": "Analyser logs BRASIL pour détection suppression service",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "Exécuter requête SQL pour extraction AID/FARID",
+        "type": "data_fix"
+      },
+      {
+        "action": "Modifier VP/VC vers VLAN 2800 dans SEBA",
+        "type": "config_fix"
+      },
+      {
+        "action": "Lancer retrofit FBN via SALSA (recréation MS)",
+        "type": "retry"
+      },
+      {
+        "action": "Valider configuration VLAN 2800 dans SCA",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Réaffectation VLAN via SEBA doit générer commande SCA",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "VP/VC 8/32",
+      "VLAN VOD",
+      "eua.farId",
+      "t_res_prod_controlers"
+    ],
+    "confidence_score": 0.94,
+    "pattern_signature": "update_service|VLAN|eua|system_bug",
+    "trigger_signals": [
+      "session ppp au lieu de dhcp",
+      "vlan vod non configuré",
+      "multiservice ko",
+      "bug brasil suppression service"
+    ],
+    "non_blocking_conditions": [
+      "Configuration VP/VC correcte vers VLAN 2800",
+      "Présence commande SCA pour VLAN 2800"
+    ],
+    "_source_file": "FR 202 Transfert en masse du MULTISERVICE sur le bon VLAN dans BRASIL et sur équipement",
+    "_qdrant_id": "50ca947d-1bde-4a62-97b1-58cde1bca8ab"
+  },
+  {
+    "id": "FR-CARD-MODEL-CHANGE-001",
+    "application": "BRASIL",
+    "title": "Modification manuelle du modèle de carte impossible après échec de rollback",
+    "intents": [
+      "update_card_model",
+      "diagnose_data_inconsistency"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM",
+          "SHGM",
+          "VDPM"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_cards",
+          "t_card_models",
+          "t_card_soft_vers",
+          "t_ports",
+          "t_slots"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Impossible de réverter le modèle de carte après échec du script 'change card Model'",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Impossible de réverter le modèle de carte après échec du script 'change card Model'",
+        "to": "cause:Modèle de carte incorrect dans t_cards (SHGM au lieu de VDPM)",
+        "confidence": 0.98
+      },
+      {
+        "from": "cause:Modèle de carte incorrect dans t_cards (SHGM au lieu de VDPM)",
+        "to": "cause:Absence de mise à jour des services associés dans t_card_soft_vers",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Absence de mise à jour des services associés dans t_card_soft_vers",
+        "to": "root:Configuration erronée des cartes dans la base BRASIL",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "A",
+      "label": "Configuration erronée des cartes dans la base BRASIL",
+      "confidence": 0.97
+    },
+    "blocking_conditions": [
+      "Modèle de carte incorrect dans t_cards",
+      "csfv_id non mis à jour dans t_cards",
+      "Nombre de ports incorrect dans t_ports"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT card_id FROM t_cards WHERE card_name='Card14'",
+        "type": "query"
+      },
+      {
+        "step": "SELECT cmod_id FROM t_card_models WHERE cmod_name='VDPM'",
+        "type": "query"
+      },
+      {
+        "step": "SELECT csfv_id FROM t_cards WHERE card_id=<ID_CARTe_VDPM_REFERENCE>",
+        "type": "query"
+      },
+      {
+        "step": "SELECT COUNT(*) FROM t_ports WHERE card_id=<ID_CARTe_INCORRECTE>",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "UPDATE t_cards SET cmod_id=262 WHERE card_id=6112602",
+        "type": "data_fix"
+      },
+      {
+        "action": "UPDATE t_cards SET csfv_id=1137 WHERE card_id=6112602",
+        "type": "data_fix"
+      },
+      {
+        "action": "INSERT INTO t_ports (slot_id, port_id, card_id) SELECT slot_id, port_id, 6112602 FROM t_ports WHERE card_id IS NULL LIMIT 64",
+        "type": "data_fix"
+      },
+      {
+        "action": "Vérifier correspondance card_id dans t_slots et t_ports",
+        "type": "check"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "La carte doit avoir un cmod_id valide correspondant à son modèle physique",
+        "type": "hard_constraint"
+      },
+      {
+        "rule": "Le csfv_id doit correspondre à un service valide pour le modèle de carte",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "card_id",
+      "cmod_id",
+      "csfv_id",
+      "t_card_models",
+      "t_card_soft_vers"
+    ],
+    "confidence_score": 0.96,
+    "pattern_signature": "update_card_model|DSLAM|t_cards|config_error",
+    "trigger_signals": [
+      "retour arrière impossible",
+      "modification manuelle bdd",
+      "carte shgm au lieu de vdpm",
+      "erreur de rollback script",
+      "nombre de ports incorrect"
+    ],
+    "non_blocking_conditions": [
+      "cmod_id correspondant au modèle demandé",
+      "csfv_id valide pour le nouveau modèle",
+      "nombre de ports cohérent avec le modèle VDPM"
+    ],
+    "_source_file": "FR 205 Changement de modèle de carte en manuel ",
+    "_qdrant_id": "6f3097e8-3fd7-49f8-9481-8abe0055cd00"
+  },
+  {
+    "id": "FR-DSLAM-CARD-01",
+    "application": "BRASIL",
+    "title": "Carte OXEG non synchronisée sur BRASIL",
+    "intents": [
+      "add_equipment",
+      "diagnose_incident"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM_01",
+          "OXEG"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_equipment",
+          "t_slots",
+          "t_inventory"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Carte OXEG slot 19 présente sur terrain et Orchestra mais absente sur BRASIL",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Carte OXEG slot 19 présente sur terrain et Orchestra mais absente sur BRASIL",
+        "to": "cause:Absence de synchronisation BRASIL-Talia pour DSLAM_01",
+        "confidence": 0.92
+      },
+      {
+        "from": "cause:Absence de synchronisation BRASIL-Talia pour DSLAM_01",
+        "to": "cause:Configuration de l'import Talia-Orchestra-Brasil incomplète",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Configuration de l'import Talia-Orchestra-Brasil incomplète",
+        "to": "root:Configuration issue sur pipeline de synchronisation",
+        "confidence": 0.98
+      }
+    ],
+    "root_cause": {
+      "class": "A",
+      "label": "Configuration issue sur pipeline de synchronisation",
+      "confidence": 0.96
+    },
+    "blocking_conditions": [
+      "Absence d'entrée dans t_equipment pour OXEG slot 19 DSLAM_01"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_equipment WHERE dslam_id='DSLAM_01' AND slot=19",
+        "type": "query"
+      },
+      {
+        "step": "Vérifier t_slots dans Orchestra pour DSLAM_01",
+        "type": "check"
+      },
+      {
+        "step": "Comparer t_inventory Talia avec BRASIL pour DSLAM_01",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "INSERT INTO t_equipment (dslam_id,slot,card_type) VALUES ('DSLAM_01',19,'OXEG')",
+        "type": "data_fix"
+      },
+      {
+        "action": "Valider synchronisation via pipeline Talia-Orchestra-Brasil",
+        "type": "check"
+      },
+      {
+        "action": "Relancer audit châssis dans BRASIL",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "Équipement doit être synchronisé entre Talia et BRASIL",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "t_equipment",
+      "t_slots",
+      "t_inventory",
+      "DSLAM_01"
+    ],
+    "confidence_score": 0.94,
+    "pattern_signature": "add_equipment|DSLAM|t_equipment|config_error",
+    "trigger_signals": [
+      "carte présente sur terrain mais pas sur brasil",
+      "synchronisation brasil-talia",
+      "absence de carte sur brasil"
+    ],
+    "non_blocking_conditions": [
+      "Présence d'entrée dans t_equipment pour OXEG slot 19 DSLAM_01",
+      "Synchronisation active entre Talia et BRASIL"
+    ],
+    "_source_file": "FR 206 INCOHERENCE BRASIL TERRAIN ( CARTE MANQUANTE )",
+    "_qdrant_id": "5f491913-c132-4499-8064-310f04467afa"
+  },
+  {
+    "id": "FR-VP-DELETION-999",
+    "application": "BRASIL",
+    "title": "Internal Error During VP Deletion Due to TST Inconsistency",
+    "intents": [
+      "delete_virtual_port",
+      "diagnose_incident"
+    ],
+    "entities": [
+      {
+        "type": "EQUIPMENT",
+        "examples": [
+          "DSLAM_01",
+          "DSLAM_02"
+        ]
+      },
+      {
+        "type": "DATABASE_TABLE",
+        "examples": [
+          "t_res_prod_roles",
+          "t_tech_serv_functions",
+          "t_tech_serv_types"
+        ]
+      }
+    ],
+    "symptoms": [
+      {
+        "text": "Internal error during VP deletion despite no active clients",
+        "type": "system_error"
+      },
+      {
+        "text": "Missing TST 'Best Effort IP NETISSIMO ATM' on master DSLAM",
+        "type": "data_inconsistency"
+      }
+    ],
+    "causal_graph": [
+      {
+        "from": "symptom:Internal error during VP deletion despite no active clients",
+        "to": "cause:Double TST entries in t_res_prod_roles for DSLAM_01",
+        "confidence": 0.95
+      },
+      {
+        "from": "cause:Double TST entries in t_res_prod_roles for DSLAM_01",
+        "to": "cause:Missing TST entry on master DSLAM_02",
+        "confidence": 0.97
+      },
+      {
+        "from": "cause:Missing TST entry on master DSLAM_02",
+        "to": "root:Incohérence de données dans t_res_prod_roles",
+        "confidence": 0.99
+      }
+    ],
+    "root_cause": {
+      "class": "C",
+      "label": "Incohérence de données dans t_res_prod_roles",
+      "confidence": 0.96
+    },
+    "blocking_conditions": [
+      "Double TST entries in t_res_prod_roles for DSLAM_01",
+      "Missing TST entry on master DSLAM_02"
+    ],
+    "diagnostic": [
+      {
+        "step": "SELECT * FROM t_res_prod_roles WHERE rpct_id = 384707",
+        "type": "query"
+      },
+      {
+        "step": "SELECT tsft_id, tsft_function_code FROM t_tech_serv_functions WHERE tsft_id = 133",
+        "type": "query"
+      },
+      {
+        "step": "Verify TST presence on DSLAM_02 using t_res_prod_roles",
+        "type": "analysis"
+      }
+    ],
+    "resolution": [
+      {
+        "action": "DELETE FROM t_res_prod_roles WHERE rpro_id = 566055133",
+        "type": "data_fix"
+      },
+      {
+        "action": "INSERT INTO t_res_prod_roles VALUES(566055133,1,null,14497,null,133,343986,387314857,1)",
+        "type": "data_fix"
+      },
+      {
+        "action": "Verify TST presence on DSLAM_02 via t_res_prod_roles",
+        "type": "check"
+      },
+      {
+        "action": "Retry VP deletion via IHM",
+        "type": "retry"
+      }
+    ],
+    "sfd_rules": [
+      {
+        "rule": "VP deletion requires consistent TST entries across all DSLAMs",
+        "type": "hard_constraint"
+      }
+    ],
+    "evidence_tags": [
+      "t_res_prod_roles.rpro_id=566055133",
+      "t_tech_serv_functions.tsft_id=133",
+      "DSLAM_01.rpct_id=384707",
+      "DSLAM_02.tsft_id=133"
+    ],
+    "confidence_score": 0.95,
+    "pattern_signature": "delete_virtual_port|DSLAM|t_res_prod_roles|data_orphan",
+    "trigger_signals": [
+      "erreur interne suppression vp",
+      "tst manquant sur dslam maître",
+      "doublon tst dans base",
+      "suppression lien bloquée"
+    ],
+    "non_blocking_conditions": [
+      "t_res_prod_roles entries consistent across DSLAMs",
+      "All TSTs present in t_tech_serv_functions"
+    ],
+    "_source_file": "FR 999 CAS D'UN BRASIL INTERNAL ERROR SUR UNE SUPPRESSION DE LIEN SUPPORT OU DE VP",
+    "_qdrant_id": "877436c3-3966-4716-a407-b4a8801de334"
+  }
+]

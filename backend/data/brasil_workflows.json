@@ -1,0 +1,531 @@
+{
+  "generated_at": "2026-04-02T14:51:49.511156",
+  "pipeline_version": "2.0",
+  "total_workflows": 8,
+  "workflows": [
+    {
+      "id": "WF-001",
+      "name": "Service Provisioning (CL - Création de Ligne)",
+      "type": "provisioning",
+      "trigger": "New service order received from E-Basiliq via RabbitMQ",
+      "business_process": "CL",
+      "entities_involved": [
+        "MAKING_FILE",
+        "EPC",
+        "MRT",
+        "DSLAM",
+        "PORT",
+        "CCL"
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "action": "Receive UMI-EPC message from Orchestra via RabbitMQ",
+          "component": "ConnectorCL",
+          "validation": "Message format check (NIFolderID, UPDATEDMRTLIST)"
+        },
+        {
+          "step": 2,
+          "action": "Create or update Making File (Dossier de Réalisation)",
+          "component": "ManageTRProductionBusinessImpl",
+          "validation": "mkfl_status = OPEN"
+        },
+        {
+          "step": 3,
+          "action": "Validate EPC record (IdEpc)",
+          "component": "ObtenirEptXdslService",
+          "validation": "EPC exists and not duplicate"
+        },
+        {
+          "step": 4,
+          "action": "Verify DSLAM production status (open/closed)",
+          "component": "PortBooker",
+          "validation": "eqpt_prod_status = OPEN"
+        },
+        {
+          "step": 5,
+          "action": "Search available port (Rechercher Broche)",
+          "component": "RechercherBrochesService",
+          "validation": "port_attribuable=1, TOC < 100%"
+        },
+        {
+          "step": 6,
+          "action": "Reserve logical resources (VP/VC on CCL)",
+          "component": "LogicalResBooker",
+          "validation": "CCL vc_count < vc_max, TSF available"
+        },
+        {
+          "step": 7,
+          "action": "Assign resources (Affecter Ressources XDSL)",
+          "component": "AffecterRessourcesXdslService",
+          "validation": "No concurrent modification, no duplicate MRTChemin"
+        },
+        {
+          "step": 8,
+          "action": "Commit transaction and update counters",
+          "component": "ManageTRProductionBusinessImpl",
+          "validation": "No deadlock, transaction complete"
+        },
+        {
+          "step": 9,
+          "action": "Send UMI-EPC movement to E-Basiliq",
+          "component": "ConnectorUMIepc",
+          "validation": "Movement sent, E-Basiliq queue not congested"
+        },
+        {
+          "step": 10,
+          "action": "Update MRT and EPC version state",
+          "component": "BRASIL",
+          "validation": "mrsv_current_state = C (connected)"
+        }
+      ],
+      "error_paths": [
+        {
+          "at_step": 4,
+          "error": "DSLAM closed for production",
+          "constraint": "CSTR-FR-001",
+          "action": "Reject with 'fermé à la production'"
+        },
+        {
+          "at_step": 5,
+          "error": "No port found (TOC=100%)",
+          "constraint": "CSTR-FR-007",
+          "action": "Reject, run CalculerToc to verify"
+        },
+        {
+          "at_step": 6,
+          "error": "TSF not found for DSLAM",
+          "constraint": "CSTR-FR-019",
+          "action": "Reject with BrasilInternalErrorException"
+        },
+        {
+          "at_step": 7,
+          "error": "CCL NumeroCCL missing for CEV",
+          "constraint": "CSTR-FR-003",
+          "action": "Reject with validation error"
+        },
+        {
+          "at_step": 8,
+          "error": "Deadlock detected",
+          "constraint": "CSTR-FR-010",
+          "action": "Rollback + retry after 55s"
+        }
+      ],
+      "confidence": "high",
+      "source_file": "FR_docs + logs + brasil_db.sql"
+    },
+    {
+      "id": "WF-002",
+      "name": "Service Liberation (Libérer Ressources XDSL)",
+      "type": "deprovisioning",
+      "trigger": "Service termination order (SAV process)",
+      "business_process": "SAV",
+      "entities_involved": [
+        "MAKING_FILE",
+        "EPC",
+        "MRT",
+        "PORT",
+        "CCL"
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "action": "Receive liberation request via RabbitMQ",
+          "component": "ConnectorCL",
+          "validation": "Message valid"
+        },
+        {
+          "step": 2,
+          "action": "Locate Making File by ID",
+          "component": "ManageTRProductionBusinessImpl",
+          "validation": "mkfl_id exists"
+        },
+        {
+          "step": 3,
+          "action": "Validate MRT identifier",
+          "component": "LibererRessourcesXdslService",
+          "validation": "mrtd_id exists in t_mrt_access_dslams"
+        },
+        {
+          "step": 4,
+          "action": "Release logical resources (VP/VC/CCL)",
+          "component": "LogicalResBooker",
+          "validation": "Resources actually assigned"
+        },
+        {
+          "step": 5,
+          "action": "Free physical port (port_occup_status = FREE)",
+          "component": "PortBooker",
+          "validation": "Port state consistent"
+        },
+        {
+          "step": 6,
+          "action": "Delete or archive MRT version",
+          "component": "BRASIL",
+          "validation": "No active services remain"
+        },
+        {
+          "step": 7,
+          "action": "Notify E-Basiliq via UMI-EPC",
+          "component": "ConnectorUMIepc",
+          "validation": "Movement confirmed"
+        }
+      ],
+      "error_paths": [
+        {
+          "at_step": 3,
+          "error": "MRT identifier unknown",
+          "constraint": "CSTR-FR-005",
+          "action": "Reject with 'Identifiant MRT inconnu'"
+        },
+        {
+          "at_step": 2,
+          "error": "Making file unknown",
+          "constraint": "CSTR-FR-006",
+          "action": "Reject with 'dossier de réalisation inconnu'"
+        }
+      ],
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "WF-003",
+      "name": "TOC Calculation (CalculerToc)",
+      "type": "diagnostic",
+      "trigger": "N3 manual action or scheduled check for DSLAM saturation",
+      "business_process": "N3_MAINTENANCE",
+      "entities_involved": [
+        "DSLAM",
+        "CARD",
+        "PORT"
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "action": "Connect to 49mbdd database on ad49mbdd server",
+          "component": "BrasilTools/CalculerTOC.ksh",
+          "validation": "DB accessible"
+        },
+        {
+          "step": 2,
+          "action": "Run SQL query for ADSL TOC on t_d_dslam_xdsl_cards",
+          "component": "SQL",
+          "validation": "Query returns result"
+        },
+        {
+          "step": 3,
+          "action": "Run SQL query for SDSL TOC",
+          "component": "SQL",
+          "validation": ""
+        },
+        {
+          "step": 4,
+          "action": "Run SQL query for VDSL2 TOC",
+          "component": "SQL",
+          "validation": ""
+        },
+        {
+          "step": 5,
+          "action": "Verify results in IHM BRASIL (TOC ADSL panel)",
+          "component": "BRASIL_IHM",
+          "validation": "TOC < 100% for normal operation"
+        },
+        {
+          "step": 6,
+          "action": "Check logs in BrasilTools/logs/",
+          "component": "filesystem",
+          "validation": "No errors in log"
+        }
+      ],
+      "error_paths": [
+        {
+          "at_step": 5,
+          "error": "TOC = 100%",
+          "constraint": "CSTR-FR-007",
+          "action": "Investigate port_attribuable field, run FR 1583 procedure"
+        }
+      ],
+      "confidence": "high",
+      "source_file": "FR 001"
+    },
+    {
+      "id": "WF-004",
+      "name": "Mass UMI-EPC Resend (Envoi en Masse)",
+      "type": "recovery",
+      "trigger": "Data desynchronization between Orchestra and Brasil for GP NDs",
+      "business_process": "N3_RECOVERY",
+      "entities_involved": [
+        "EPC",
+        "MRT",
+        "MAKING_FILE"
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "action": "Verify E-Basiliq MQ queue capacity (PUC monitoring)",
+          "component": "E_BASILIQ_PUC",
+          "validation": "Queue not congested"
+        },
+        {
+          "step": 2,
+          "action": "Avoid peak hours (08h30-09h30)",
+          "component": "OPERATIONAL",
+          "validation": "Time window check"
+        },
+        {
+          "step": 3,
+          "action": "Prepare CSV file with ND list (9-char format)",
+          "component": "filesystem",
+          "validation": "File format correct"
+        },
+        {
+          "step": 4,
+          "action": "Launch N3-Envoi mouvements UMI-EPC from IHM Brasil",
+          "component": "BRASIL_IHM",
+          "validation": "Script accepted"
+        },
+        {
+          "step": 5,
+          "action": "Monitor execution via IHM request history",
+          "component": "BRASIL_IHM",
+          "validation": "Status changes from IN_PROGRESS to DONE"
+        },
+        {
+          "step": 6,
+          "action": "Verify report and log file",
+          "component": "BRASIL_IHM",
+          "validation": "No errors in report"
+        },
+        {
+          "step": 7,
+          "action": "Verify UMI-EPC movement file on op49mwa11",
+          "component": "connectorUMIepc log",
+          "validation": "ND present in movement file"
+        },
+        {
+          "step": 8,
+          "action": "Verify E-Basiliq PUC confirms NDs processed",
+          "component": "E_BASILIQ_PUC",
+          "validation": "NDs acknowledged"
+        }
+      ],
+      "error_paths": [
+        {
+          "at_step": 1,
+          "error": "E-Basiliq queue congested",
+          "constraint": "CSTR-INFRA-001",
+          "action": "Wait, retry later or off-peak hours"
+        }
+      ],
+      "confidence": "high",
+      "source_file": "FR 002"
+    },
+    {
+      "id": "WF-005",
+      "name": "DLM Blocked Orders Recovery",
+      "type": "recovery",
+      "trigger": "DLM orders blocked in Brasil requiring N3 intervention",
+      "business_process": "DLM",
+      "entities_involved": [
+        "MAKING_FILE",
+        "EPC",
+        "MRT"
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "action": "Identify blocked DLM orders in t_making_files",
+          "component": "SQL",
+          "validation": "mkfl_business_process=4 AND mkfl_status=BLOCKED"
+        },
+        {
+          "step": 2,
+          "action": "Analyze blocking reason from logs",
+          "component": "Brasil logs",
+          "validation": "Root cause identified"
+        },
+        {
+          "step": 3,
+          "action": "Apply corrective action (manual data fix or replay)",
+          "component": "N3_ACTION",
+          "validation": "Depends on root cause"
+        },
+        {
+          "step": 4,
+          "action": "Re-trigger processing via IHM Brasil",
+          "component": "BRASIL_IHM",
+          "validation": "Order status changes"
+        },
+        {
+          "step": 5,
+          "action": "Verify order completed successfully",
+          "component": "BRASIL_IHM",
+          "validation": "mkfl_status = COMPLETED"
+        }
+      ],
+      "error_paths": [],
+      "confidence": "high",
+      "source_file": "FR 101"
+    },
+    {
+      "id": "WF-006",
+      "name": "Node Comparison Brasil vs Référentiel Sites",
+      "type": "diagnostic",
+      "trigger": "Node present in Référentiel Sites but absent in Brasil (or mismatch)",
+      "business_process": "N3_DIAGNOSTIC",
+      "entities_involved": [
+        "NODE",
+        "DSLAM"
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "action": "Query Brasil for node by code42C or node_code",
+          "component": "BRASIL_IHM",
+          "validation": "Node found or not found"
+        },
+        {
+          "step": 2,
+          "action": "Query Référentiel Sites for same node",
+          "component": "ORCHESTRA",
+          "validation": "Node data in referential"
+        },
+        {
+          "step": 3,
+          "action": "Compare node attributes (code, DR, name, type)",
+          "component": "N3_COMPARISON",
+          "validation": "Differences identified"
+        },
+        {
+          "step": 4,
+          "action": "If discrepancy: create ticket or apply correction",
+          "component": "JIRA/BRASIL_IHM",
+          "validation": "Sync restored"
+        }
+      ],
+      "error_paths": [
+        {
+          "at_step": 1,
+          "error": "Node absent in Brasil",
+          "constraint": "CSTR-FR-012",
+          "action": "Create node via admin procedure"
+        }
+      ],
+      "confidence": "high",
+      "source_file": "FR 148 + FR 151"
+    },
+    {
+      "id": "WF-007",
+      "name": "DSLAM Node Modification",
+      "type": "configuration",
+      "trigger": "Need to move DSLAM to different node",
+      "business_process": "NETWORK_REORGANIZATION",
+      "entities_involved": [
+        "DSLAM",
+        "NODE",
+        "CARD",
+        "PORT"
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "action": "Verify no active services on DSLAM before move",
+          "component": "SQL/BRASIL_IHM",
+          "validation": "No MRT in state C"
+        },
+        {
+          "step": 2,
+          "action": "Close DSLAM for production",
+          "component": "BRASIL_IHM",
+          "validation": "eqpt_prod_status = CLOSED"
+        },
+        {
+          "step": 3,
+          "action": "Modify node_id on t_equipments",
+          "component": "N3_DB_ACTION",
+          "validation": "FK constraint check on t_nodes"
+        },
+        {
+          "step": 4,
+          "action": "Update node constraints (t_dslam_access_constraints)",
+          "component": "N3_DB_ACTION",
+          "validation": "Constraints consistent"
+        },
+        {
+          "step": 5,
+          "action": "Reopen DSLAM for production",
+          "component": "BRASIL_IHM",
+          "validation": "eqpt_prod_status = OPEN"
+        },
+        {
+          "step": 6,
+          "action": "Verify DSLAM visible in correct node context",
+          "component": "BRASIL_IHM",
+          "validation": "Node association confirmed"
+        }
+      ],
+      "error_paths": [
+        {
+          "at_step": 1,
+          "error": "Active services present",
+          "constraint": "CSTR-SQL-001",
+          "action": "Cannot move; must decommission services first"
+        },
+        {
+          "at_step": 4,
+          "error": "Missing constraint on repartiteur",
+          "constraint": "CSTR-FR-012",
+          "action": "Create constraint via FR 150 procedure"
+        }
+      ],
+      "confidence": "high",
+      "source_file": "FR 152 + FR 150"
+    },
+    {
+      "id": "WF-008",
+      "name": "MQ Backout Message Recovery (UMI-DICO)",
+      "type": "recovery",
+      "trigger": "UMI-DICO messages stuck in MQ Backout queue",
+      "business_process": "N3_RECOVERY",
+      "entities_involved": [
+        "SYSTEM:UMI_DICO",
+        "SYSTEM:RABBITMQ"
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "action": "Identify messages in MQ Backout via PUC monitoring",
+          "component": "PUC",
+          "validation": "Backout queue not empty"
+        },
+        {
+          "step": 2,
+          "action": "Analyze message content and failure reason",
+          "component": "MQ_ADMIN",
+          "validation": "Root cause identified"
+        },
+        {
+          "step": 3,
+          "action": "Apply data fix if required",
+          "component": "N3_DB_ACTION",
+          "validation": "Data corrected"
+        },
+        {
+          "step": 4,
+          "action": "Move messages back to active queue",
+          "component": "MQ_ADMIN",
+          "validation": "Messages reprocessed"
+        },
+        {
+          "step": 5,
+          "action": "Monitor processing completion",
+          "component": "BRASIL_IHM",
+          "validation": "No new backout messages"
+        }
+      ],
+      "error_paths": [],
+      "confidence": "high",
+      "source_file": "FR 003"
+    }
+  ]
+}

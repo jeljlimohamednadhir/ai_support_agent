@@ -1,0 +1,243 @@
+{
+  "meta": {
+    "title": "Présentation de BRASIL — Base de connaissances N3",
+    "version": "2.0",
+    "generated_at": "2026-05-19",
+    "description": "Fiche de présentation complète de l'application BRASIL pour le chatbot N3"
+  },
+  "presentation": {
+    "nom_complet": "BRASIL (Base de Ressources ADSL pour la Supervision et l'Infrastructure Locale)",
+    "nature": "Application OSS (Operations Support System) télécom",
+    "domaine": "Gestion des ressources xDSL — provisionnement, affectation et supervision des lignes ADSL/SDSL/VDSL2",
+    "description_courte": "BRASIL est le système central de gestion des ressources télécom xDSL. Il assure le provisionnement des lignes, la réservation des ressources réseau (ports DSLAM, CCL, MRT, EPC) et la supervision des équipements pour les techniciens N3.",
+    "description_longue": "BRASIL gère l'ensemble du cycle de vie des accès xDSL (ADSL, SDSL, VDSL2) : depuis la création de ligne (CL) jusqu'à la libération des ressources (SAV). Il orchestre les échanges avec Orchestra (via RabbitMQ / UMI-EPC), avec E-Basiliq (couche OSS supérieure) et avec les équipements réseau (DSLAM, nœuds). Les équipes N3 utilisent l'IHM BRASIL pour les interventions manuelles, les diagnostics de saturation (TOC), les récupérations de commandes bloquées et les opérations de masse.",
+    "contexte_operationnel": "BRASIL est utilisé par les équipes N3 (niveau 3) pour les interventions d'exploitation avancée qui ne peuvent pas être automatisées ou résolues par N1/N2. L'application est critique : une indisponibilité impacte directement la création et la maintenance des accès internet des abonnés."
+  },
+  "architecture": {
+    "type_systeme": "OSS Java EE — architecture transactionnelle multi-tier",
+    "composants_principaux": [
+      {
+        "nom": "BRASIL IHM",
+        "role": "Interface Homme-Machine pour les opérateurs N3 — actions manuelles, diagnostics, opérations de masse",
+        "type": "Frontend Java / Web"
+      },
+      {
+        "nom": "ConnectorCL",
+        "role": "Réception des ordres de création de ligne depuis Orchestra via RabbitMQ",
+        "type": "Connecteur MQ"
+      },
+      {
+        "nom": "ConnectorUMIepc",
+        "role": "Envoi des mouvements UMI-EPC vers E-Basiliq après provisionnement",
+        "type": "Connecteur MQ"
+      },
+      {
+        "nom": "ManageTRProductionBusinessImpl",
+        "role": "Orchestration du provisionnement — gestion du dossier de réalisation (Making File)",
+        "type": "Service métier"
+      },
+      {
+        "nom": "PortBooker",
+        "role": "Réservation et libération des ports physiques DSLAM",
+        "type": "Service ressources"
+      },
+      {
+        "nom": "LogicalResBooker",
+        "role": "Réservation des ressources logiques (VP/VC sur CCL)",
+        "type": "Service ressources"
+      },
+      {
+        "nom": "BrasilTools",
+        "role": "Scripts de maintenance N3 (CalculerTOC.ksh, etc.)",
+        "type": "Outils CLI"
+      }
+    ],
+    "base_de_donnees": {
+      "nom": "49mbdd",
+      "serveur": "ad49mbdd",
+      "type": "Oracle / relationnel",
+      "tables_cles": ["t_making_files", "t_equipments", "t_nodes", "t_mrt_access_dslams", "t_d_dslam_xdsl_cards"]
+    },
+    "messagerie": {
+      "type": "RabbitMQ (MQ IBM compatible)",
+      "queues_cles": ["UMI-EPC entrant (Orchestra→Brasil)", "UMI-EPC sortant (Brasil→E-Basiliq)", "UMI-DICO"],
+      "monitoring": "PUC (outil de surveillance des queues MQ)"
+    }
+  },
+  "entites_principales": {
+    "DSLAM": {
+      "description": "Digital Subscriber Line Access Multiplexer — équipement réseau physique hébergeant les ports xDSL des abonnés",
+      "etats": ["OPEN (ouvert à la production)", "CLOSED (fermé — aucune nouvelle affectation)"],
+      "attribut_cle": "eqpt_prod_status, TOC (Taux d'Occupation des Cartes)"
+    },
+    "EPC": {
+      "description": "Entité de Provisionnement Client — représentation logique de la ligne d'un abonné dans Brasil",
+      "attribut_cle": "IdEpc — identifiant unique EPC",
+      "lien": "Associé à un MRT et un Making File"
+    },
+    "MRT": {
+      "description": "Master Record Telecom — enregistrement de la ressource technique affectée à une ligne",
+      "etats": ["C (Connected — ligne active)", "autres états transitoires"],
+      "attribut_cle": "mrsv_current_state, mrtd_id"
+    },
+    "PORT": {
+      "description": "Port physique sur une carte DSLAM — point de raccordement de la ligne abonné",
+      "attributs": ["port_occup_status (FREE/OCCUPIED)", "port_attribuable (0/1)", "TOC de la carte parent"]
+    },
+    "CCL": {
+      "description": "Concentrateur de Circuit Logique — ressource logique de transport (VP/VC) sur le réseau",
+      "attributs": ["vc_count", "vc_max", "NumeroCCL pour CEV"]
+    },
+    "NODE": {
+      "description": "Nœud réseau — unité géographique regroupant les DSLAMs d'une zone",
+      "attributs": ["node_code", "code42C", "DR (Direction Régionale)"]
+    },
+    "MAKING_FILE": {
+      "description": "Dossier de Réalisation — objet transactionnel central qui suit l'avancement d'un ordre",
+      "etats": ["OPEN", "IN_PROGRESS", "COMPLETED", "BLOCKED"],
+      "attributs": ["mkfl_id", "mkfl_status", "mkfl_business_process"]
+    },
+    "TSF": {
+      "description": "Template de Service France — configuration réseau de référence associée à un DSLAM",
+      "role": "Définit les paramètres VP/VC disponibles"
+    }
+  },
+  "processus_metier": [
+    {
+      "code": "CL",
+      "nom": "Création de Ligne",
+      "description": "Provisionnement d'une nouvelle ligne xDSL — affectation port + ressources logiques + envoi UMI-EPC",
+      "declencheur": "Ordre entrant depuis Orchestra via RabbitMQ",
+      "duree_typique": "Automatique — quelques secondes si pas de blocage"
+    },
+    {
+      "code": "SAV",
+      "nom": "Service Après-Vente — Libération",
+      "description": "Libération des ressources d'une ligne résiliée (port, CCL, MRT)",
+      "declencheur": "Ordre de résiliation reçu via RabbitMQ"
+    },
+    {
+      "code": "DLM",
+      "nom": "Déménagement de Ligne",
+      "description": "Migration d'un abonné vers un nouveau nœud ou DSLAM",
+      "declencheur": "Ordre DLM — peut rester BLOCKED nécessitant intervention N3"
+    },
+    {
+      "code": "N3_RECOVERY",
+      "nom": "Récupération N3",
+      "description": "Actions de récupération manuelle : renvoi en masse UMI-EPC, déblocage commandes, récupération Backout MQ"
+    },
+    {
+      "code": "N3_MAINTENANCE",
+      "nom": "Maintenance N3",
+      "description": "Actions de maintenance planifiées : calcul TOC, modification nœud DSLAM, synchronisation référentiel"
+    }
+  ],
+  "systemes_connectes": {
+    "Orchestra": {
+      "role": "Système OSS supérieur — source des ordres de provisionnement",
+      "protocole": "RabbitMQ (messages UMI-EPC entrants)",
+      "direction": "Orchestra → Brasil"
+    },
+    "E-Basiliq": {
+      "role": "Couche OSS de gestion commerciale — reçoit les confirmations de provisionnement",
+      "protocole": "RabbitMQ (messages UMI-EPC sortants via ConnectorUMIepc)",
+      "direction": "Brasil → E-Basiliq",
+      "monitoring": "PUC (surveillance congestion queue)"
+    },
+    "Référentiel Sites": {
+      "role": "Référentiel géographique des nœuds réseau",
+      "utilisation": "Comparaison et synchronisation des nœuds Brasil vs référentiel"
+    },
+    "UMI-DICO": {
+      "role": "Système de dictionnaire unifié — mouvements de données cataloguées",
+      "problemes_connus": "Messages peuvent se retrouver en Backout queue MQ"
+    }
+  },
+  "incidents_frequents": [
+    {
+      "type": "DSLAM_SATURE",
+      "description": "TOC = 100% — plus aucun port disponible sur le DSLAM",
+      "action_n3": "Calculer TOC (BrasilTools/CalculerTOC.ksh), vérifier port_attribuable, FR 1583"
+    },
+    {
+      "type": "MAKING_FILE_BLOCKED",
+      "description": "Commande CL ou DLM bloquée — mkfl_status=BLOCKED",
+      "action_n3": "Analyser logs Brasil, identifier cause, corriger données, relancer via IHM"
+    },
+    {
+      "type": "BACKOUT_MQ",
+      "description": "Messages UMI-DICO ou UMI-EPC échoués dans la Backout queue RabbitMQ",
+      "action_n3": "Analyser message, corriger données si nécessaire, remettre en queue active"
+    },
+    {
+      "type": "DESYNCHRO_ORCHESTRA",
+      "description": "Désynchronisation entre Orchestra et Brasil sur les NDs (Numéros de Dossier)",
+      "action_n3": "Opération 'Envoi en masse' depuis IHM Brasil, préparer fichier CSV NDs, éviter heures de pointe (08h30-09h30)"
+    },
+    {
+      "type": "NODE_ABSENT",
+      "description": "Nœud présent dans Référentiel Sites mais absent ou différent dans Brasil",
+      "action_n3": "Créer ou mettre à jour le nœud via procédure admin, FR 148 + FR 151"
+    },
+    {
+      "type": "TSF_ABSENT",
+      "description": "BrasilInternalErrorException — TSF non trouvé pour le DSLAM",
+      "action_n3": "Contrainte CSTR-FR-019 — vérifier configuration TSF du DSLAM"
+    },
+    {
+      "type": "ERREUR_DEADLOCK",
+      "description": "Deadlock détecté lors d'une transaction de provisionnement",
+      "action_n3": "Rollback automatique + retry après 55s — surveiller récurrence"
+    },
+    {
+      "type": "CCL_NUMEROCCL_MANQUANT",
+      "description": "CCL NumeroCCL manquant pour CEV — validation échoue",
+      "action_n3": "Contrainte CSTR-FR-003 — corriger les données CCL"
+    }
+  ],
+  "procedures_cles": [
+    {
+      "ref": "FR 001 / FR 1583",
+      "nom": "CalculerTOC",
+      "description": "Calcul du Taux d'Occupation des Cartes DSLAM — diagnostique saturation ADSL/SDSL/VDSL2"
+    },
+    {
+      "ref": "FR 002",
+      "nom": "Envoi en masse UMI-EPC",
+      "description": "Renvoi en masse des mouvements UMI-EPC pour resynchroniser Orchestra et Brasil"
+    },
+    {
+      "ref": "FR 003",
+      "nom": "Récupération Backout MQ",
+      "description": "Procédure de récupération des messages échoués dans la Backout queue RabbitMQ"
+    },
+    {
+      "ref": "FR 101",
+      "nom": "Déblocage commandes DLM",
+      "description": "Identification et déblocage des commandes DLM bloquées dans t_making_files"
+    },
+    {
+      "ref": "FR 148 + FR 151",
+      "nom": "Comparaison nœud Brasil/Référentiel",
+      "description": "Procédure de comparaison et synchronisation des nœuds avec le Référentiel Sites"
+    },
+    {
+      "ref": "FR 152 + FR 150",
+      "nom": "Modification nœud DSLAM",
+      "description": "Déplacement d'un DSLAM vers un autre nœud (fermeture production, modification DB, réouverture)"
+    }
+  ],
+  "contraintes_techniques": [
+    {"ref": "CSTR-FR-001", "description": "DSLAM fermé à la production — aucune affectation possible"},
+    {"ref": "CSTR-FR-003", "description": "CCL NumeroCCL obligatoire pour type CEV"},
+    {"ref": "CSTR-FR-005", "description": "Identifiant MRT inconnu — MRT absent de t_mrt_access_dslams"},
+    {"ref": "CSTR-FR-006", "description": "Dossier de réalisation inconnu — Making File absent"},
+    {"ref": "CSTR-FR-007", "description": "TOC = 100% — toutes les cartes saturées, port_attribuable=0"},
+    {"ref": "CSTR-FR-010", "description": "Deadlock détecté — rollback + retry 55s"},
+    {"ref": "CSTR-FR-012", "description": "Nœud absent dans Brasil — création via procédure admin nécessaire"},
+    {"ref": "CSTR-FR-019", "description": "TSF introuvable pour le DSLAM — BrasilInternalErrorException"},
+    {"ref": "CSTR-INFRA-001", "description": "Queue E-Basiliq congestionnée — attendre ou différer l'opération"}
+  ],
+  "chatbot_knowledge_summary": "Je suis le chatbot N3 Brasil. Je connais l'architecture et les processus de l'application BRASIL : provisionnement xDSL (CL, SAV, DLM), gestion des ressources (DSLAM, EPC, MRT, PORT, CCL, NODE), procédures d'exploitation N3 (calcul TOC, déblocage DLM, récupération MQ Backout, envoi en masse UMI-EPC), codes d'erreur BRASIL (1xxx, 2xxx, 3xxx, 4xxx), contraintes techniques (CSTR-FR-*) et les interfaces avec les systèmes partenaires (Orchestra, E-Basiliq, Référentiel Sites). Je peux vous aider à diagnostiquer un incident, vous guider dans une procédure N3, ou rechercher la documentation FR associée à un problème."
+}

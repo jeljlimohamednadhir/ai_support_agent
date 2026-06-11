@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>OpsPilot AI v4.0 â€” NouveautÃ©s & Gains</title>
+  <style>
+    :root{
+      --primary:#0ea5e9;--secondary:#8b5cf6;--accent:#f59e0b;
+      --green:#10b981;--red:#ef4444;--dark:#0f172a;
+      --light:#f8fafc;--text:#1e293b;--muted:#64748b;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{font-family:Inter,system-ui,sans-serif;color:var(--text);background:var(--light);overflow-x:hidden}
+
+    /* â”€â”€ NAV â”€â”€ */
+    .nav{position:sticky;top:0;z-index:100;background:rgba(15,23,42,.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.07)}
+    .nav-inner{max-width:1200px;margin:0 auto;padding:.8rem 2rem;display:flex;align-items:center;gap:1.5rem}
+    .nav-logo{font-weight:900;font-size:1rem;background:linear-gradient(90deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-right:auto}
+    .nav-inner a{color:rgba(255,255,255,.55);text-decoration:none;font-size:.82rem;font-weight:600;transition:color .2s}
+    .nav-inner a:hover{color:var(--primary)}
+
+    /* â”€â”€ HERO â”€â”€ */
+    .hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a 0%,#1a1040 50%,#0c2340 100%);overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:url('data:image/svg+xml,<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><circle cx="1" cy="1" r="1" fill="white" opacity="0.08"/></svg>');animation:stars 80s linear infinite}
+    @keyframes stars{0%{transform:translateY(0)}100%{transform:translateY(60px)}}
+    .hero-content{position:relative;z-index:10;text-align:center;padding:2rem;max-width:1100px}
+    .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.35);color:#c4b5fd;padding:.45rem 1.2rem;border-radius:50px;font-size:.8rem;font-weight:700;margin-bottom:1.8rem;letter-spacing:.06em}
+    .new-badge{background:linear-gradient(135deg,var(--accent),#f97316);color:white;padding:.15rem .6rem;border-radius:6px;font-size:.7rem;font-weight:800}
+    .hero h1{font-size:clamp(2.5rem,6vw,4.8rem);font-weight:900;line-height:1.1;margin-bottom:1.5rem;animation:fadeUp 1s ease-out}
+    .hero h1 span{background:linear-gradient(90deg,#60a5fa,#a78bfa,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .hero p{font-size:clamp(1rem,2vw,1.3rem);color:rgba(255,255,255,.75);max-width:720px;margin:0 auto 2.5rem;line-height:1.75;animation:fadeUp 1s ease-out .2s both}
+    .hero-cta{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;animation:fadeUp 1s ease-out .4s both}
+    .hero-kpis{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin-top:3.5rem;animation:fadeUp 1s ease-out .6s both}
+    .hero-kpi{text-align:center}
+    .hero-kpi-num{font-size:2.2rem;font-weight:900;background:linear-gradient(90deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .hero-kpi-label{font-size:.78rem;color:rgba(255,255,255,.5);margin-top:.2rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+
+    /* â”€â”€ BUTTONS â”€â”€ */
+    .btn{padding:.9rem 2rem;border-radius:12px;font-weight:700;text-decoration:none;transition:all .3s;display:inline-block;font-size:.92rem}
+    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;box-shadow:0 10px 30px rgba(14,165,233,.3)}
+    .btn-primary:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(14,165,233,.4)}
+    .btn-secondary{background:rgba(255,255,255,.1);color:white;border:2px solid rgba(255,255,255,.25);backdrop-filter:blur(10px)}
+    .btn-secondary:hover{background:rgba(255,255,255,.18)}
+
+    /* â”€â”€ LAYOUT â”€â”€ */
+    section{padding:5.5rem 2rem}
+    .container{max-width:1200px;margin:0 auto}
+    h2{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin-bottom:.7rem;text-align:center;background:linear-gradient(90deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .section-sub{text-align:center;color:var(--muted);margin-bottom:3.5rem;max-width:660px;margin-left:auto;margin-right:auto;line-height:1.7}
+
+    /* â”€â”€ BEFORE / AFTER â”€â”€ */
+    .compare{background:white}
+    .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem}
+    @media(max-width:640px){.compare-grid{grid-template-columns:1fr}}
+    .compare-col{border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.08);opacity:0;transform:translateY(30px);transition:all .7s}
+    .compare-col.animate{opacity:1;transform:translateY(0)}
+    .compare-head{padding:1.1rem 1.6rem;font-weight:800;font-size:.97rem;display:flex;align-items:center;gap:.6rem}
+    .compare-head.before{background:#fff1f2;color:#be123c;border-bottom:2px solid #fecdd3}
+    .compare-head.after{background:linear-gradient(135deg,rgba(14,165,233,.1),rgba(139,92,246,.1));color:#0369a1;border-bottom:2px solid rgba(14,165,233,.25)}
+    .compare-item{padding:.9rem 1.6rem;font-size:.88rem;color:var(--muted);border-bottom:1px solid #f8fafc;display:flex;align-items:flex-start;gap:.7rem;background:white}
+    .compare-item:last-child{border:none}
+    .dot{flex-shrink:0;margin-top:5px;width:7px;height:7px;border-radius:50%}
+    .before .dot{background:#f43f5e}.after .dot{background:var(--green)}
+
+    /* â”€â”€ NEW FEATURES â”€â”€ */
+    .new-features{background:linear-gradient(135deg,#f8fafc 0%,#ede9fe 100%)}
+    .nf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.8rem}
+    .nf-card{background:white;border-radius:20px;padding:2rem;box-shadow:0 4px 20px rgba(0,0,0,.06);border:1px solid rgba(139,92,246,.1);position:relative;overflow:hidden;opacity:0;transform:translateY(40px);transition:all .6s}
+    .nf-card.animate{opacity:1;transform:translateY(0)}
+    .nf-card:hover{transform:translateY(-8px);box-shadow:0 20px 50px rgba(139,92,246,.15)}
+    .nf-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--primary),var(--secondary))}
+    .nf-badge{display:inline-flex;align-items:center;gap:.4rem;background:linear-gradient(135deg,var(--accent),#f97316);color:white;padding:.3rem .8rem;border-radius:8px;font-size:.72rem;font-weight:800;margin-bottom:1rem;letter-spacing:.04em}
+    .nf-icon{font-size:2.2rem;margin-bottom:1rem;display:block}
+    .nf-card h3{font-size:1.15rem;font-weight:800;color:var(--dark);margin-bottom:.7rem}
+    .nf-card p{color:var(--muted);font-size:.88rem;line-height:1.7}
+    .nf-gain{margin-top:1rem;padding:.6rem 1rem;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:10px;font-size:.82rem;font-weight:700;color:#15803d;display:flex;align-items:center;gap:.5rem}
+
+    /* â”€â”€ GAINS â”€â”€ */
+    .gains{background:var(--dark);color:white}
+    .gains h2{color:white;background:none;-webkit-text-fill-color:white}
+    .gains-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin-top:3rem}
+    .gain-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:2rem;opacity:0;transform:scale(.9);transition:all .6s;position:relative;overflow:hidden}
+    .gain-card.animate{opacity:1;transform:scale(1)}
+    .gain-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--primary),var(--secondary))}
+    .gain-before{font-size:.8rem;color:rgba(255,255,255,.4);text-decoration:line-through;margin-bottom:.4rem}
+    .gain-after{font-size:2.5rem;font-weight:900;background:linear-gradient(90deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.4rem}
+    .gain-label{font-size:.9rem;color:rgba(255,255,255,.7);font-weight:600;line-height:1.4}
+    .gain-icon{font-size:1.8rem;margin-bottom:1rem;display:block}
+
+    /* â”€â”€ WORKFLOW â”€â”€ */
+    .workflow{background:white}
+    .steps{display:flex;flex-direction:column;gap:0}
+    .step{display:grid;grid-template-columns:60px 1fr;gap:1.5rem;padding:1.5rem 0;border-bottom:1px solid #f1f5f9;opacity:0;transform:translateX(-30px);transition:all .6s}
+    .step.animate{opacity:1;transform:translateX(0)}
+    .step:last-child{border:none}
+    .step-num{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-weight:900;color:white;font-size:1.1rem;flex-shrink:0}
+    .step-num.new{background:linear-gradient(135deg,var(--accent),#f97316)}
+    .step-body h3{font-size:1rem;font-weight:700;color:var(--dark);margin-bottom:.4rem;display:flex;align-items:center;gap:.6rem}
+    .step-body p{font-size:.87rem;color:var(--muted);line-height:1.65}
+    .tag-new{background:linear-gradient(135deg,var(--accent),#f97316);color:white;font-size:.65rem;font-weight:800;padding:.2rem .6rem;border-radius:6px;letter-spacing:.04em}
+    .tag-improved{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;font-size:.65rem;font-weight:800;padding:.2rem .6rem;border-radius:6px;letter-spacing:.04em}
+
+    /* â”€â”€ ARCH â”€â”€ */
+    .architecture{background:linear-gradient(135deg,#f8fafc,#e0f2fe)}
+    .arch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem;margin-top:3rem}
+    .arch-card{background:white;border-radius:16px;padding:1.8rem;box-shadow:0 4px 20px rgba(0,0,0,.06);border:1px solid rgba(14,165,233,.1);opacity:0;transform:translateY(30px);transition:all .6s;position:relative}
+    .arch-card.animate{opacity:1;transform:translateY(0)}
+    .arch-card.is-new::before{content:'NOUVEAU';position:absolute;top:-.8rem;right:1rem;background:linear-gradient(135deg,var(--accent),#f97316);color:white;font-size:.62rem;font-weight:800;padding:.25rem .7rem;border-radius:8px;letter-spacing:.05em}
+    .arch-card h3{font-size:.95rem;font-weight:800;color:var(--primary);margin-bottom:1rem}
+    .arch-card ul{list-style:none;padding:0}
+    .arch-card li{font-size:.83rem;color:var(--muted);padding:.4rem 0;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:.5rem}
+    .arch-card li:last-child{border:none}
+    .arch-card li::before{content:'â–¸';color:var(--primary);font-size:.7rem;flex-shrink:0}
+
+    /* â”€â”€ ROADMAP â”€â”€ */
+    .roadmap{background:white}
+    .rm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem}
+    .rm-card{border-radius:20px;padding:1.8rem;box-shadow:0 4px 20px rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.06);opacity:0;transform:translateY(30px);transition:all .6s;position:relative;overflow:hidden}
+    .rm-card.animate{opacity:1;transform:translateY(0)}
+    .rm-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px}
+    .rm-done::before{background:linear-gradient(90deg,var(--green),#06b6d4)}
+    .rm-next::before{background:linear-gradient(90deg,var(--primary),var(--secondary))}
+    .rm-future::before{background:linear-gradient(90deg,var(--accent),#f97316)}
+    .rm-phase{display:inline-block;font-size:.72rem;font-weight:800;padding:.25rem .8rem;border-radius:20px;margin-bottom:1rem;text-transform:uppercase;letter-spacing:.07em}
+    .rm-done .rm-phase{background:#dcfce7;color:#15803d}
+    .rm-next .rm-phase{background:rgba(14,165,233,.1);color:var(--primary)}
+    .rm-future .rm-phase{background:#fef3c7;color:#92400e}
+    .rm-card h3{font-size:.97rem;font-weight:800;color:var(--dark);margin-bottom:.8rem}
+    .rm-card li{font-size:.85rem;color:var(--muted);padding:.3rem 0;border-bottom:1px solid #f8fafc;list-style:none;display:flex;gap:.5rem;line-height:1.5}
+    .rm-card li:last-child{border:none}
+    .rm-card li::before{content:'â€“';color:var(--primary);flex-shrink:0}
+
+    /* â”€â”€ CTA â”€â”€ */
+    .cta{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;text-align:center;padding:7rem 2rem}
+    .cta h2{color:white;background:none;-webkit-text-fill-color:white;font-size:clamp(2rem,4vw,3rem);margin-bottom:1rem}
+    .cta p{font-size:1.15rem;opacity:.85;margin-bottom:2.5rem;max-width:600px;margin-left:auto;margin-right:auto;line-height:1.7}
+    .meta-row{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem}
+    .meta-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:.6rem 1.3rem;font-size:.82rem;color:rgba(255,255,255,.9)}
+    .meta-pill strong{display:block;font-size:.9rem;color:white}
+
+    /* â”€â”€ ROBOT â”€â”€ */
+    .robot-float{position:fixed;right:36px;bottom:36px;z-index:9999;width:110px;height:110px;background:linear-gradient(135deg,#fff,#f0f9ff);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;animation:float 4s ease-in-out infinite}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+    .robot-float:hover{transform:scale(1.08) translateY(-4px)!important}
+
+    @media(max-width:768px){section{padding:3.5rem 1.2rem}.step{grid-template-columns:1fr}.step-num{display:none}.robot-float{width:80px;height:80px;right:16px;bottom:16px}}
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <span class="nav-logo">OpsPilot AI v4.1</span>
+    <a href="#gains">Gains</a>
+    <a href="#nouveautes">NouveautÃ©s</a>
+    <a href="#workflow">Workflow</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#roadmap">Roadmap</a>
+    <a href="presentation.html" style="color:rgba(255,255,255,.35);font-size:.78rem">â† PrÃ©sentation complÃ¨te</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <span class="new-badge">v4.1</span>
+      Stabilisation &amp; NouveautÃ©s â€” Mai 2026
+    </div>
+    <h1>Ce qui a changÃ©<br><span>depuis la v1</span></h1>
+    <p>De la recherche manuelle dans les logs Ã  un assistant N3 intelligent : diagnostic en 2 min, classification automatique, 51 FRs validÃ©es, classifieur hiÃ©rarchique 2 niveaux, moteur de vÃ©ritÃ©, routeur sÃ©mantique 25 catÃ©gories, provenance automatique â€” voici ce que v4.1 apporte concrÃ¨tement.</p>
+    <div class="hero-cta">
+      <a href="#nouveautes" class="btn btn-primary">Voir les nouveautÃ©s</a>
+      <a href="#gains" class="btn btn-secondary">Voir les gains</a>
+    </div>
+    <div class="hero-kpis">
+      <div class="hero-kpi"><div class="hero-kpi-num">20â†’2 min</div><div class="hero-kpi-label">Diagnostic initial</div></div>
+      <div class="hero-kpi"><div class="hero-kpi-num">~85%</div><div class="hero-kpi-label">Tickets auto-qualifiÃ©s</div></div>
+      <div class="hero-kpi"><div class="hero-kpi-num">51</div><div class="hero-kpi-label">FRs indexÃ©es Qdrant</div></div>
+      <div class="hero-kpi"><div class="hero-kpi-num">11</div><div class="hero-kpi-label">Nouvelles fonctionnalitÃ©s</div></div>
+      <div class="hero-kpi"><div class="hero-kpi-num">110</div><div class="hero-kpi-label">Tests Â· 0 Ã©chec</div></div>
+      <div class="hero-kpi"><div class="hero-kpi-num">0</div><div class="hero-kpi-label">Hallucinations tolÃ©rÃ©es</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- AVANT / APRÃˆS -->
+<section id="compare" class="compare">
+  <div class="container">
+    <h2>Ce qui a changÃ© pour les Ã©quipes</h2>
+    <p class="section-sub">Sur chaque situation couverte par l'outil, voici la diffÃ©rence concrÃ¨te dans le quotidien des agents N3.</p>
+    <div class="compare-grid">
+      <div class="compare-col">
+        <div class="compare-head before">âš ï¸ Avant â€” Traitement manuel</div>
+        <div class="compare-item before"><span class="dot"></span>Recherche dans les logs, wikis, e-mails : 20â€“60 min par incident</div>
+        <div class="compare-item before"><span class="dot"></span>Connaissance concentrÃ©e sur 1â€“2 experts, absences bloquantes</div>
+        <div class="compare-item before"><span class="dot"></span>Qualification des tickets Ã  l'apprÃ©ciation de l'agent, inconsistante</div>
+        <div class="compare-item before"><span class="dot"></span>RÃ©solutions rarement capitalisÃ©es â€” mÃªmes problÃ¨mes rÃ©solus plusieurs fois</div>
+        <div class="compare-item before"><span class="dot"></span>Nouvel arrivant : apprentissage zÃ©ro, aucune base partagÃ©e</div>
+        <div class="compare-item before"><span class="dot"></span>Logs parsÃ©s manuellement, patterns non dÃ©tectÃ©s automatiquement</div>
+        <div class="compare-item before"><span class="dot"></span>Aucune dÃ©tection proactive des exceptions BRASIL connues</div>
+        <div class="compare-item before"><span class="dot"></span>Classification des tickets = tÃ¢che humaine, lente et variable</div>
+      </div>
+      <div class="compare-col">
+        <div class="compare-head after">âœ… AprÃ¨s â€” OpsPilot AI v4.0</div>
+        <div class="compare-item after"><span class="dot"></span>ProcÃ©dure N3 proposÃ©e en <strong>&lt; 2 min</strong> avec sources citÃ©es et score de confiance</div>
+        <div class="compare-item after"><span class="dot"></span>Base de connaissance partagÃ©e, accessible Ã  tous dÃ¨s l'arrivÃ©e</div>
+        <div class="compare-item after"><span class="dot"></span>Classification proposÃ©e automatiquement, l'agent valide ou corrige</div>
+        <div class="compare-item after"><span class="dot"></span>Chaque correction enrichit la base â€” apprentissage continu sans effort</div>
+        <div class="compare-item after"><span class="dot"></span>Onboarding accÃ©lÃ©rÃ© : 27 procÃ©dures N3 + 51 FRs disponibles immÃ©diatement</div>
+        <div class="compare-item after"><span class="dot"></span>1 133 Ã©vÃ©nements de logs classifiÃ©s automatiquement (30+ patterns)</div>
+        <div class="compare-item after"><span class="dot"></span>DÃ©tection inline de 5 exceptions critiques BRASIL + retrieval Qdrant</div>
+        <div class="compare-item after"><span class="dot"></span>~75% des tickets qualifiÃ©s automatiquement, 25% signalÃ©s pour revue</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GAINS -->
+<section id="gains" class="gains">
+  <div class="container">
+    <h2>Gains mesurÃ©s</h2>
+    <p class="section-sub" style="color:rgba(255,255,255,.55)">Chiffres issus des premiers mois d'utilisation sur le pÃ©rimÃ¨tre actuel.</p>
+    <div class="gains-grid">
+      <div class="gain-card">
+        <span class="gain-icon">âš¡</span>
+        <div class="gain-before">20â€“60 minutes</div>
+        <div class="gain-after">&lt; 2 min</div>
+        <div class="gain-label">Diagnostic initial proposÃ©<br>avec procÃ©dure et sources</div>
+      </div>
+      <div class="gain-card">
+        <span class="gain-icon">ðŸ—‚ï¸</span>
+        <div class="gain-before">100% manuel</div>
+        <div class="gain-after">~75%</div>
+        <div class="gain-label">Tickets qualifiÃ©s automatiquement<br>sans intervention humaine</div>
+      </div>
+      <div class="gain-card">
+        <span class="gain-icon">ðŸ“–</span>
+        <div class="gain-before">0 procÃ©dure partagÃ©e</div>
+        <div class="gain-after">27</div>
+        <div class="gain-label">ProcÃ©dures N3 documentÃ©es<br>depuis l'historique incidents</div>
+      </div>
+      <div class="gain-card">
+        <span class="gain-icon">ðŸ“‹</span>
+        <div class="gain-before">Fiches dispersÃ©es</div>
+        <div class="gain-after">51</div>
+        <div class="gain-label">Fiches de RÃ©solution BRASIL<br>indexÃ©es dans Qdrant</div>
+      </div>
+      <div class="gain-card">
+        <span class="gain-icon">ðŸ”¬</span>
+        <div class="gain-before">Analyse manuelle</div>
+        <div class="gain-after">1 133</div>
+        <div class="gain-label">Ã‰vÃ©nements de logs classifiÃ©s<br>automatiquement</div>
+      </div>
+      <div class="gain-card">
+        <span class="gain-icon">ðŸŽ¯</span>
+        <div class="gain-before">1 niveau de classification</div>
+        <div class="gain-after">L1 + L2</div>
+        <div class="gain-label">Taxonomie hiÃ©rarchique BRASIL<br>KNN + LR + fallback Groq</div>
+      </div>
+      <div class="gain-card">
+        <span class="gain-icon">ðŸ›¡ï¸</span>
+        <div class="gain-before">LLM libre de toute contrainte</div>
+        <div class="gain-after">0</div>
+        <div class="gain-label">Hallucinations tolÃ©rÃ©es<br>Anti-hallucination injectÃ© au LLM</div>
+      </div>
+      <div class="gain-card">
+        <span class="gain-icon">ðŸ‘¥</span>
+        <div class="gain-before">Expert systÃ©matiquement sollicitÃ©</div>
+        <div class="gain-after">Cas hors-pÃ©rimÃ¨tre</div>
+        <div class="gain-label">Expert sollicitÃ© uniquement<br>sur les cas vraiment complexes</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NOUVEAUTÃ‰S -->
+<section id="nouveautes" class="new-features">
+  <div class="container">
+    <h2>11 NouveautÃ©s majeures</h2>
+    <p class="section-sub">Chaque fonctionnalitÃ© rÃ©pond Ã  un besoin terrain identifiÃ© par les Ã©quipes N3.</p>
+    <div class="nf-grid">
+
+      <div class="nf-card">
+        <span class="nf-badge">ðŸ†• NOUVEAU</span>
+        <span class="nf-icon">ðŸ”¬</span>
+        <h3>Pipeline N3 Knowledge Engineering</h3>
+        <p>Transforme automatiquement 1 133 Ã©vÃ©nements de logs BRASIL en 27 procÃ©dures N3 structurÃ©es via un pipeline 3 Ã©tapes : extraction â†’ gÃ©nÃ©ration â†’ indexation Qdrant. Trust score composite (source Ã— frÃ©quence Ã— validation Ã— fraÃ®cheur).</p>
+        <div class="nf-gain">âœ… Gain : 27 procÃ©dures gÃ©nÃ©rÃ©es sans saisie manuelle</div>
+      </div>
+
+      <div class="nf-card">
+        <span class="nf-badge">ðŸ†• NOUVEAU</span>
+        <span class="nf-icon">ðŸ§ </span>
+        <h3>Moteur de Diagnostic N3</h3>
+        <p>DÃ©tecte les exceptions BRASIL connues (DslamClosed, UnknownMRT, BusinessRuleâ€¦) et retrouve la procÃ©dure adaptÃ©e en moins de 2 secondes. 5 procÃ©dures inline offline + retrieval Qdrant. Instruction anti-hallucination injectÃ©e au LLM.</p>
+        <div class="nf-gain">âœ… Gain : Diagnostic en &lt; 2 min vs 20â€“60 min auparavant</div>
+      </div>
+
+      <div class="nf-card">
+        <span class="nf-badge">ðŸ†• NOUVEAU</span>
+        <span class="nf-icon">ðŸ¤–</span>
+        <h3>Classification ML Hybride</h3>
+        <p>Pipeline 9 Ã©tapes : FAISS (similaritÃ© cosinus dim=384) + TF-IDF + keyword boost BRASIL. Colonne texte source et max_features configurables depuis l'UI. Carte de correction contextuelle avec <code>user_sig</code> et <code>inc_solution</code>.</p>
+        <div class="nf-gain">âœ… Gain : ~75% des tickets qualifiÃ©s sans intervention humaine</div>
+      </div>
+
+      <div class="nf-card">
+        <span class="nf-badge">ðŸ†• NOUVEAU</span>
+        <span class="nf-icon">ðŸ§©</span>
+        <h3>Classifieur HiÃ©rarchique 2 Niveaux</h3>
+        <p>Taxonomie BRASIL 2 niveaux : KNN L1 (domaine) + RÃ©gression Logistique L2 (cause prÃ©cise) + fallback Groq pour cas ambigus. Tiers de confiance HIGH/MEDIUM/LOW. Flag <code>needs_review</code> automatique. Export CSV enrichi.</p>
+        <div class="nf-gain">âœ… Gain : Classification explicable avec rationale LLM optionnel</div>
+      </div>
+
+      <div class="nf-card">
+        <span class="nf-badge">ðŸ†• NOUVEAU</span>
+        <span class="nf-icon">ðŸ“Ž</span>
+        <h3>Injection de 51 FRs dans Qdrant</h3>
+        <p>51 Fiches de RÃ©solution BRASIL validÃ©es par les experts N3, indexÃ©es dans la collection <code>brasil_frs</code>. Le chatbot retrouve d'abord les FRs pertinentes avant d'interroger le LLM. Si confiance &gt; 90% : skip LLM automatique.</p>
+        <div class="nf-gain">âœ… Gain : RÃ©ponses basÃ©es sur des rÃ©solutions validÃ©es, pas inventÃ©es</div>
+      </div>
+
+      <div class="nf-card">
+        <span class="nf-badge">ðŸ†• NOUVEAU</span>
+        <span class="nf-icon">ðŸ“‚</span>
+        <h3>Log Ingestion BRASIL Intelligente</h3>
+        <p>7 stratÃ©gies de parsing auto-dÃ©tectÃ©es (brasil_error, brasil_transaction, brasil_solicitationâ€¦). 30+ classificateurs d'erreurs mÃ©tier. Filtrage du bruit applicatif (rollbacks, stack traces inutiles). 1 133 Ã©vÃ©nements classifiÃ©s.</p>
+        <div class="nf-gain">âœ… Gain : 0 parsing manuel, patterns dÃ©tectÃ©s automatiquement</div>
+      </div>
+
+      <div class="nf-card">
+        <span class="nf-badge">ðŸ†• NOUVEAU</span>
+        <span class="nf-icon">âœï¸</span>
+        <h3>Correction Interactive &amp; Feedback Loop</h3>
+        <p>Seuil de confiance ajustable (0.0â€“1.0). Chaque correction manuelle enrichit automatiquement le jeu d'entraÃ®nement. Re-training incrÃ©mental sans intervention technique. Les corrections deviennent des ressources partagÃ©es.</p>
+        <div class="nf-gain">âœ… Gain : Le modÃ¨le s'amÃ©liore avec l'usage â€” sans effort de saisie</div>
+      </div>
+
+      <div class="nf-card">
+        <span class="nf-badge">ðŸ‡¦ STABILISATION</span>
+        <span class="nf-icon">ðŸ›¡ï¸</span>
+        <h3>Moteur de VÃ©ritÃ© (Truth Engine)</h3>
+        <p>Valide chaque affirmation factuelle contre les index rÃ©els : 128 tables BRASIL, 3 200 fichiers Java, FRs indexÃ©es. Bloque systÃ©matiquement SQL <code>UPDATE/DELETE/INSERT</code>, commandes shell, placeholders SQL (<code>xxx</code>, <code>??</code>). Tables et fonctions inconnues signalÃ©es âš ï¸ au lieu d'Ãªtre inventÃ©es.</p>
+        <div class="nf-gain">âœ… Gain : 0 hallucination factuelle tolÃ©rÃ©e â€” LLM = formateur uniquement</div>
+      </div>
+
+      <div class="nf-card">
+        <span class="nf-badge">ðŸ‡¦ STABILISATION</span>
+        <span class="nf-icon">ðŸ§ </span>
+        <h3>Routeur SÃ©mantique 25 catÃ©gories</h3>
+        <p>Classifieur pur regex (sans LLM, &lt; 1 ms) : 25 catÃ©gories opÃ©rationnelles couvrant le vocabulaire N3 BRASIL en franÃ§ais. Multi-label avec seuil d'ambiguÃ¯tÃ©. CatÃ©gories : diagnostic runtime, forensic logs, workflow navigation, source code lookup, schema lookup, root cause explanation, function traceâ€¦</p>
+        <div class="nf-gain">âœ… Gain : Routage dÃ©terministe â€” intent correct dÃ¨s la 1re passe, sans LLM</div>
+      </div>
+
+      <div class="nf-card">
+        <span class="nf-badge">ðŸ‡¦ STABILISATION</span>
+        <span class="nf-icon">ðŸ“‚</span>
+        <h3>Moteur de Provenance</h3>
+        <p>GÃ©nÃ¨re automatiquement un footer Â« ðŸ“‚ Sources des informations Â» sur chaque rÃ©ponse forensique : fichier de log, table SQL (avec serveur), mÃ©thode Java (avec ligne), fiche FR, collection Qdrant. L'agent N3 peut vÃ©rifier chaque source citÃ©e en 1 clic.</p>
+        <div class="nf-gain">âœ… Gain : TraÃ§abilitÃ© complÃ¨te â€” chaque diagnostic est auditable</div>
+      </div>
+
+      <div class="nf-card">
+        <span class="nf-badge">ðŸ‡¦ STABILISATION</span>
+        <span class="nf-icon">âš™ï¸</span>
+        <h3>Workflow Intelligence</h3>
+        <p>RÃ©solution dÃ©terministe des workflows opÃ©rationnels depuis le code Java source + FRs. Suppression DSLAM, crÃ©ation VLAN, Ã©quipements, rejeu d'ordre â€” avec mÃ©thodes Java rÃ©elles citÃ©es. Si le workflow n'est pas indexÃ© : message d'incertitude explicite, jamais d'Ã©tapes fabriquÃ©es.</p>
+        <div class="nf-gain">âœ… Gain : ProcÃ©dures opÃ©rationnelles 100% ancrÃ©es dans le code rÃ©el</div>
+      </div>
+
+    </div>
+<section id="workflow" class="workflow">
+  <div class="container">
+    <h2>Workflow â€” Ce qui est nouveau</h2>
+    <p class="section-sub">Les Ã©tapes en <strong style="color:var(--accent)">orange</strong> sont nouvelles en v4.0. Les Ã©tapes en <strong style="color:var(--primary)">bleu</strong> ont Ã©tÃ© amÃ©liorÃ©es.</p>
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Collecte des donnÃ©es <span class="tag-improved">AMÃ‰LIORÃ‰</span></h3>
+          <p>Ingestion automatique des logs BRASIL (connectorCL, transactions, sollicitations), introspection DB, clonage Git. Auto-dÃ©tection de la stratÃ©gie de parsing selon le nom du fichier.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num new">2</div>
+        <div class="step-body">
+          <h3>Log Ingestion BRASIL <span class="tag-new">NOUVEAU v4.0</span></h3>
+          <p>7 stratÃ©gies de parsing, 30+ classificateurs d'erreurs BRASIL, filtrage du bruit applicatif. 1 133 Ã©vÃ©nements de logs classifiÃ©s automatiquement en types mÃ©tier (DSLAM_CLOSED, MRT_DUPLICATE, BIZ_RULEâ€¦).</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num new">3</div>
+        <div class="step-body">
+          <h3>Knowledge Extraction N3 <span class="tag-new">NOUVEAU v4.0</span></h3>
+          <p>Mining de templates d'erreurs, calcul du trust score composite (source Ã—0.35 + frÃ©quence Ã—0.25 + validation Ã—0.30 + fraÃ®cheur Ã—0.10). Injection du catalogue BRASIL inline.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num new">4</div>
+        <div class="step-body">
+          <h3>GÃ©nÃ©ration de 27 ProcÃ©dures N3 <span class="tag-new">NOUVEAU v4.0</span></h3>
+          <p>Croisement clusters tickets Ã— log knowledge records â†’ 27 procÃ©dures structurÃ©es (PROC-BRASIL-GEN-XXXX) avec Ã©tapes diagnostiques, causes racines, rÃ©solutions et critÃ¨res d'escalade.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num new">5</div>
+        <div class="step-body">
+          <h3>Indexation Qdrant â€” 3 collections <span class="tag-new">NOUVEAU v4.0</span></h3>
+          <p>Vectorisation MiniLM-L12-v2 (dim=384) et indexation dans <code>brasil_log_patterns</code> (12 records), <code>brasil_procedures</code> (27 procÃ©dures) et <code>brasil_frs</code> (51 Fiches de RÃ©solution).</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num new">6</div>
+        <div class="step-body">
+          <h3>Diagnostic N3 en temps rÃ©el <span class="tag-new">NOUVEAU v4.0</span></h3>
+          <p>DÃ©tection d'exceptions BRASIL â†’ retrieval procÃ©dure (catalogue inline ou Qdrant) â†’ scoring de confiance HIGH/MED/LOW â†’ instruction anti-hallucination injectÃ©e au LLM avant gÃ©nÃ©ration de la rÃ©ponse.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num new">7</div>
+        <div class="step-body">
+          <h3>Classification ML Hybride (9 Ã©tapes) <span class="tag-new">NOUVEAU v4.0</span></h3>
+          <p>Upload CSV â†’ prÃ©paration â†’ entraÃ®nement FAISS + TF-IDF â†’ prÃ©dictions â†’ correction interactive via carte contextuelle (<code>user_sig</code>, <code>inc_solution</code>) â†’ feedback loop â†’ re-training incrÃ©mental.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num new">8</div>
+        <div class="step-body">
+          <h3>Classifieur HiÃ©rarchique L1 + L2 <span class="tag-new">NOUVEAU v4.0</span></h3>
+          <p>KNN L1 (domaine BRASIL) + RÃ©gression Logistique L2 (cause prÃ©cise) + fallback Groq llama-3.1-8b pour cas ambigus. Export CSV enrichi avec <code>level_1</code>, <code>level_2</code>, <code>confidence_tier</code>, <code>needs_review</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">9</div>
+        <div class="step-body">
+          <h3>Validation &amp; AmÃ©lioration continue <span class="tag-improved">AMÃ‰LIORÃ‰</span></h3>
+          <p>Revue humaine avec seuil ajustable. Corrections persistÃ©es et re-training automatique. Trust score mis Ã  jour Ã  chaque feedback expert. La base de connaissance s'amÃ©liore avec l'usage, sans effort supplÃ©mentaire.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture" class="architecture">
+  <div class="container">
+    <h2>Ce qui a Ã©tÃ© ajoutÃ© techniquement</h2>
+    <p class="section-sub">Les composants marquÃ©s <strong style="color:var(--accent)">NOUVEAU</strong> n'existaient pas en v1â€“v3.</p>
+    <div class="arch-grid">
+      <div class="arch-card is-new">
+        <h3>Pipeline N3</h3>
+        <ul>
+          <li>log_knowledge_extractor.py</li>
+          <li>procedure_generator.py</li>
+          <li>knowledge_indexer.py</li>
+          <li>Trust score composite</li>
+        </ul>
+      </div>
+      <div class="arch-card is-new">
+        <h3>Diagnostic Engine</h3>
+        <ul>
+          <li>DiagnosticEngine async</li>
+          <li>Catalogue inline 5 procÃ©dures</li>
+          <li>Qdrant vector retrieval</li>
+          <li>Anti-hallucination prompt</li>
+        </ul>
+      </div>
+      <div class="arch-card is-new">
+        <h3>Log Ingestion BRASIL</h3>
+        <ul>
+          <li>brasil_error (Spring logs)</li>
+          <li>brasil_transaction (XML KO)</li>
+          <li>brasil_solicitation (stats)</li>
+          <li>30+ classificateurs mÃ©tier</li>
+        </ul>
+      </div>
+      <div class="arch-card is-new">
+        <h3>Classification ML Hybride</h3>
+        <ul>
+          <li>FAISS cosinus dim=384</li>
+          <li>TF-IDF + keyword boost</li>
+          <li>MiniLM-L12-v2 embeddings</li>
+          <li>Pipeline 9 Ã©tapes</li>
+        </ul>
+      </div>
+      <div class="arch-card is-new">
+        <h3>Classifieur HiÃ©rarchique</h3>
+        <ul>
+          <li>KNN L1 domaine BRASIL</li>
+          <li>LR L2 par catÃ©gorie</li>
+          <li>Groq fallback llama-3.1-8b</li>
+          <li>confidence_tier HIGH/MED/LOW</li>
+        </ul>
+      </div>
+      <div class="arch-card is-new">
+        <h3>FRs Qdrant â€” brasil_frs</h3>
+        <ul>
+          <li>51 Fiches de RÃ©solution</li>
+          <li>Trust scoring composite</li>
+          <li>Retrieval avant LLM</li>
+          <li>Skip LLM si confiance &gt;90%</li>
+        </ul>
+      </div>
+      <div class="arch-card">
+        <h3>Bases de DonnÃ©es (amÃ©liorÃ©)</h3>
+        <ul>
+          <li>PostgreSQL mÃ©tadonnÃ©es</li>
+          <li>Qdrant brasil_log_patterns</li>
+          <li>Qdrant brasil_procedures</li>
+          <li>Qdrant brasil_frs (nouveau)</li>
+        </ul>
+      </div>
+      <div class="arch-card">
+        <h3>LLM &amp; IA (amÃ©liorÃ©)</h3>
+        <ul>
+          <li>Groq API (inference)</li>
+          <li>HDBSCAN clustering</li>
+          <li>SentenceTransformers</li>
+          <li>Injection contextuelle N3</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap" class="roadmap">
+  <div class="container">
+    <h2>Feuille de route</h2>
+    <p class="section-sub">Ce qui a Ã©tÃ© livrÃ©, ce qui est en cours, ce qui est envisagÃ©.</p>
+    <div class="rm-grid">
+      <div class="rm-card rm-done">
+        <span class="rm-phase">âœ… LivrÃ© â€” v4.1</span>
+        <h3>PÃ©rimÃ¨tre actuel</h3>
+        <ul>
+          <li>Pipeline N3 Knowledge Engineering</li>
+          <li>Moteur de Diagnostic N3 + Qdrant</li>
+          <li>Log Ingestion BRASIL (7 stratÃ©gies)</li>
+          <li>Classification ML Hybride FAISS</li>
+          <li>Classifieur HiÃ©rarchique 2 niveaux</li>
+          <li>Injection 51 FRs dans Qdrant</li>
+          <li>Correction interactive + feedback loop</li>
+          <li>IntÃ©gration Jira</li>
+          <li>ðŸ”’ Truth Engine â€” 0 hallucination</li>
+          <li>ðŸ§  Routeur SÃ©mantique 25 catÃ©gories</li>
+          <li>ðŸ“‚ Provenance automatique</li>
+          <li>âš™ï¸ Workflow Intelligence dÃ©terministe</li>
+          <li>110 tests automatisÃ©s Â· 0 Ã©chec</li>
+        </ul>
+      </div>
+      <div class="rm-card rm-next">
+        <span class="rm-phase">ðŸ”µ EnvisagÃ© â€” v4.x</span>
+        <h3>Extension du pÃ©rimÃ¨tre</h3>
+        <ul>
+          <li>Adaptation Ã  d'autres applications</li>
+          <li>Vue consolidÃ©e multi-pÃ©rimÃ¨tres</li>
+          <li>Base de connaissance par domaine mÃ©tier</li>
+          <li>Indicateurs de suivi par Ã©quipe</li>
+          <li>API REST pour intÃ©gration ITSM</li>
+          <li>Authentification multi-utilisateurs</li>
+        </ul>
+      </div>
+      <div class="rm-card rm-future">
+        <span class="rm-phase">ðŸŸ¡ Ã€ Ã©tudier â€” v5</span>
+        <h3>Ã‰volutions futures</h3>
+        <ul>
+          <li>DÃ©tection proactive de tendances</li>
+          <li>Recommandations maintenance prÃ©ventive</li>
+          <li>Rapport automatique qualitÃ© de service</li>
+          <li>Chiffrement des secrets (Vault)</li>
+          <li>Tests unitaires sur les modules ML</li>
+          <li>Logs rotatifs structurÃ©s (ELK)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="container">
+    <h2>OpsPilot AI v4.1</h2>
+    <p>11 nouvelles fonctionnalitÃ©s. 27 procÃ©dures N3. 51 FRs indexÃ©es. 110 tests Â· 0 Ã©chec. ~85% des tickets qualifiÃ©s automatiquement. 0 hallucination tolÃ©rÃ©e. Le support N3 BRASIL ne ressemble plus Ã  ce qu'il Ã©tait.</p>
+    <div class="hero-cta">
+      <a href="presentation.html" class="btn btn-primary" style="background:white;color:var(--primary)">Version technique complÃ¨te</a>
+      <a href="presentation_metier.html" class="btn btn-secondary">PrÃ©sentation mÃ©tier</a>
+      <a href="documentation.html" class="btn btn-secondary">Documentation</a>
+    </div>
+    <div class="meta-row">
+      <div class="meta-pill"><strong>Statut</strong>OpÃ©rationnel â€” pÃ©rimÃ¨tre BRASIL</div>
+      <div class="meta-pill"><strong>Version</strong>4.1 â€” Mai 2026</div>
+      <div class="meta-pill"><strong>Nouveau pÃ©rimÃ¨tre</strong>2 Ã  4 semaines</div>
+      <div class="meta-pill"><strong>PrÃ©requis</strong>Historique incidents + Ã©quipe rÃ©fÃ©rente</div>
+    </div>
+  </div>
+</section>
+
+<!-- ROBOT -->
+<div class="robot-float" title="OpsPilot AI">
+  <svg viewBox="0 0 160 160" width="75" height="75">
+    <defs>
+      <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#f8fbff"/><stop offset="1" stop-color="#e6f5ff"/></linearGradient>
+      <linearGradient id="g2" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0ea5e9"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>
+    </defs>
+    <rect x="18" y="18" width="124" height="86" rx="18" fill="url(#g1)" stroke="#bfdbfe" stroke-width="2"/>
+    <rect x="34" y="30" width="92" height="58" rx="12" fill="url(#g2)"/>
+    <ellipse cx="60" cy="50" rx="10" ry="8" fill="#0c4a6e" opacity=".85"/>
+    <ellipse cx="100" cy="50" rx="10" ry="8" fill="#0c4a6e" opacity=".85"/>
+    <circle id="pupilL" cx="60" cy="50" r="4" fill="#7dd3fc"/>
+    <circle id="pupilR" cx="100" cy="50" r="4" fill="#7dd3fc"/>
+    <path d="M78 72c2 4 8 4 10 0" fill="#7dd3fc" opacity=".95"/>
+    <g transform="translate(40,88)"><ellipse cx="40" cy="34" rx="40" ry="34" fill="#f3f9fb"/><rect x="8" y="6" width="64" height="36" rx="12" fill="#eff6fb" stroke="#dbeafe"/></g>
+  </svg>
+</div>
+
+<script>
+  // Scroll animations
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('animate'); });
+  },{threshold:0.1});
+  document.querySelectorAll('.compare-col,.nf-card,.gain-card,.step,.arch-card,.rm-card').forEach(el=>observer.observe(el));
+
+  // Stagger delays
+  document.querySelectorAll('.nf-card').forEach((el,i)=>el.style.transitionDelay=`${i*.08}s`);
+  document.querySelectorAll('.gain-card').forEach((el,i)=>el.style.transitionDelay=`${i*.07}s`);
+  document.querySelectorAll('.step').forEach((el,i)=>el.style.transitionDelay=`${i*.06}s`);
+  document.querySelectorAll('.arch-card').forEach((el,i)=>el.style.transitionDelay=`${i*.06}s`);
+  document.querySelectorAll('.rm-card').forEach((el,i)=>el.style.transitionDelay=`${i*.1}s`);
+
+  // Robot gaze
+  const pupilL=document.getElementById('pupilL'),pupilR=document.getElementById('pupilR'),robot=document.querySelector('.robot-float');
+  document.addEventListener('mousemove',e=>{
+    if(!robot||!pupilL||!pupilR)return;
+    const r=robot.getBoundingClientRect();
+    const dx=(e.clientX-(r.left+r.width/2))/window.innerWidth*3;
+    const dy=(e.clientY-(r.top+r.height/2))/window.innerHeight*2;
+    pupilL.style.transform=`translate(${dx}px,${dy}px)`;
+    pupilR.style.transform=`translate(${dx}px,${dy}px)`;
+  });
+
+  // Smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',e=>{
+    e.preventDefault();const t=document.querySelector(a.getAttribute('href'));
+    if(t)t.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
+
+  // Parallax hero
+  window.addEventListener('scroll',()=>{
+    const s=window.pageYOffset,hero=document.querySelector('.hero-content');
+    if(hero){hero.style.transform=`translateY(${s*.4}px)`;hero.style.opacity=1-(s/700);}
+  });
+</script>
+</body>
+</html>

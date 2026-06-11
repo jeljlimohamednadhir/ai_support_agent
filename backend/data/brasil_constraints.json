@@ -1,0 +1,458 @@
+{
+  "generated_at": "2026-04-02T14:51:49.511156",
+  "pipeline_version": "2.0",
+  "total_constraints": 27,
+  "blocking_count": 24,
+  "warning_count": 3,
+  "constraints": [
+    {
+      "id": "CSTR-SQL-001",
+      "description": "EQUIPMENT cannot be deleted if CARDS reference it (eqpt_id FK in t_cards)",
+      "rule": "DELETE t_equipments WHERE eqpt_id IS REFERENCED BY t_cards.eqpt_id → BLOCKED",
+      "affected_entities": [
+        "EQUIPMENT",
+        "CARD"
+      ],
+      "severity": "blocking",
+      "constraint_type": "deletion",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-SQL-002",
+      "description": "CARD cannot be deleted if PORTS reference it (card_id FK in t_ports)",
+      "rule": "DELETE t_cards WHERE card_id IS REFERENCED BY t_ports.card_id → BLOCKED",
+      "affected_entities": [
+        "CARD",
+        "PORT"
+      ],
+      "severity": "blocking",
+      "constraint_type": "deletion",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-SQL-003",
+      "description": "NODE cannot be deleted if EQUIPMENTS or DISTRIBUTORS reference it",
+      "rule": "DELETE t_nodes WHERE node_id IS REFERENCED BY t_equipments.node_id OR t_distributors.node_id → BLOCKED",
+      "affected_entities": [
+        "NODE",
+        "EQUIPMENT",
+        "DISTRIBUTOR"
+      ],
+      "severity": "blocking",
+      "constraint_type": "deletion",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-SQL-004",
+      "description": "MAKING_FILE cannot be processed if status is blocking (mkfl_status)",
+      "rule": "PROCESS t_making_files WHERE mkfl_status IN (BLOCKED, CANCELLED) → REJECTED",
+      "affected_entities": [
+        "MAKING_FILE"
+      ],
+      "severity": "blocking",
+      "constraint_type": "lifecycle",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-SQL-005",
+      "description": "PORT cannot be assigned if port_attribuable = 0",
+      "rule": "ASSIGN t_ports WHERE port_attribuable = 0 → BLOCKED",
+      "affected_entities": [
+        "PORT"
+      ],
+      "severity": "blocking",
+      "constraint_type": "validation",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR 1583B",
+      "multi_source": true
+    },
+    {
+      "id": "CSTR-SQL-006",
+      "description": "CCL cannot accept new VCs if rpct_allocated_vc_count >= rpct_vc_max",
+      "rule": "ASSIGN VC ON t_res_prod_controlables WHERE allocated_vc_count >= vc_max → REJECTED",
+      "affected_entities": [
+        "CCL",
+        "VP_VC"
+      ],
+      "severity": "blocking",
+      "constraint_type": "capacity",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR_docs",
+      "multi_source": true
+    },
+    {
+      "id": "CSTR-SQL-007",
+      "description": "EPC cannot have duplicate epc_epc_id",
+      "rule": "INSERT t_epcs WHERE epc_epc_id ALREADY EXISTS → UNIQUE VIOLATION",
+      "affected_entities": [
+        "EPC"
+      ],
+      "severity": "blocking",
+      "constraint_type": "uniqueness",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs",
+      "multi_source": true
+    },
+    {
+      "id": "CSTR-SQL-008",
+      "description": "FTTH ONT lock requires unique (ont_num, port_id) pair",
+      "rule": "INSERT t_ftth_lock_onts WHERE (flko_ont_num, port_id) ALREADY EXISTS → UNIQUE CONSTRAINT",
+      "affected_entities": [
+        "PORT",
+        "FTTH_ONT_LOCK"
+      ],
+      "severity": "blocking",
+      "constraint_type": "uniqueness",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-001",
+      "description": "DSLAM closed for production blocks all port assignment (recherche broche)",
+      "rule": "IF dslam_prod_status = CLOSED THEN AffecterRessourcesXdslService → FAIL with 'fermé à la production'",
+      "affected_entities": [
+        "DSLAM",
+        "PORT",
+        "MAKING_FILE"
+      ],
+      "severity": "blocking",
+      "constraint_type": "production_state",
+      "fr_references": [
+        "FR 1583",
+        "FR 1583B"
+      ],
+      "confidence": "high",
+      "source_file": "FR_docs + logs",
+      "multi_source": true
+    },
+    {
+      "id": "CSTR-FR-002",
+      "description": "CARD closed for production blocks port assignment on that card",
+      "rule": "IF card_prod_status = CLOSED THEN AffecterRessourcesXdslService → FAIL with 'carte fermée à la production'",
+      "affected_entities": [
+        "CARD",
+        "PORT"
+      ],
+      "severity": "blocking",
+      "constraint_type": "production_state",
+      "fr_references": [
+        "FR 1583",
+        "logs"
+      ],
+      "confidence": "high",
+      "source_file": "logs",
+      "multi_source": true
+    },
+    {
+      "id": "CSTR-FR-003",
+      "description": "CCL (VC) NumeroCCL is mandatory for CEV offers",
+      "rule": "IF offer_type = CEV AND rpct_ccl_name IS NULL THEN AffecterRessourcesXdslService → ERROR 'Le NumeroCCL est obligatoire dans le cas d\\'une offre CEV'",
+      "affected_entities": [
+        "CCL",
+        "MAKING_FILE",
+        "EPC"
+      ],
+      "severity": "blocking",
+      "constraint_type": "validation",
+      "fr_references": [
+        "FR 135"
+      ],
+      "confidence": "high",
+      "source_file": "FR_docs + logs",
+      "multi_source": true
+    },
+    {
+      "id": "CSTR-FR-004",
+      "description": "EPC identifier already used by another EPC (duplicate detection)",
+      "rule": "IF epc_epc_id ALREADY IN USE → AffecterRessourcesXdslService → ERROR 'L\\'identifiant d\\'EPC est déjà utilisé'",
+      "affected_entities": [
+        "EPC"
+      ],
+      "severity": "blocking",
+      "constraint_type": "uniqueness",
+      "fr_references": [
+        "logs"
+      ],
+      "confidence": "high",
+      "source_file": "logs",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-005",
+      "description": "MRT Access DSLAM identifier unknown blocks liberation (LibérerRessources)",
+      "rule": "IF mrtd_id NOT FOUND → LibererRessourcesXdslService → ERROR 'Identifiant de Macro Ressource Technique inconnu'",
+      "affected_entities": [
+        "MRT",
+        "MAKING_FILE"
+      ],
+      "severity": "blocking",
+      "constraint_type": "referential_integrity",
+      "fr_references": [
+        "FR_docs",
+        "logs"
+      ],
+      "confidence": "high",
+      "source_file": "logs",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-006",
+      "description": "EPC dossier de réalisation ID unknown blocks modification",
+      "rule": "IF mkfl_id NOT FOUND → ModifierDonneesCommerciales → ERROR 'Identifiant de dossier de réalisation inconnu'",
+      "affected_entities": [
+        "MAKING_FILE",
+        "EPC"
+      ],
+      "severity": "blocking",
+      "constraint_type": "referential_integrity",
+      "fr_references": [
+        "FR 012",
+        "logs"
+      ],
+      "confidence": "high",
+      "source_file": "FR_docs + logs",
+      "multi_source": true
+    },
+    {
+      "id": "CSTR-FR-007",
+      "description": "Port counter (TOC) at 100% prevents new port assignment on DSLAM",
+      "rule": "IF DSLAM_TOC = 100% THEN RechercherBrochesService → FAIL 'No port found with such constraints'",
+      "affected_entities": [
+        "DSLAM",
+        "PORT",
+        "CARD"
+      ],
+      "severity": "blocking",
+      "constraint_type": "capacity",
+      "fr_references": [
+        "FR 001 (CalculerToc)",
+        "FR 1583"
+      ],
+      "confidence": "high",
+      "source_file": "FR_docs + logs",
+      "multi_source": true
+    },
+    {
+      "id": "CSTR-FR-008",
+      "description": "Access already being modified (dossier en cours) blocks concurrent modification",
+      "rule": "IF mkfl_status = IN_PROGRESS → AffecterRessourcesXdslService → ERROR 'L\\'accès est déjà en cours de modification'",
+      "affected_entities": [
+        "MAKING_FILE",
+        "EPC",
+        "MRT"
+      ],
+      "severity": "blocking",
+      "constraint_type": "concurrency",
+      "fr_references": [
+        "logs"
+      ],
+      "confidence": "high",
+      "source_file": "logs",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-009",
+      "description": "MRTChemin already carried by another MRTAccesDslam blocks new assignment",
+      "rule": "IF mrtd_crc_mrt_id ALREADY ASSIGNED TO ANOTHER MRTD → ERROR 'Un accès client existe déjà avec le même identifiant'",
+      "affected_entities": [
+        "MRT",
+        "EPC"
+      ],
+      "severity": "blocking",
+      "constraint_type": "uniqueness",
+      "fr_references": [
+        "logs"
+      ],
+      "confidence": "high",
+      "source_file": "logs",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-010",
+      "description": "Deadlock in PostgreSQL causes provisioning rollback and retry with 55s delay",
+      "rule": "IF PSQLException deadlock_detected → ROLLBACK → RETRY after 55000ms (max 3 attempts)",
+      "affected_entities": [
+        "MAKING_FILE",
+        "PORT",
+        "CCL"
+      ],
+      "severity": "warning",
+      "constraint_type": "transactional",
+      "fr_references": [
+        "logs - ConnectorCLMDBBean(236)"
+      ],
+      "confidence": "high",
+      "source_file": "logs",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-011",
+      "description": "SCA blocking caused by missing FARID or RemoteID",
+      "rule": "IF farid IS NULL OR remote_id IS NULL → SCA_BLOCKED",
+      "affected_entities": [
+        "EPC",
+        "MRT",
+        "MAKING_FILE"
+      ],
+      "severity": "blocking",
+      "constraint_type": "validation",
+      "fr_references": [
+        "FR 010"
+      ],
+      "confidence": "high",
+      "source_file": "FR 010",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-012",
+      "description": "DSLAM constraint on repartiteur must exist before DSLAM assignment",
+      "rule": "IF t_dslam_access_constraints FOR node DOES NOT EXIST → assignment blocked",
+      "affected_entities": [
+        "DSLAM",
+        "NODE",
+        "DISTRIBUTOR"
+      ],
+      "severity": "blocking",
+      "constraint_type": "prerequisite",
+      "fr_references": [
+        "FR 150"
+      ],
+      "confidence": "high",
+      "source_file": "FR 150",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-013",
+      "description": "VP/VLAN/VC counter incorrect (occupied wrongly) blocks new resource assignment",
+      "rule": "IF ctrs_occupied_count MISMATCH ACTUAL USAGE → new VC assignment may fail",
+      "affected_entities": [
+        "CCL",
+        "VP_VC",
+        "VLAN",
+        "DSLAM"
+      ],
+      "severity": "blocking",
+      "constraint_type": "data_inconsistency",
+      "fr_references": [
+        "FR 136b",
+        "FR 136c"
+      ],
+      "confidence": "high",
+      "source_file": "FR 136b + FR 136c",
+      "multi_source": true
+    },
+    {
+      "id": "CSTR-FR-014",
+      "description": "NIFolderID field missing (Error 1002) - mandatory field validation",
+      "rule": "IF nifolderid IS NULL IN INCOMING MESSAGE → BRASIL ERROR 1002 'Champ obligatoire NIFolderID non présent'",
+      "affected_entities": [
+        "MAKING_FILE",
+        "EPC"
+      ],
+      "severity": "blocking",
+      "constraint_type": "validation",
+      "fr_references": [
+        "FR 012"
+      ],
+      "confidence": "high",
+      "source_file": "FR 012",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-015",
+      "description": "UPDATEDMRTLIST field absent or format error (Error 1002)",
+      "rule": "IF updatedmrtlist IS NULL OR FORMAT_INVALID → BRASIL ERROR 1002",
+      "affected_entities": [
+        "MRT",
+        "EPC"
+      ],
+      "severity": "blocking",
+      "constraint_type": "validation",
+      "fr_references": [
+        "FR 013"
+      ],
+      "confidence": "high",
+      "source_file": "FR 013",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-016",
+      "description": "DLM blocked orders require manual reprocessing via Brasil N3 procedure",
+      "rule": "IF mkfl_business_process = DLM AND mkfl_status = BLOCKED → manual intervention required",
+      "affected_entities": [
+        "MAKING_FILE"
+      ],
+      "severity": "blocking",
+      "constraint_type": "lifecycle",
+      "fr_references": [
+        "FR 101"
+      ],
+      "confidence": "high",
+      "source_file": "FR 101",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-017",
+      "description": "Port réseau without service or endpoint is invalid resource",
+      "rule": "IF port_occup_status = OCCUPIED AND NO_SERVICE AND NO_ENDPOINT → data inconsistency requires correction",
+      "affected_entities": [
+        "PORT",
+        "CCL",
+        "MRT"
+      ],
+      "severity": "warning",
+      "constraint_type": "data_inconsistency",
+      "fr_references": [
+        "FR 114"
+      ],
+      "confidence": "high",
+      "source_file": "FR 114",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-018",
+      "description": "BBC movement without Brasil action requires investigation",
+      "rule": "IF bbc_movement_received AND NO_BRASIL_ACTION → data_sync_failure",
+      "affected_entities": [
+        "MAKING_FILE",
+        "EPC"
+      ],
+      "severity": "warning",
+      "constraint_type": "synchronization",
+      "fr_references": [
+        "FR 156"
+      ],
+      "confidence": "medium",
+      "source_file": "FR 156",
+      "multi_source": false
+    },
+    {
+      "id": "CSTR-FR-019",
+      "description": "TSF resources not found for DSLAM causes internal error on service assignment",
+      "rule": "IF TSF resources not available ON DSLAM → BrasilInternalErrorException on resource reservation",
+      "affected_entities": [
+        "TSF",
+        "CCL",
+        "DSLAM",
+        "MRT"
+      ],
+      "severity": "blocking",
+      "constraint_type": "resource_availability",
+      "fr_references": [
+        "logs - ManageNetworkTRProductionBusinessImpl(968)"
+      ],
+      "confidence": "high",
+      "source_file": "logs",
+      "multi_source": true
+    }
+  ]
+}

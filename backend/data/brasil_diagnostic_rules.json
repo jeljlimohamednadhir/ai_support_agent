@@ -1,0 +1,752 @@
+{
+  "generated_at": "2026-04-02T14:51:49.511156",
+  "pipeline_version": "2.0",
+  "total_rules": 12,
+  "validation_report": {
+    "entities_count": 360,
+    "relationships_count": 36,
+    "constraints_count": 27,
+    "workflows_count": 8,
+    "log_patterns_count": 23,
+    "graph_density": 0.0003,
+    "issues_detected": [
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:NODE → ENTITY:DSLAM",
+        "message": "Relationship source not in entity set: ENTITY:NODE"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:NODE → ENTITY:MSAN",
+        "message": "Relationship source not in entity set: ENTITY:NODE"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:NODE → ENTITY:DISTRIBUTOR",
+        "message": "Relationship source not in entity set: ENTITY:NODE"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:DSLAM → ENTITY:SHELF",
+        "message": "Relationship source not in entity set: ENTITY:DSLAM"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:DSLAM → ENTITY:CARD",
+        "message": "Relationship source not in entity set: ENTITY:DSLAM"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:CARD → ENTITY:PORT",
+        "message": "Relationship source not in entity set: ENTITY:CARD"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:SHELF → ENTITY:CARD",
+        "message": "Relationship source not in entity set: ENTITY:SHELF"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:PORT → ENTITY:REGLETTE",
+        "message": "Relationship source not in entity set: ENTITY:PORT"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:REGLETTE → ENTITY:REPARTITEUR",
+        "message": "Relationship source not in entity set: ENTITY:REGLETTE"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:EPC → ENTITY:MRT",
+        "message": "Relationship source not in entity set: ENTITY:EPC"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:MRT → ENTITY:PORT",
+        "message": "Relationship source not in entity set: ENTITY:MRT"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:MRT → ENTITY:DSLAM",
+        "message": "Relationship source not in entity set: ENTITY:MRT"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:MRT → ENTITY:CCL",
+        "message": "Relationship source not in entity set: ENTITY:MRT"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:CCL → ENTITY:VP_VC",
+        "message": "Relationship source not in entity set: ENTITY:CCL"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:CCL → ENTITY:VLAN",
+        "message": "Relationship source not in entity set: ENTITY:CCL"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:CCL → ENTITY:DSLAM",
+        "message": "Relationship source not in entity set: ENTITY:CCL"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:CCL → ENTITY:NIP",
+        "message": "Relationship source not in entity set: ENTITY:CCL"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:MAKING_FILE → ENTITY:EPC",
+        "message": "Relationship source not in entity set: ENTITY:MAKING_FILE"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:MAKING_FILE → ENTITY:MRT",
+        "message": "Relationship source not in entity set: ENTITY:MAKING_FILE"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:MAKING_FILE → ENTITY:OPERATOR",
+        "message": "Relationship source not in entity set: ENTITY:MAKING_FILE"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:DSLAM → ENTITY:TSF",
+        "message": "Relationship source not in entity set: ENTITY:DSLAM"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:TSF → ENTITY:CCL",
+        "message": "Relationship source not in entity set: ENTITY:TSF"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:NODE → ENTITY:DR_ZONE",
+        "message": "Relationship source not in entity set: ENTITY:NODE"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:MUTATION → ENTITY:DSLAM",
+        "message": "Relationship source not in entity set: ENTITY:MUTATION"
+      },
+      {
+        "type": "missing_source",
+        "severity": "warning",
+        "rel": "ENTITY:MUTATION → ENTITY:MRT",
+        "message": "Relationship source not in entity set: ENTITY:MUTATION"
+      }
+    ],
+    "issues_count": 25,
+    "confidence_distribution": {
+      "high": 11,
+      "medium": 1,
+      "low": 0
+    }
+  },
+  "rules": [
+    {
+      "id": "DIAG-001",
+      "incident_type": "port_assignment_failure",
+      "title": "Recherche de broche en échec (Port Assignment Failure)",
+      "detected_on": [
+        "AffecterRessourcesXdslService",
+        "RechercherBrochesService",
+        "PortBooker"
+      ],
+      "log_indicators": [
+        "No port found with such constraints",
+        "Echec de la recherche de broche",
+        "DSLAM closed for production",
+        "Card closed for production"
+      ],
+      "probable_causes": [
+        "DSLAM production status CLOSED (eqpt_prod_status='F')",
+        "Card production status CLOSED (card_prod_status='F')",
+        "DSLAM TOC at 100% - no available ports",
+        "port_attribuable = 0 incorrectly set",
+        "Port counters desynchronized in t_d_dslam_xdsl_cards"
+      ],
+      "related_entities": [
+        "DSLAM",
+        "CARD",
+        "PORT",
+        "MAKING_FILE"
+      ],
+      "related_constraints": [
+        "CSTR-FR-001",
+        "CSTR-FR-002",
+        "CSTR-FR-007",
+        "CSTR-SQL-005"
+      ],
+      "recommended_checks": [
+        "SELECT eqpt_name, eqpt_prod_status FROM t_equipments WHERE eqpt_name='<DSLAM_NAME>'",
+        "Run CalculerToc.ksh (FR 001) to verify TOC percentage",
+        "SELECT card_num, card_prod_status FROM t_cards WHERE eqpt_id=<DSLAM_EQPT_ID>",
+        "Check dsme_auto_available_port_count in t_d_dslam_manelems",
+        "Check port_attribuable in t_ports for target DSLAM ports",
+        "If TOC=100% and ports appear free: run FR 1583B procedure"
+      ],
+      "resolution_steps": [
+        "If DSLAM closed: open DSLAM in BRASIL IHM → verify in Orchestra",
+        "If card closed: open card or identify alternative card",
+        "If TOC=100% but ports available: run counter recalculation (FR 001)",
+        "If port_attribuable=0: investigate why and correct per FR 1583"
+      ],
+      "confidence": "high",
+      "sources_correlated": [
+        "brasil_db.sql",
+        "FR 001",
+        "FR 1583",
+        "FR 1583B",
+        "logs/connectorCL"
+      ]
+    },
+    {
+      "id": "DIAG-002",
+      "incident_type": "ccl_resource_failure",
+      "title": "CCL/VC Resource Unavailable (Logical Resource Booking Failure)",
+      "detected_on": [
+        "LogicalResBooker",
+        "ManageNetworkTRProductionBusinessImpl"
+      ],
+      "log_indicators": [
+        "Resources not found for following TechServiceFunction",
+        "TechnicalException (BrasilInternalErrorException) sur la réservation de ressources",
+        "Le NumeroCCL est obligatoire dans le cas d'une offre CEV"
+      ],
+      "probable_causes": [
+        "TSF not provisioned on target DSLAM (t_d_rsc_dslam_tsfs empty)",
+        "CCL saturated: allocated_vc_count >= vc_max",
+        "CCL production status inactive",
+        "CEV offer without CCL number in order",
+        "Routing misconfiguration (VP/VLAN counter mismatch)"
+      ],
+      "related_entities": [
+        "TSF",
+        "CCL",
+        "VLAN",
+        "VP_VC",
+        "DSLAM",
+        "NIP"
+      ],
+      "related_constraints": [
+        "CSTR-FR-003",
+        "CSTR-FR-013",
+        "CSTR-FR-019",
+        "CSTR-SQL-006"
+      ],
+      "recommended_checks": [
+        "SELECT * FROM t_d_rsc_dslam_tsfs WHERE dslam_eqpt_id=<ID>",
+        "SELECT rpct_ccl_name, rpct_vc_max, rpct_allocated_vc_count FROM t_res_prod_controlables WHERE a_eqpt_id=<DSLAM_ID>",
+        "Check rpct_prod_status in t_res_prod_controlables",
+        "Verify offer type requires CCL (CEV/GE offers)",
+        "Run FR 136b/FR 136c counter verification"
+      ],
+      "resolution_steps": [
+        "If TSF missing: provision TSF via network team",
+        "If CCL saturated: request CCL capacity extension",
+        "If CEV with missing CCL: verify order includes CCL number",
+        "If counter mismatch: apply FR 136b/136c correction procedure"
+      ],
+      "confidence": "high",
+      "sources_correlated": [
+        "brasil_db.sql",
+        "FR 135",
+        "FR 136b",
+        "FR 136c",
+        "FR 137",
+        "logs/connectorCL"
+      ]
+    },
+    {
+      "id": "DIAG-003",
+      "incident_type": "mrt_not_found",
+      "title": "MRT/EPC Not Found (Référentiel Inconsistency)",
+      "detected_on": [
+        "ObtenirEptXdslService",
+        "LibererRessourcesXdslService",
+        "ManageGetEptXdslTranslatorBusinessImpl"
+      ],
+      "log_indicators": [
+        "Aucune MRT Access DSLAM ne correspond aux critères de recherche",
+        "Identifiant de Macro Ressource Technique inconnu",
+        "Erreur interne Brasil - Aucune MRT Access DSLAM"
+      ],
+      "probable_causes": [
+        "MRT deleted before service liberation",
+        "Data migration incomplete (MRT not propagated)",
+        "DSLAM node changed without MRT update",
+        "MRT ID expired or wrong ID in order",
+        "BRASIL-SEBA synchronization gap"
+      ],
+      "related_entities": [
+        "MRT",
+        "EPC",
+        "DSLAM",
+        "MAKING_FILE"
+      ],
+      "related_constraints": [
+        "CSTR-FR-005",
+        "CSTR-FR-006"
+      ],
+      "recommended_checks": [
+        "SELECT * FROM t_mrt_access_dslams WHERE mrtd_id=<MRT_ID>",
+        "SELECT * FROM t_mrt_access_dslams WHERE mrtd_nd='<ND>' AND mrtd_customer_id='<CLIENT_ID>'",
+        "Check if recent data migration affected this ND",
+        "Verify making file contains correct MRT reference",
+        "Compare BRASIL data with SEBA/Orchestra referential"
+      ],
+      "resolution_steps": [
+        "If MRT missing: recreate via admin procedure",
+        "If wrong ID: identify correct MRT and update order",
+        "If migration issue: force BRASIL-SEBA resync for this ND",
+        "If node changed: verify MRT points to correct DSLAM/node"
+      ],
+      "confidence": "high",
+      "sources_correlated": [
+        "brasil_db.sql",
+        "FR_docs",
+        "logs/connectorCL"
+      ]
+    },
+    {
+      "id": "DIAG-004",
+      "incident_type": "data_synchronization_failure",
+      "title": "Data Synchronization Failure (Orchestra-Brasil-SEBA)",
+      "detected_on": [
+        "ConnectorCL",
+        "ConnectorUMIepc",
+        "E_BASILIQ"
+      ],
+      "log_indicators": [
+        "Un accès client existe déjà avec le même identifiant",
+        "Identifiant de dossier de réalisation inconnu",
+        "BRASIL ERROR 1002"
+      ],
+      "probable_causes": [
+        "Duplicate EPC/MRT from replayed MQ message",
+        "Making file ID mismatch between systems",
+        "NIFolderID or UPDATEDMRTLIST field missing/malformed",
+        "Orchestra-Brasil desynchronization after weekend resynchro"
+      ],
+      "related_entities": [
+        "EPC",
+        "MRT",
+        "MAKING_FILE",
+        "SYSTEM:E_BASILIQ",
+        "SYSTEM:ORCHESTRA"
+      ],
+      "related_constraints": [
+        "CSTR-FR-004",
+        "CSTR-FR-006",
+        "CSTR-FR-014",
+        "CSTR-FR-015"
+      ],
+      "recommended_checks": [
+        "Check MQ backout queue for duplicate messages",
+        "SELECT * FROM t_epcs WHERE epc_epc_id='<EPC_ID>'",
+        "Verify message format: NIFolderID and UPDATEDMRTLIST present",
+        "Check E-Basiliq PUC for MQ queue congestion",
+        "Compare Orchestra referential with Brasil data for affected ND"
+      ],
+      "resolution_steps": [
+        "If duplicate: purge backout queue duplicate",
+        "If field missing: fix sender system (Orchestra/E-Basiliq)",
+        "If desync post-weekend: use FR 002 mass UMI-EPC resend",
+        "If making file mismatch: reset order and recreate"
+      ],
+      "confidence": "high",
+      "sources_correlated": [
+        "FR 002",
+        "FR 003",
+        "FR 012",
+        "FR 013",
+        "logs"
+      ]
+    },
+    {
+      "id": "DIAG-005",
+      "incident_type": "db_concurrency_issue",
+      "title": "Database Deadlock / Transaction Failure",
+      "detected_on": [
+        "AbstractBrasilMDBBean",
+        "ConnectorCLMDBBean",
+        "SqlExceptionHelper"
+      ],
+      "log_indicators": [
+        "deadlock detected",
+        "PSQLException: ERROR: deadlock detected",
+        "current transaction is aborted, commands ignored until end of transaction block",
+        "LockAcquisitionException"
+      ],
+      "probable_causes": [
+        "Concurrent provisioning orders on same DSLAM",
+        "High load on ConnectorCL (multiple RabbitMQ consumers)",
+        "Long-running transactions holding locks",
+        "CASCADE update/delete conflicts"
+      ],
+      "related_entities": [
+        "MAKING_FILE",
+        "PORT",
+        "CCL",
+        "DSLAM"
+      ],
+      "related_constraints": [
+        "CSTR-FR-010"
+      ],
+      "recommended_checks": [
+        "Check pg_locks in PostgreSQL for blocking sessions",
+        "Monitor ConnectorCL thread pool utilization",
+        "Check t_making_files for orders stuck in IN_PROGRESS state",
+        "Review retry counter: 3 retries × 55s delay",
+        "Check if deadlock involves t_ports or t_res_prod_controlables"
+      ],
+      "resolution_steps": [
+        "System auto-retries 3 times with 55s delay",
+        "If persistent: check PostgreSQL connection pool settings",
+        "If orders stuck: manually close and replay from IHM Brasil",
+        "Long-term: review concurrent access patterns on high-load DSLAMs"
+      ],
+      "confidence": "high",
+      "sources_correlated": [
+        "logs/connectorCL",
+        "brasil_db.sql"
+      ]
+    },
+    {
+      "id": "DIAG-006",
+      "incident_type": "node_dslam_mismatch",
+      "title": "Node/DSLAM Mismatch between Brasil and Référentiel Sites",
+      "detected_on": [
+        "BRASIL_IHM",
+        "Orchestra"
+      ],
+      "log_indicators": [
+        "Node present in Référentiel Sites absent in BRASIL",
+        "DSLAM node association incorrect"
+      ],
+      "probable_causes": [
+        "Node created in Référentiel Sites but not synced to Brasil",
+        "DSLAM moved to different node without Brasil update",
+        "Node code42C mismatch between systems"
+      ],
+      "related_entities": [
+        "NODE",
+        "DSLAM",
+        "DR_ZONE"
+      ],
+      "related_constraints": [
+        "CSTR-FR-012"
+      ],
+      "recommended_checks": [
+        "SELECT * FROM t_nodes WHERE node_base_code42c='<CODE42C>'",
+        "Compare with Orchestra Référentiel Sites record",
+        "Check t_equipments.node_id for affected DSLAMs",
+        "Verify t_dslam_access_constraints for node"
+      ],
+      "resolution_steps": [
+        "If node missing in Brasil: create via admin procedure",
+        "If DSLAM on wrong node: apply FR 152 (Modifier nœud DSLAM)",
+        "If constraint missing: apply FR 150 procedure",
+        "Resync Brasil with Orchestra Référentiel Sites"
+      ],
+      "confidence": "high",
+      "sources_correlated": [
+        "FR 148",
+        "FR 150",
+        "FR 151",
+        "FR 152",
+        "brasil_db.sql"
+      ]
+    },
+    {
+      "id": "DIAG-007",
+      "incident_type": "mutation_failure",
+      "title": "Link Mutation Failure",
+      "detected_on": [
+        "ManageTRProductionBusinessImpl",
+        "MutationService"
+      ],
+      "log_indicators": [
+        "mutation blocked",
+        "DSLAM closed for production",
+        "No port found"
+      ],
+      "probable_causes": [
+        "Target DSLAM closed for production",
+        "No available ports on target DSLAM",
+        "MRT already in mutation state",
+        "Missing constraint on target repartiteur/node"
+      ],
+      "related_entities": [
+        "MUTATION",
+        "DSLAM",
+        "NODE",
+        "MRT",
+        "PORT"
+      ],
+      "related_constraints": [
+        "CSTR-FR-001",
+        "CSTR-FR-007",
+        "CSTR-FR-012"
+      ],
+      "recommended_checks": [
+        "Verify target DSLAM production status",
+        "Run CalculerToc on target DSLAM",
+        "Check t_mutations_requests.murq_status",
+        "Verify t_dslam_access_constraints for target node"
+      ],
+      "resolution_steps": [
+        "Open target DSLAM if closed",
+        "Apply FR 100 (Mutation de Liens) procedure",
+        "If constraint missing: apply FR 150",
+        "Verify new port assignment after mutation"
+      ],
+      "confidence": "high",
+      "sources_correlated": [
+        "FR 100",
+        "brasil_db.sql"
+      ]
+    },
+    {
+      "id": "DIAG-008",
+      "incident_type": "vc_vlan_counter_mismatch",
+      "title": "VP/VLAN/VC Counter Mismatch (Logical Resource Counter Error)",
+      "detected_on": [
+        "BRASIL_IHM",
+        "SQL"
+      ],
+      "log_indicators": [
+        "AFFECTATION SUR CCL VC DEJA OCCUPE",
+        "compteurs VC VP VLAN OCCUPE A TORT"
+      ],
+      "probable_causes": [
+        "Counter not updated after failed transaction",
+        "Manual intervention modified data without counter update",
+        "Software bug in counter management (BRASIL-439)"
+      ],
+      "related_entities": [
+        "CCL",
+        "VP_VC",
+        "VLAN",
+        "DSLAM"
+      ],
+      "related_constraints": [
+        "CSTR-FR-013"
+      ],
+      "recommended_checks": [
+        "SELECT rpct_allocated_vc_count, rpct_vc_max FROM t_res_prod_controlables WHERE rpct_ccl_name='<CCL_NAME>'",
+        "COUNT actual VCs on CCL vs stored counter",
+        "Check t_d_controlable_rscs.ctrs_occupied_count vs actual",
+        "Run FR 136c counter verification procedure"
+      ],
+      "resolution_steps": [
+        "Apply FR 136b (Libérer ports occupés à tort)",
+        "Apply FR 136c (VP VLAN VC counter correction)",
+        "Run counter recalculation via N3 script",
+        "Verify after correction: counters match reality"
+      ],
+      "confidence": "high",
+      "sources_correlated": [
+        "FR 135",
+        "FR 136",
+        "FR 136b",
+        "FR 136c",
+        "brasil_db.sql"
+      ]
+    },
+    {
+      "id": "DIAG-009",
+      "incident_type": "encoding_corruption",
+      "title": "Character Encoding Corruption in Database",
+      "detected_on": [
+        "t_ports.t_remarks",
+        "Database"
+      ],
+      "log_indicators": [
+        "CARACTERES ERRONES EN BASE BRASIL",
+        "encoding_correct table"
+      ],
+      "probable_causes": [
+        "UTF-8/Latin-1 encoding mismatch on data import",
+        "Connector encoding misconfiguration",
+        "Database migration encoding error"
+      ],
+      "related_entities": [
+        "PORT",
+        "EQUIPMENT"
+      ],
+      "related_constraints": [],
+      "recommended_checks": [
+        "Check encoding_correct table for affected records",
+        "Query t_ports.port_remarks for garbled characters",
+        "Verify database connection encoding settings"
+      ],
+      "resolution_steps": [
+        "Apply FR 077 encoding correction procedure",
+        "Use encoding_correct table to identify and fix affected records",
+        "Correct database connection charset to UTF-8"
+      ],
+      "confidence": "high",
+      "sources_correlated": [
+        "FR 077",
+        "brasil_db.sql (encoding_correct table)"
+      ]
+    },
+    {
+      "id": "DIAG-010",
+      "incident_type": "sca_blocking",
+      "title": "SCA Blocking Due to Missing FARID or RemoteID",
+      "detected_on": [
+        "SCA",
+        "AffecterRessourcesXdslService"
+      ],
+      "log_indicators": [
+        "SCA blocked",
+        "FARID missing",
+        "RemoteID absent"
+      ],
+      "probable_causes": [
+        "EPC order missing FARID field",
+        "RemoteID not generated for FTTH/GPON service",
+        "SCA-Brasil interface configuration error"
+      ],
+      "related_entities": [
+        "EPC",
+        "MRT",
+        "MAKING_FILE",
+        "SYSTEM:SCA"
+      ],
+      "related_constraints": [
+        "CSTR-FR-011"
+      ],
+      "recommended_checks": [
+        "Check mrtd_farid in t_mrt_access_dslams",
+        "Check mras_remote_id in t_mrt_access_services",
+        "Verify SCA interface configuration",
+        "Check if offer type requires FARID/RemoteID"
+      ],
+      "resolution_steps": [
+        "Apply FR 010 (Blocage SCA) procedure",
+        "Fill missing FARID/RemoteID fields",
+        "Contact SCA team if interface issue"
+      ],
+      "confidence": "high",
+      "sources_correlated": [
+        "FR 010",
+        "brasil_db.sql"
+      ]
+    },
+    {
+      "id": "DIAG-011",
+      "incident_type": "error_type_1300",
+      "title": "Error Type 1300 (Brasil Internal Classification Error)",
+      "detected_on": [
+        "BRASIL",
+        "ConnectorCL"
+      ],
+      "log_indicators": [
+        "BRASIL erreur 1300",
+        "type d'erreur 1300"
+      ],
+      "probable_causes": [
+        "Internal Brasil classification error",
+        "Service type not matching equipment capability",
+        "Configuration data missing for requested service"
+      ],
+      "related_entities": [
+        "EPC",
+        "MAKING_FILE",
+        "DSLAM"
+      ],
+      "related_constraints": [],
+      "recommended_checks": [
+        "Check Brasil logs for exact 1300 error context",
+        "Verify offer type vs DSLAM/card capabilities",
+        "Apply FR 130 analysis procedure"
+      ],
+      "resolution_steps": [
+        "Apply FR 130 (Les types d'erreur 1300) procedure",
+        "Analyze logs for specific sub-type of 1300",
+        "Contact Brasil N3 team for configuration fix"
+      ],
+      "confidence": "medium",
+      "sources_correlated": [
+        "FR 130"
+      ]
+    },
+    {
+      "id": "DIAG-012",
+      "incident_type": "port_search_failure_300_327",
+      "title": "Port Search Failure with Error 300 or 327",
+      "detected_on": [
+        "RechercherBrochesService",
+        "BRASIL"
+      ],
+      "log_indicators": [
+        "RECHERCHE DE BROCHE EN ECHEC",
+        "300",
+        "327"
+      ],
+      "probable_causes": [
+        "DSLAM port counter at 100% (TOC)",
+        "port_attribuable field incorrectly set",
+        "Wrong port group assignment",
+        "DSLAM shelf/card configuration error"
+      ],
+      "related_entities": [
+        "PORT",
+        "DSLAM",
+        "CARD",
+        "SHELF"
+      ],
+      "related_constraints": [
+        "CSTR-FR-007",
+        "CSTR-SQL-005"
+      ],
+      "recommended_checks": [
+        "Apply FR 1583B specific diagnosis",
+        "Check port_attribuable for all ports on DSLAM",
+        "Verify t_d_dslam_xdsl_cards counters",
+        "Compare available vs occupied port counts"
+      ],
+      "resolution_steps": [
+        "Apply FR 1583B procedure (Recherche de broche en échec 300 ou 327)",
+        "Fix port_attribuable if incorrectly 0",
+        "Recalculate TOC with FR 001",
+        "Escalate to BRASIL development team if persistent"
+      ],
+      "confidence": "high",
+      "sources_correlated": [
+        "FR 1583",
+        "FR 1583B",
+        "brasil_db.sql"
+      ]
+    }
+  ]
+}

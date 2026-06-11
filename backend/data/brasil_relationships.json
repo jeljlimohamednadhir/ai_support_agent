@@ -1,0 +1,306 @@
+{
+  "generated_at": "2026-04-02T14:51:49.511156",
+  "pipeline_version": "2.0",
+  "total_relationships": 36,
+  "by_type": {
+    "DEPENDS_ON": 4,
+    "HAS": 13,
+    "LINKED_TO": 7,
+    "BELONGS_TO": 3,
+    "PROCESSES": 2,
+    "SYNCHRONIZES": 1,
+    "INTERFACES_WITH": 1,
+    "MANAGES": 4,
+    "DELIVERS": 1
+  },
+  "relationships": [
+    {
+      "source": "SQL:T_SITES",
+      "target": "SQL:T_SITES",
+      "type": "DEPENDS_ON",
+      "via_column": "site_id",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "SQL:T_VC_LOCK_RANGES",
+      "target": "SQL:T_RES_PROD_CONTROLABLES",
+      "type": "DEPENDS_ON",
+      "via_column": "rpct_id",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:NODE",
+      "target": "ENTITY:DSLAM",
+      "type": "HAS",
+      "description": "NODE contains DSLAM equipments",
+      "confidence": "high",
+      "source_file": "domain_model"
+    },
+    {
+      "source": "ENTITY:NODE",
+      "target": "ENTITY:MSAN",
+      "type": "HAS",
+      "description": "NODE contains MSAN equipments",
+      "confidence": "high",
+      "source_file": "domain_model"
+    },
+    {
+      "source": "ENTITY:NODE",
+      "target": "ENTITY:DISTRIBUTOR",
+      "type": "HAS",
+      "description": "NODE has physical distributor",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:DSLAM",
+      "target": "ENTITY:SHELF",
+      "type": "HAS",
+      "description": "DSLAM has logical shelves",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:DSLAM",
+      "target": "ENTITY:CARD",
+      "type": "HAS",
+      "description": "DSLAM contains cards",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs"
+    },
+    {
+      "source": "ENTITY:CARD",
+      "target": "ENTITY:PORT",
+      "type": "HAS",
+      "description": "CARD contains physical ports",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs"
+    },
+    {
+      "source": "ENTITY:SHELF",
+      "target": "ENTITY:CARD",
+      "type": "HAS",
+      "description": "SHELF groups cards",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:PORT",
+      "target": "ENTITY:REGLETTE",
+      "type": "LINKED_TO",
+      "description": "PORT linked to MDF reglette",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "source": "ENTITY:REGLETTE",
+      "target": "ENTITY:REPARTITEUR",
+      "type": "BELONGS_TO",
+      "description": "Reglette belongs to repartiteur",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "source": "ENTITY:EPC",
+      "target": "ENTITY:MRT",
+      "type": "HAS",
+      "description": "EPC has associated MRT (access)",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:MRT",
+      "target": "ENTITY:PORT",
+      "type": "LINKED_TO",
+      "description": "MRT linked to physical port",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:MRT",
+      "target": "ENTITY:DSLAM",
+      "type": "LINKED_TO",
+      "description": "MRT linked to DSLAM equipment",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:MRT",
+      "target": "ENTITY:CCL",
+      "type": "DEPENDS_ON",
+      "description": "MRT service depends on CCL resource",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs"
+    },
+    {
+      "source": "ENTITY:CCL",
+      "target": "ENTITY:VP_VC",
+      "type": "HAS",
+      "description": "CCL manages VP/VC resources",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:CCL",
+      "target": "ENTITY:VLAN",
+      "type": "HAS",
+      "description": "CCL has associated VLAN",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR_docs"
+    },
+    {
+      "source": "ENTITY:CCL",
+      "target": "ENTITY:DSLAM",
+      "type": "LINKED_TO",
+      "description": "CCL connects DSLAM side",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:CCL",
+      "target": "ENTITY:NIP",
+      "type": "LINKED_TO",
+      "description": "CCL connects NIP/BAS side",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:MAKING_FILE",
+      "target": "ENTITY:EPC",
+      "type": "HAS",
+      "description": "Making file triggers EPC update",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:MAKING_FILE",
+      "target": "ENTITY:MRT",
+      "type": "HAS",
+      "description": "Making file has MRT impacts",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:MAKING_FILE",
+      "target": "ENTITY:OPERATOR",
+      "type": "BELONGS_TO",
+      "description": "Making file belongs to operator",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:DSLAM",
+      "target": "ENTITY:TSF",
+      "type": "HAS",
+      "description": "DSLAM has technical service functions",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs"
+    },
+    {
+      "source": "ENTITY:TSF",
+      "target": "ENTITY:CCL",
+      "type": "LINKED_TO",
+      "description": "TSF linked to CCL resource",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:NODE",
+      "target": "ENTITY:DR_ZONE",
+      "type": "BELONGS_TO",
+      "description": "NODE belongs to DR geographic zone",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "ENTITY:MUTATION",
+      "target": "ENTITY:DSLAM",
+      "type": "LINKED_TO",
+      "description": "Mutation involves source/target DSLAM",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR 100"
+    },
+    {
+      "source": "ENTITY:MUTATION",
+      "target": "ENTITY:MRT",
+      "type": "DEPENDS_ON",
+      "description": "Mutation requires MRT reassignment",
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "source": "SYSTEM:CONNECTOR_CL",
+      "target": "ENTITY:MAKING_FILE",
+      "type": "PROCESSES",
+      "description": "ConnectorCL processes making files",
+      "confidence": "high",
+      "source_file": "logs"
+    },
+    {
+      "source": "SYSTEM:CONNECTOR_CL",
+      "target": "ENTITY:EPC",
+      "type": "PROCESSES",
+      "description": "ConnectorCL processes EPC updates",
+      "confidence": "high",
+      "source_file": "logs"
+    },
+    {
+      "source": "SYSTEM:UMI_EPC",
+      "target": "ENTITY:EPC",
+      "type": "SYNCHRONIZES",
+      "description": "UMI-EPC syncs EPC movements",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "source": "SYSTEM:E_BASILIQ",
+      "target": "SYSTEM:BRASIL",
+      "type": "INTERFACES_WITH",
+      "description": "E-Basiliq exchanges data with BRASIL",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "source": "SYSTEM:ORCHESTRA",
+      "target": "ENTITY:DSLAM",
+      "type": "MANAGES",
+      "description": "Orchestra manages DSLAM NE repository",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "source": "SYSTEM:ORCHESTRA",
+      "target": "ENTITY:NODE",
+      "type": "MANAGES",
+      "description": "Orchestra manages node repository",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "source": "SYSTEM:RABBITMQ",
+      "target": "SYSTEM:CONNECTOR_CL",
+      "type": "DELIVERS",
+      "description": "RabbitMQ delivers messages to ConnectorCL",
+      "confidence": "high",
+      "source_file": "logs"
+    },
+    {
+      "source": "SYSTEM:BRASIL",
+      "target": "ENTITY:DSLAM",
+      "type": "MANAGES",
+      "description": "BRASIL manages DSLAM resources",
+      "confidence": "high",
+      "source_file": "domain_model"
+    },
+    {
+      "source": "SYSTEM:BRASIL",
+      "target": "ENTITY:EPC",
+      "type": "MANAGES",
+      "description": "BRASIL manages EPC service records",
+      "confidence": "high",
+      "source_file": "domain_model"
+    }
+  ]
+}

@@ -1,0 +1,4266 @@
+{
+  "generated_at": "2026-04-02T14:51:49.511156",
+  "pipeline_version": "2.0",
+  "nodes": [
+    {
+      "id": "ENTITY:DSLAM",
+      "type": "EQUIPMENT",
+      "name": "DSLAM",
+      "display_name": "Digital Subscriber Line Access Multiplexer",
+      "db_table": "t_equipments + t_d_dslam_manelems",
+      "description": "Network access equipment supporting xDSL lines. Has production status (open/closed). Contains shelves, cards, ports.",
+      "attributes": [
+        "eqpt_id",
+        "eqpt_name",
+        "eqpt_prod_status",
+        "eqpt_status",
+        "eqpt_toc_max_init",
+        "eqpt_load"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR_docs + logs"
+    },
+    {
+      "id": "ENTITY:MSAN",
+      "type": "EQUIPMENT",
+      "name": "MSAN",
+      "display_name": "Multi-Service Access Node",
+      "db_table": "t_equipments",
+      "description": "Multi-service access node supporting VDSL2, GPON. Variant of DSLAM with extended service support.",
+      "attributes": [
+        "eqpt_id",
+        "eqpt_name",
+        "eqpt_prod_status",
+        "eqpt_runtime_type"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR_docs"
+    },
+    {
+      "id": "ENTITY:CARD",
+      "type": "CARD",
+      "name": "CARD",
+      "display_name": "Line Card",
+      "db_table": "t_cards + t_d_dslam_xdsl_cards",
+      "description": "Physical card installed in a DSLAM/MSAN chassis. Can be open or closed for production. Contains ports.",
+      "attributes": [
+        "card_id",
+        "card_num",
+        "card_prod_status",
+        "card_nature",
+        "cmod_id",
+        "slot_id"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs"
+    },
+    {
+      "id": "ENTITY:PORT",
+      "type": "PORT",
+      "name": "PORT",
+      "display_name": "Physical Port (Broche)",
+      "db_table": "t_ports",
+      "description": "Physical connection point on a card. Has occupation status, production status, attributable flag.",
+      "attributes": [
+        "port_id",
+        "port_num",
+        "port_type",
+        "port_pin_num",
+        "port_out_status",
+        "port_occup_status",
+        "port_attribuable",
+        "port_prod_status"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs"
+    },
+    {
+      "id": "ENTITY:SHELF",
+      "type": "SHELF",
+      "name": "SHELF",
+      "display_name": "Logical Shelf (Chassis DSLAM)",
+      "db_table": "t_d_dslam_logical_shelfs",
+      "description": "Logical shelf grouping cards within a DSLAM chassis.",
+      "attributes": [
+        "dsls_id",
+        "dsls_prod_status",
+        "dsls_toc_max",
+        "dsls_total_port_count",
+        "dsls_total_used_port_count"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "id": "ENTITY:NODE",
+      "type": "NODE",
+      "name": "NODE",
+      "display_name": "Network Node (NRA/NRO)",
+      "db_table": "t_nodes",
+      "description": "Geographic network concentration point. Can be NRA (copper) or NRO (fiber). Contains DSLAMs and distributors.",
+      "attributes": [
+        "node_id",
+        "node_node_code",
+        "node_base_code42c",
+        "node_center_code42c",
+        "node_dr_code",
+        "node_nra_type"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR_docs"
+    },
+    {
+      "id": "ENTITY:EPC",
+      "type": "SERVICE",
+      "name": "EPC",
+      "display_name": "Electronic Provisioning Contract",
+      "db_table": "t_epcs + t_epc_vers",
+      "description": "Customer service record. References the client ND and service versions. Entry point for provisioning commands.",
+      "attributes": [
+        "epc_id",
+        "epc_epc_id",
+        "epc_nd_service",
+        "epc_reselled_offer",
+        "epc_vers_num_0",
+        "epc_vers_num_1"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR_docs + logs"
+    },
+    {
+      "id": "ENTITY:MRT",
+      "type": "SERVICE",
+      "name": "MRT",
+      "display_name": "Macro Ressource Technique (MRT Access DSLAM)",
+      "db_table": "t_mrt_access_dslams + t_mrt_access_service_vers",
+      "description": "Technical resource link between customer (EPC) and physical DSLAM port. Key routing object.",
+      "attributes": [
+        "mrtd_id",
+        "mrtd_customer_id",
+        "mrtd_nd",
+        "mrtd_crc_mrt_id",
+        "mrtd_farid",
+        "a_eqpt_id",
+        "a_port_id"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs + FR_docs"
+    },
+    {
+      "id": "ENTITY:CCL",
+      "type": "NETWORK_RESOURCE",
+      "name": "CCL",
+      "display_name": "Contrôle de Collecte Logique (CCL/VC)",
+      "db_table": "t_res_prod_controlables",
+      "description": "Logical resource (VLAN/VC) binding DSLAM to NIP/BAS. Has VC counters and production status. Critical for GE/CEV offers.",
+      "attributes": [
+        "rpct_id",
+        "rpct_type",
+        "rpct_ccl_name",
+        "rpct_prod_status",
+        "rpct_vc_max",
+        "rpct_allocated_vc_count",
+        "rpct_vlan_interne"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR_docs + logs"
+    },
+    {
+      "id": "ENTITY:VLAN",
+      "type": "NETWORK_RESOURCE",
+      "name": "VLAN",
+      "display_name": "Virtual LAN",
+      "db_table": "lst_vlan_usage + t_res_prod_controlables",
+      "description": "Virtual LAN identifier used for service routing. Managed via CCL resources.",
+      "attributes": [
+        "vlan",
+        "usage"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR_docs"
+    },
+    {
+      "id": "ENTITY:VP_VC",
+      "type": "NETWORK_RESOURCE",
+      "name": "VP_VC",
+      "display_name": "ATM Virtual Path/Virtual Circuit",
+      "db_table": "t_d_rsc_vcis",
+      "description": "ATM VP/VC resource assigned on DSLAM port for ADSL/VDSL services.",
+      "attributes": [
+        "rscv_id",
+        "rscv_vci",
+        "rscv_status",
+        "rpct_id"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR_docs"
+    },
+    {
+      "id": "ENTITY:MAKING_FILE",
+      "type": "ORDER",
+      "name": "MAKING_FILE",
+      "display_name": "Dossier de Réalisation (Making File)",
+      "db_table": "t_making_files",
+      "description": "Provisioning order file. Contains business process type (CL/SAV/DLM/AVP/RES). Central orchestration object.",
+      "attributes": [
+        "mkfl_id",
+        "mkfl_file_id",
+        "mkfl_customer_name",
+        "mkfl_nd",
+        "mkfl_business_process",
+        "mkfl_status",
+        "mkfl_base_code_42c"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR_docs"
+    },
+    {
+      "id": "ENTITY:NIP",
+      "type": "EQUIPMENT",
+      "name": "NIP",
+      "display_name": "Nœud IP (BAS/BRAS)",
+      "db_table": "t_equipments",
+      "description": "IP network node (BAS/BRAS/BNG) aggregating DSLAM traffic via CCL/VC resources.",
+      "attributes": [
+        "eqpt_id",
+        "eqpt_name",
+        "eqpt_runtime_type"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR_docs + logs"
+    },
+    {
+      "id": "ENTITY:OPERATOR",
+      "type": "ACTOR",
+      "name": "OPERATOR",
+      "display_name": "Opérateur",
+      "db_table": "t_operators",
+      "description": "Telecom operator (Orange, resellers). Controls service provisioning.",
+      "attributes": [
+        "oper_id",
+        "oper_name",
+        "oper_long_name"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "id": "ENTITY:REGLETTE",
+      "type": "PHYSICAL",
+      "name": "REGLETTE",
+      "display_name": "Réglette de répartiteur",
+      "db_table": "implicit (referenced in FR docs and UMI-EPC messages)",
+      "description": "Physical distribution frame strip. Referenced in MRT Access DSLAM for copper line termination.",
+      "attributes": [
+        "referenceReglette",
+        "numeroBroche"
+      ],
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ENTITY:REPARTITEUR",
+      "type": "PHYSICAL",
+      "name": "REPARTITEUR",
+      "display_name": "Répartiteur (MDF)",
+      "db_table": "implicit",
+      "description": "Main Distribution Frame. Physical junction between subscriber copper lines and DSLAM.",
+      "attributes": [
+        "grGs",
+        "codeDr",
+        "libelle42C",
+        "code42C",
+        "ciDico"
+      ],
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ENTITY:MUTATION",
+      "type": "OPERATION",
+      "name": "MUTATION",
+      "display_name": "Mutation (Link Mutation)",
+      "db_table": "t_mutations_requests",
+      "description": "Physical link mutation operation. Moves service between DSLAMs or nodes.",
+      "attributes": [
+        "murq_id",
+        "murq_status",
+        "murq_execution_type",
+        "murq_equipment_n",
+        "murq_equipment_n1"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR 100"
+    },
+    {
+      "id": "ENTITY:DISTRIBUTOR",
+      "type": "PHYSICAL",
+      "name": "DISTRIBUTOR",
+      "display_name": "Distributeur",
+      "db_table": "t_distributors",
+      "description": "Distribution element within a node. Connected to DSLAMs.",
+      "attributes": [
+        "dist_id",
+        "node_id",
+        "dist_prod_orientation"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "id": "ENTITY:TSF",
+      "type": "PARAMETER",
+      "name": "TSF",
+      "display_name": "Tech Service Function (TSF)",
+      "db_table": "t_d_rsc_dslam_tsfs",
+      "description": "Technical service function binding. Defines which services can be provisioned on a DSLAM port.",
+      "attributes": [
+        "rscd_id",
+        "tsft_id",
+        "rpct_id",
+        "dslam_eqpt_id",
+        "rscd_priority"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs"
+    },
+    {
+      "id": "ENTITY:DR_ZONE",
+      "type": "GEOGRAPHIC",
+      "name": "DR_ZONE",
+      "display_name": "Direction Régionale (DR)",
+      "db_table": "t_dr",
+      "description": "Regional zone grouping network nodes. Used for geographic routing and assignment.",
+      "attributes": [
+        "dr_code",
+        "dr_name"
+      ],
+      "confidence": "high",
+      "source_file": "brasil_db.sql"
+    },
+    {
+      "id": "SQL:ENCODING_CORRECT",
+      "type": "TABLE",
+      "name": "ENCODING_CORRECT",
+      "display_name": "encoding_correct",
+      "db_table": "encoding_correct",
+      "columns": [
+        "table_name"
+      ],
+      "primary_key": "table_name",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:LST_PRESTA_NEW_OFFRES",
+      "type": "TABLE",
+      "name": "LST_PRESTA_NEW_OFFRES",
+      "display_name": "lst_presta_new_offres",
+      "db_table": "lst_presta_new_offres",
+      "columns": [
+        "offre"
+      ],
+      "primary_key": null,
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:LST_PRESTA_OFFRES",
+      "type": "TABLE",
+      "name": "LST_PRESTA_OFFRES",
+      "display_name": "lst_presta_offres",
+      "db_table": "lst_presta_offres",
+      "columns": [
+        "offre"
+      ],
+      "primary_key": null,
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:LST_PRESTA_RECAP_DETAIL",
+      "type": "TABLE",
+      "name": "LST_PRESTA_RECAP_DETAIL",
+      "display_name": "lst_presta_recap_detail",
+      "db_table": "lst_presta_recap_detail",
+      "columns": [
+        "offre"
+      ],
+      "primary_key": null,
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:LST_PRESTA_RECAP_GRAPH_DETAILS",
+      "type": "TABLE",
+      "name": "LST_PRESTA_RECAP_GRAPH_DETAILS",
+      "display_name": "lst_presta_recap_graph_details",
+      "db_table": "lst_presta_recap_graph_details",
+      "columns": [
+        "offre"
+      ],
+      "primary_key": null,
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:LST_PRESTA_RECAP_GRAPH_TOTAL",
+      "type": "TABLE",
+      "name": "LST_PRESTA_RECAP_GRAPH_TOTAL",
+      "display_name": "lst_presta_recap_graph_total",
+      "db_table": "lst_presta_recap_graph_total",
+      "columns": [
+        "offre"
+      ],
+      "primary_key": null,
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:LST_PRESTA_RECAP_TOTAL",
+      "type": "TABLE",
+      "name": "LST_PRESTA_RECAP_TOTAL",
+      "display_name": "lst_presta_recap_total",
+      "db_table": "lst_presta_recap_total",
+      "columns": [
+        "offre"
+      ],
+      "primary_key": null,
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:LST_PRESTA_TECHNO",
+      "type": "TABLE",
+      "name": "LST_PRESTA_TECHNO",
+      "display_name": "lst_presta_techno",
+      "db_table": "lst_presta_techno",
+      "columns": [
+        "techno"
+      ],
+      "primary_key": null,
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:LST_VLAN_USAGE",
+      "type": "VLAN",
+      "name": "LST_VLAN_USAGE",
+      "display_name": "lst_vlan_usage",
+      "db_table": "lst_vlan_usage",
+      "columns": [
+        "vlan"
+      ],
+      "primary_key": null,
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_APPLICATION_CONFIGS",
+      "type": "APP_CONFIG",
+      "name": "T_APPLICATION_CONFIGS",
+      "display_name": "t_application_configs",
+      "db_table": "t_application_configs",
+      "columns": [
+        "apcf_id"
+      ],
+      "primary_key": "apcf_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_APPLICATION_PARAMETER_VALUES",
+      "type": "TABLE",
+      "name": "T_APPLICATION_PARAMETER_VALUES",
+      "display_name": "t_application_parameter_values",
+      "db_table": "t_application_parameter_values",
+      "columns": [
+        "appv_id"
+      ],
+      "primary_key": "appv_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_APPLICATION_PARAMETERS",
+      "type": "APP_PARAMETER",
+      "name": "T_APPLICATION_PARAMETERS",
+      "display_name": "t_application_parameters",
+      "db_table": "t_application_parameters",
+      "columns": [
+        "appa_id"
+      ],
+      "primary_key": "appa_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_ATM_PROFILES",
+      "type": "ATM_PROFILE",
+      "name": "T_ATM_PROFILES",
+      "display_name": "t_atm_profiles",
+      "db_table": "t_atm_profiles",
+      "columns": [
+        "atpr_id"
+      ],
+      "primary_key": "atpr_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_BAYS",
+      "type": "BAY",
+      "name": "T_BAYS",
+      "display_name": "t_bays",
+      "db_table": "t_bays",
+      "columns": [
+        "bay_id"
+      ],
+      "primary_key": "bay_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_CARD_MODELS",
+      "type": "CARD_MODEL",
+      "name": "T_CARD_MODELS",
+      "display_name": "t_card_models",
+      "db_table": "t_card_models",
+      "columns": [
+        "cmod_id"
+      ],
+      "primary_key": "cmod_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_CARD_NATIONAL_PROFILES",
+      "type": "CARD_PROFILE",
+      "name": "T_CARD_NATIONAL_PROFILES",
+      "display_name": "t_card_national_profiles",
+      "db_table": "t_card_national_profiles",
+      "columns": [
+        "cnpr_id"
+      ],
+      "primary_key": "cnpr_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_CARD_SOFT_VERS",
+      "type": "CARD_SOFT_VERSION",
+      "name": "T_CARD_SOFT_VERS",
+      "display_name": "t_card_soft_vers",
+      "db_table": "t_card_soft_vers",
+      "columns": [
+        "csfv_id"
+      ],
+      "primary_key": "csfv_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_CARDMODELS_SFP",
+      "type": "TABLE",
+      "name": "T_CARDMODELS_SFP",
+      "display_name": "t_cardmodels_sfp",
+      "db_table": "t_cardmodels_sfp",
+      "columns": [
+        "csfp_id"
+      ],
+      "primary_key": "csfp_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_CARDS",
+      "type": "CARD",
+      "name": "T_CARDS",
+      "display_name": "t_cards",
+      "db_table": "t_cards",
+      "columns": [
+        "card_id"
+      ],
+      "primary_key": "card_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_D_BOOKED_PORTS",
+      "type": "TABLE",
+      "name": "T_D_BOOKED_PORTS",
+      "display_name": "t_d_booked_ports",
+      "db_table": "t_d_booked_ports",
+      "columns": [
+        "port_id"
+      ],
+      "primary_key": "port_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_D_CONTROLABLE_RSCS",
+      "type": "CONTROLLABLE_RSC",
+      "name": "T_D_CONTROLABLE_RSCS",
+      "display_name": "t_d_controlable_rscs",
+      "db_table": "t_d_controlable_rscs",
+      "columns": [
+        "ctrs_type"
+      ],
+      "primary_key": "ctrs_type",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_D_DSLAM_LOGICAL_SHELFS",
+      "type": "SHELF",
+      "name": "T_D_DSLAM_LOGICAL_SHELFS",
+      "display_name": "t_d_dslam_logical_shelfs",
+      "db_table": "t_d_dslam_logical_shelfs",
+      "columns": [
+        "dsls_prod_status"
+      ],
+      "primary_key": "dsls_prod_status",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_D_DSLAM_MANELEMS",
+      "type": "DSLAM",
+      "name": "T_D_DSLAM_MANELEMS",
+      "display_name": "t_d_dslam_manelems",
+      "db_table": "t_d_dslam_manelems",
+      "columns": [
+        "dsme_dslam_status"
+      ],
+      "primary_key": "dsme_dslam_status",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_D_DSLAM_XDSL_CARDS",
+      "type": "DSLAM_CARD",
+      "name": "T_D_DSLAM_XDSL_CARDS",
+      "display_name": "t_d_dslam_xdsl_cards",
+      "db_table": "t_d_dslam_xdsl_cards",
+      "columns": [
+        "dxcd_prod_status"
+      ],
+      "primary_key": "dxcd_prod_status",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_D_NEED_NEW_VCS",
+      "type": "TABLE",
+      "name": "T_D_NEED_NEW_VCS",
+      "display_name": "t_d_need_new_vcs",
+      "db_table": "t_d_need_new_vcs",
+      "columns": [
+        "rpct_id"
+      ],
+      "primary_key": "rpct_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_D_RSC_DSLAM_TSFS",
+      "type": "TABLE",
+      "name": "T_D_RSC_DSLAM_TSFS",
+      "display_name": "t_d_rsc_dslam_tsfs",
+      "db_table": "t_d_rsc_dslam_tsfs",
+      "columns": [
+        "rscd_priority"
+      ],
+      "primary_key": "rscd_priority",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_D_RSC_VCIS",
+      "type": "VCI",
+      "name": "T_D_RSC_VCIS",
+      "display_name": "t_d_rsc_vcis",
+      "db_table": "t_d_rsc_vcis",
+      "columns": [
+        "rscv_vci"
+      ],
+      "primary_key": "rscv_vci",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_D_XDSL_CARD_STRIPES",
+      "type": "TABLE",
+      "name": "T_D_XDSL_CARD_STRIPES",
+      "display_name": "t_d_xdsl_card_stripes",
+      "db_table": "t_d_xdsl_card_stripes",
+      "columns": [
+        "xdcs_port_count"
+      ],
+      "primary_key": "xdcs_port_count",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_DISTRIBUTORS",
+      "type": "DISTRIBUTOR",
+      "name": "T_DISTRIBUTORS",
+      "display_name": "t_distributors",
+      "db_table": "t_distributors",
+      "columns": [
+        "dist_id"
+      ],
+      "primary_key": "dist_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_DR",
+      "type": "DR_ZONE",
+      "name": "T_DR",
+      "display_name": "t_dr",
+      "db_table": "t_dr",
+      "columns": [
+        "dr_code"
+      ],
+      "primary_key": null,
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_DSLAM_ACCESS_CONSTRAINTS",
+      "type": "DSLAM_CONSTRAINT",
+      "name": "T_DSLAM_ACCESS_CONSTRAINTS",
+      "display_name": "t_dslam_access_constraints",
+      "db_table": "t_dslam_access_constraints",
+      "columns": [
+        "dsac_id"
+      ],
+      "primary_key": "dsac_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_DSLAM_ASSIGNMENTS",
+      "type": "DSLAM_ASSIGNMENT",
+      "name": "T_DSLAM_ASSIGNMENTS",
+      "display_name": "t_dslam_assignments",
+      "db_table": "t_dslam_assignments",
+      "columns": [
+        "dsag_id"
+      ],
+      "primary_key": "dsag_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_DSLAM_SOFT_VERS",
+      "type": "TABLE",
+      "name": "T_DSLAM_SOFT_VERS",
+      "display_name": "t_dslam_soft_vers",
+      "db_table": "t_dslam_soft_vers",
+      "columns": [
+        "dssv_id"
+      ],
+      "primary_key": "dssv_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_EPC_ORDER_LINES",
+      "type": "EPC_ORDER_LINE",
+      "name": "T_EPC_ORDER_LINES",
+      "display_name": "t_epc_order_lines",
+      "db_table": "t_epc_order_lines",
+      "columns": [
+        "epco_id"
+      ],
+      "primary_key": "epco_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_EPC_VERS",
+      "type": "EPC_VERSION",
+      "name": "T_EPC_VERS",
+      "display_name": "t_epc_vers",
+      "db_table": "t_epc_vers",
+      "columns": [
+        "epcv_id"
+      ],
+      "primary_key": "epcv_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_EPC_VERS_COMPS",
+      "type": "EPC_VERSION_COMPONENT",
+      "name": "T_EPC_VERS_COMPS",
+      "display_name": "t_epc_vers_comps",
+      "db_table": "t_epc_vers_comps",
+      "columns": [
+        "epvc_id"
+      ],
+      "primary_key": "epvc_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_EPC_VERS_IMPACTS",
+      "type": "EPC_VERSION_IMPACT",
+      "name": "T_EPC_VERS_IMPACTS",
+      "display_name": "t_epc_vers_impacts",
+      "db_table": "t_epc_vers_impacts",
+      "columns": [
+        "evim_id"
+      ],
+      "primary_key": "evim_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_EPCS",
+      "type": "EPC",
+      "name": "T_EPCS",
+      "display_name": "t_epcs",
+      "db_table": "t_epcs",
+      "columns": [
+        "epc_id"
+      ],
+      "primary_key": "epc_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_EQPT_SHF_MDL_COMPATIBILITIES",
+      "type": "TABLE",
+      "name": "T_EQPT_SHF_MDL_COMPATIBILITIES",
+      "display_name": "t_eqpt_shf_mdl_compatibilities",
+      "db_table": "t_eqpt_shf_mdl_compatibilities",
+      "columns": [
+        "esmc_id"
+      ],
+      "primary_key": "esmc_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_EQUIPMENTS",
+      "type": "EQUIPMENT",
+      "name": "T_EQUIPMENTS",
+      "display_name": "t_equipments",
+      "db_table": "t_equipments",
+      "columns": [
+        "eqpt_id"
+      ],
+      "primary_key": "eqpt_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_ES",
+      "type": "ES_SCRIPT",
+      "name": "T_ES",
+      "display_name": "t_es",
+      "db_table": "t_es",
+      "columns": [
+        "es_id"
+      ],
+      "primary_key": "es_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_ES_CONNEXIONS",
+      "type": "TABLE",
+      "name": "T_ES_CONNEXIONS",
+      "display_name": "t_es_connexions",
+      "db_table": "t_es_connexions",
+      "columns": [
+        "esc_id"
+      ],
+      "primary_key": "esc_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_ES_HABILITATIONS",
+      "type": "TABLE",
+      "name": "T_ES_HABILITATIONS",
+      "display_name": "t_es_habilitations",
+      "db_table": "t_es_habilitations",
+      "columns": [
+        "esh_id"
+      ],
+      "primary_key": "esh_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_ES_LOGS",
+      "type": "ES_LOG",
+      "name": "T_ES_LOGS",
+      "display_name": "t_es_logs",
+      "db_table": "t_es_logs",
+      "columns": [
+        "esl_id"
+      ],
+      "primary_key": "esl_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_ES_TYPES",
+      "type": "ES_TYPE",
+      "name": "T_ES_TYPES",
+      "display_name": "t_es_types",
+      "db_table": "t_es_types",
+      "columns": [
+        "est_id"
+      ],
+      "primary_key": "est_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_FTTH_LOCK_ONTS",
+      "type": "FTTH_ONT_LOCK",
+      "name": "T_FTTH_LOCK_ONTS",
+      "display_name": "t_ftth_lock_onts",
+      "db_table": "t_ftth_lock_onts",
+      "columns": [
+        "flko_id"
+      ],
+      "primary_key": "flko_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_FUNCTION_CODES",
+      "type": "FUNCTION_CODE",
+      "name": "T_FUNCTION_CODES",
+      "display_name": "t_function_codes",
+      "db_table": "t_function_codes",
+      "columns": [
+        "fctc_id"
+      ],
+      "primary_key": "fctc_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_GROUP_LOCALISATION",
+      "type": "TABLE",
+      "name": "T_GROUP_LOCALISATION",
+      "display_name": "t_group_localisation",
+      "db_table": "t_group_localisation",
+      "columns": [
+        "group_localisation_id"
+      ],
+      "primary_key": "group_localisation_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_ICC_UPDATES",
+      "type": "ICC_UPDATE",
+      "name": "T_ICC_UPDATES",
+      "display_name": "t_icc_updates",
+      "db_table": "t_icc_updates",
+      "columns": [
+        "iccu_id"
+      ],
+      "primary_key": "iccu_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_INTERFACES",
+      "type": "INTERFACE",
+      "name": "T_INTERFACES",
+      "display_name": "t_interfaces",
+      "db_table": "t_interfaces",
+      "columns": [
+        "intf_id"
+      ],
+      "primary_key": "intf_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_LINE_PROFILES",
+      "type": "LINE_PROFILE",
+      "name": "T_LINE_PROFILES",
+      "display_name": "t_line_profiles",
+      "db_table": "t_line_profiles",
+      "columns": [
+        "lnpr_id"
+      ],
+      "primary_key": "lnpr_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_LINK_DR_GROUP_LOCALISATION",
+      "type": "TABLE",
+      "name": "T_LINK_DR_GROUP_LOCALISATION",
+      "display_name": "t_link_dr_group_localisation",
+      "db_table": "t_link_dr_group_localisation",
+      "columns": [
+        "group_localisation_id"
+      ],
+      "primary_key": null,
+      "foreign_keys": [
+        "group_localisation_id"
+      ],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_LOCAL_AREAS",
+      "type": "LOCAL_AREA",
+      "name": "T_LOCAL_AREAS",
+      "display_name": "t_local_areas",
+      "db_table": "t_local_areas",
+      "columns": [
+        "loca_id"
+      ],
+      "primary_key": null,
+      "foreign_keys": [
+        "loca_id"
+      ],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_LOGICAL_EQPT_MODELS",
+      "type": "EQUIPMENT_MODEL",
+      "name": "T_LOGICAL_EQPT_MODELS",
+      "display_name": "t_logical_eqpt_models",
+      "db_table": "t_logical_eqpt_models",
+      "columns": [
+        "lgem_id"
+      ],
+      "primary_key": "lgem_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_MAKING_FILES",
+      "type": "MAKING_FILE",
+      "name": "T_MAKING_FILES",
+      "display_name": "t_making_files",
+      "db_table": "t_making_files",
+      "columns": [
+        "mkfl_id"
+      ],
+      "primary_key": "mkfl_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_MANUFACTURERS",
+      "type": "MANUFACTURER",
+      "name": "T_MANUFACTURERS",
+      "display_name": "t_manufacturers",
+      "db_table": "t_manufacturers",
+      "columns": [
+        "manf_id"
+      ],
+      "primary_key": "manf_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_MEDIA_LINKS",
+      "type": "MEDIA_LINK",
+      "name": "T_MEDIA_LINKS",
+      "display_name": "t_media_links",
+      "db_table": "t_media_links",
+      "columns": [
+        "mdlk_id"
+      ],
+      "primary_key": "mdlk_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_MRT_ACCESS_DSLAM_VERS",
+      "type": "TABLE",
+      "name": "T_MRT_ACCESS_DSLAM_VERS",
+      "display_name": "t_mrt_access_dslam_vers",
+      "db_table": "t_mrt_access_dslam_vers",
+      "columns": [
+        "mrdv_id"
+      ],
+      "primary_key": "mrdv_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_MRT_ACCESS_DSLAMS",
+      "type": "MRT",
+      "name": "T_MRT_ACCESS_DSLAMS",
+      "display_name": "t_mrt_access_dslams",
+      "db_table": "t_mrt_access_dslams",
+      "columns": [
+        "mrtd_id"
+      ],
+      "primary_key": "mrtd_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_MRT_ACCESS_MSAN_USAGE",
+      "type": "MSAN_USAGE",
+      "name": "T_MRT_ACCESS_MSAN_USAGE",
+      "display_name": "t_mrt_access_msan_usage",
+      "db_table": "t_mrt_access_msan_usage",
+      "columns": [
+        "mrmu_id"
+      ],
+      "primary_key": "mrmu_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_MRT_ACCESS_SERVICE_VERS",
+      "type": "MRT_SERVICE_VERSION",
+      "name": "T_MRT_ACCESS_SERVICE_VERS",
+      "display_name": "t_mrt_access_service_vers",
+      "db_table": "t_mrt_access_service_vers",
+      "columns": [
+        "mrsv_id"
+      ],
+      "primary_key": "mrsv_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_MRT_ACCESS_SERVICES",
+      "type": "MRT_SERVICE",
+      "name": "T_MRT_ACCESS_SERVICES",
+      "display_name": "t_mrt_access_services",
+      "db_table": "t_mrt_access_services",
+      "columns": [
+        "mras_id"
+      ],
+      "primary_key": "mras_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_MRT_TYPES",
+      "type": "MRT_TYPE",
+      "name": "T_MRT_TYPES",
+      "display_name": "t_mrt_types",
+      "db_table": "t_mrt_types",
+      "columns": [
+        "mrty_id"
+      ],
+      "primary_key": "mrty_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_MRT_VERS_IMPACTS",
+      "type": "MRT_VERSION_IMPACT",
+      "name": "T_MRT_VERS_IMPACTS",
+      "display_name": "t_mrt_vers_impacts",
+      "db_table": "t_mrt_vers_impacts",
+      "columns": [
+        "mrvi_id"
+      ],
+      "primary_key": "mrvi_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_MUTATIONS_REQUESTS",
+      "type": "MUTATION_REQUEST",
+      "name": "T_MUTATIONS_REQUESTS",
+      "display_name": "t_mutations_requests",
+      "db_table": "t_mutations_requests",
+      "columns": [
+        "murq_id"
+      ],
+      "primary_key": "murq_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_NET_PORT_MODELS",
+      "type": "TABLE",
+      "name": "T_NET_PORT_MODELS",
+      "display_name": "t_net_port_models",
+      "db_table": "t_net_port_models",
+      "columns": [
+        "npmd_id"
+      ],
+      "primary_key": "npmd_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_NET_RESOURCE_RELS",
+      "type": "NETWORK_RESOURCE_REL",
+      "name": "T_NET_RESOURCE_RELS",
+      "display_name": "t_net_resource_rels",
+      "db_table": "t_net_resource_rels",
+      "columns": [
+        "nrre_id"
+      ],
+      "primary_key": "nrre_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_NIP_SERVER_ASSOCS",
+      "type": "TABLE",
+      "name": "T_NIP_SERVER_ASSOCS",
+      "display_name": "t_nip_server_assocs",
+      "db_table": "t_nip_server_assocs",
+      "columns": [
+        "nsra_id"
+      ],
+      "primary_key": "nsra_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_NO_BACK_ON_TECHNOS",
+      "type": "NO_BACK_TECHNO",
+      "name": "T_NO_BACK_ON_TECHNOS",
+      "display_name": "t_no_back_on_technos",
+      "db_table": "t_no_back_on_technos",
+      "columns": [
+        "nbkt_id"
+      ],
+      "primary_key": "nbkt_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_NODES",
+      "type": "NODE",
+      "name": "T_NODES",
+      "display_name": "t_nodes",
+      "db_table": "t_nodes",
+      "columns": [
+        "node_id"
+      ],
+      "primary_key": "node_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_ONT_PROFILES",
+      "type": "ONT_PROFILE",
+      "name": "T_ONT_PROFILES",
+      "display_name": "t_ont_profiles",
+      "db_table": "t_ont_profiles",
+      "columns": [
+        "ontp_id"
+      ],
+      "primary_key": "ontp_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_OPERATORS",
+      "type": "OPERATOR",
+      "name": "T_OPERATORS",
+      "display_name": "t_operators",
+      "db_table": "t_operators",
+      "columns": [
+        "oper_id"
+      ],
+      "primary_key": "oper_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_P_INTSIAM_CONCAT_OFFERS",
+      "type": "TABLE",
+      "name": "T_P_INTSIAM_CONCAT_OFFERS",
+      "display_name": "t_p_intsiam_concat_offers",
+      "db_table": "t_p_intsiam_concat_offers",
+      "columns": [
+        "isco_concat_label"
+      ],
+      "primary_key": "isco_concat_label",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_P_INTSIAM_OFFERS",
+      "type": "TABLE",
+      "name": "T_P_INTSIAM_OFFERS",
+      "display_name": "t_p_intsiam_offers",
+      "db_table": "t_p_intsiam_offers",
+      "columns": [
+        "iso_libelle_intsiam"
+      ],
+      "primary_key": "iso_libelle_intsiam",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_P_PCP_REPOS",
+      "type": "TABLE",
+      "name": "T_P_PCP_REPOS",
+      "display_name": "t_p_pcp_repos",
+      "db_table": "t_p_pcp_repos",
+      "columns": [
+        "pcpr_shelf_model_id"
+      ],
+      "primary_key": "pcpr_shelf_model_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_P_SLOT_REPOS",
+      "type": "TABLE",
+      "name": "T_P_SLOT_REPOS",
+      "display_name": "t_p_slot_repos",
+      "db_table": "t_p_slot_repos",
+      "columns": [
+        "sltr_shelf_model_id"
+      ],
+      "primary_key": "sltr_shelf_model_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_P_TALIA_LOGICAL_BAYS",
+      "type": "TABLE",
+      "name": "T_P_TALIA_LOGICAL_BAYS",
+      "display_name": "t_p_talia_logical_bays",
+      "db_table": "t_p_talia_logical_bays",
+      "columns": [
+        "tlby_label"
+      ],
+      "primary_key": "tlby_label",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_P_TALIA_SERVICE_IDS",
+      "type": "TABLE",
+      "name": "T_P_TALIA_SERVICE_IDS",
+      "display_name": "t_p_talia_service_ids",
+      "db_table": "t_p_talia_service_ids",
+      "columns": [
+        "tsid_ts_component_name"
+      ],
+      "primary_key": "tsid_ts_component_name",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_P_TECH_SERVICE_FILTERS",
+      "type": "TABLE",
+      "name": "T_P_TECH_SERVICE_FILTERS",
+      "display_name": "t_p_tech_service_filters",
+      "db_table": "t_p_tech_service_filters",
+      "columns": [
+        "tsfr_tech_serv_name"
+      ],
+      "primary_key": "tsfr_tech_serv_name",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_P_TST_TO_COMP_SERVS",
+      "type": "TABLE",
+      "name": "T_P_TST_TO_COMP_SERVS",
+      "display_name": "t_p_tst_to_comp_servs",
+      "db_table": "t_p_tst_to_comp_servs",
+      "columns": [
+        "ttcs_tst_name"
+      ],
+      "primary_key": "ttcs_tst_name",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_PORT_GROUPS",
+      "type": "PORT_GROUP",
+      "name": "T_PORT_GROUPS",
+      "display_name": "t_port_groups",
+      "db_table": "t_port_groups",
+      "columns": [
+        "pogr_id"
+      ],
+      "primary_key": "pogr_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_PORTS",
+      "type": "PORT",
+      "name": "T_PORTS",
+      "display_name": "t_ports",
+      "db_table": "t_ports",
+      "columns": [
+        "port_id"
+      ],
+      "primary_key": "port_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_PRESTATIONS",
+      "type": "PRESTATION",
+      "name": "T_PRESTATIONS",
+      "display_name": "t_prestations",
+      "db_table": "t_prestations",
+      "columns": [
+        "prst_id"
+      ],
+      "primary_key": "prst_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_RES_PROD_CONTROLABLES",
+      "type": "CCL",
+      "name": "T_RES_PROD_CONTROLABLES",
+      "display_name": "t_res_prod_controlables",
+      "db_table": "t_res_prod_controlables",
+      "columns": [
+        "rpct_id"
+      ],
+      "primary_key": "rpct_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_RES_PROD_CONTROLERS",
+      "type": "RESOURCE_CONTROLLER",
+      "name": "T_RES_PROD_CONTROLERS",
+      "display_name": "t_res_prod_controlers",
+      "db_table": "t_res_prod_controlers",
+      "columns": [
+        "rpco_id"
+      ],
+      "primary_key": "rpco_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_RES_PROD_ROLES",
+      "type": "RESOURCE_ROLE",
+      "name": "T_RES_PROD_ROLES",
+      "display_name": "t_res_prod_roles",
+      "db_table": "t_res_prod_roles",
+      "columns": [
+        "rpro_id"
+      ],
+      "primary_key": "rpro_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_RESOURCE_CONSTRAINTS",
+      "type": "RESOURCE_CONSTRAINT",
+      "name": "T_RESOURCE_CONSTRAINTS",
+      "display_name": "t_resource_constraints",
+      "db_table": "t_resource_constraints",
+      "columns": [
+        "rcst_id"
+      ],
+      "primary_key": "rcst_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_RESOURCE_USAGES",
+      "type": "TABLE",
+      "name": "T_RESOURCE_USAGES",
+      "display_name": "t_resource_usages",
+      "db_table": "t_resource_usages",
+      "columns": [
+        "rsus_id"
+      ],
+      "primary_key": "rsus_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_ROLES",
+      "type": "TABLE",
+      "name": "T_ROLES",
+      "display_name": "t_roles",
+      "db_table": "t_roles",
+      "columns": [
+        "role_id"
+      ],
+      "primary_key": "role_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_ROOMS",
+      "type": "TABLE",
+      "name": "T_ROOMS",
+      "display_name": "t_rooms",
+      "db_table": "t_rooms",
+      "columns": [
+        "room_id"
+      ],
+      "primary_key": "room_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_ROWS",
+      "type": "TABLE",
+      "name": "T_ROWS",
+      "display_name": "t_rows",
+      "db_table": "t_rows",
+      "columns": [
+        "row_id"
+      ],
+      "primary_key": "row_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_SERVER_CONSTRAINTS",
+      "type": "TABLE",
+      "name": "T_SERVER_CONSTRAINTS",
+      "display_name": "t_server_constraints",
+      "db_table": "t_server_constraints",
+      "columns": [
+        "scst_id"
+      ],
+      "primary_key": "scst_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_SERVERS",
+      "type": "TABLE",
+      "name": "T_SERVERS",
+      "display_name": "t_servers",
+      "db_table": "t_servers",
+      "columns": [
+        "serv_id"
+      ],
+      "primary_key": "serv_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_SERVICE_COMMIT",
+      "type": "TABLE",
+      "name": "T_SERVICE_COMMIT",
+      "display_name": "t_service_commit",
+      "db_table": "t_service_commit",
+      "columns": [
+        "sc_id"
+      ],
+      "primary_key": "sc_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_SERVICE_PROFILES",
+      "type": "TABLE",
+      "name": "T_SERVICE_PROFILES",
+      "display_name": "t_service_profiles",
+      "db_table": "t_service_profiles",
+      "columns": [
+        "srpr_id"
+      ],
+      "primary_key": "srpr_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_SFP_MODULE_PORT_ASSOCS",
+      "type": "TABLE",
+      "name": "T_SFP_MODULE_PORT_ASSOCS",
+      "display_name": "t_sfp_module_port_assocs",
+      "db_table": "t_sfp_module_port_assocs",
+      "columns": [
+        "smpa_id"
+      ],
+      "primary_key": "smpa_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_SFP_MODULES",
+      "type": "TABLE",
+      "name": "T_SFP_MODULES",
+      "display_name": "t_sfp_modules",
+      "db_table": "t_sfp_modules",
+      "columns": [
+        "sfpm_id"
+      ],
+      "primary_key": "sfpm_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_SHELF_MODELS",
+      "type": "TABLE",
+      "name": "T_SHELF_MODELS",
+      "display_name": "t_shelf_models",
+      "db_table": "t_shelf_models",
+      "columns": [
+        "shmd_id"
+      ],
+      "primary_key": "shmd_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_SHELFS",
+      "type": "TABLE",
+      "name": "T_SHELFS",
+      "display_name": "t_shelfs",
+      "db_table": "t_shelfs",
+      "columns": [
+        "shlf_id"
+      ],
+      "primary_key": "shlf_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_SITES",
+      "type": "TABLE",
+      "name": "T_SITES",
+      "display_name": "t_sites",
+      "db_table": "t_sites",
+      "columns": [
+        "site_id"
+      ],
+      "primary_key": null,
+      "foreign_keys": [
+        "site_id"
+      ],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_SLOT_MODELS",
+      "type": "TABLE",
+      "name": "T_SLOT_MODELS",
+      "display_name": "t_slot_models",
+      "db_table": "t_slot_models",
+      "columns": [
+        "slmd_id"
+      ],
+      "primary_key": "slmd_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_SLOTS",
+      "type": "TABLE",
+      "name": "T_SLOTS",
+      "display_name": "t_slots",
+      "db_table": "t_slots",
+      "columns": [
+        "slot_id"
+      ],
+      "primary_key": "slot_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_ST_COMPONENTS",
+      "type": "TABLE",
+      "name": "T_ST_COMPONENTS",
+      "display_name": "t_st_components",
+      "db_table": "t_st_components",
+      "columns": [
+        "stco_id"
+      ],
+      "primary_key": "stco_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_STRIPE_MODELS",
+      "type": "TABLE",
+      "name": "T_STRIPE_MODELS",
+      "display_name": "t_stripe_models",
+      "db_table": "t_stripe_models",
+      "columns": [
+        "strm_id"
+      ],
+      "primary_key": "strm_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_STRIPES",
+      "type": "TABLE",
+      "name": "T_STRIPES",
+      "display_name": "t_stripes",
+      "db_table": "t_stripes",
+      "columns": [
+        "strp_id"
+      ],
+      "primary_key": "strp_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_SWAP_REQUESTS",
+      "type": "TABLE",
+      "name": "T_SWAP_REQUESTS",
+      "display_name": "t_swap_requests",
+      "db_table": "t_swap_requests",
+      "columns": [
+        "swap_id"
+      ],
+      "primary_key": "swap_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TECH_SERV_FUNCTIONS",
+      "type": "TABLE",
+      "name": "T_TECH_SERV_FUNCTIONS",
+      "display_name": "t_tech_serv_functions",
+      "db_table": "t_tech_serv_functions",
+      "columns": [
+        "tsft_id"
+      ],
+      "primary_key": "tsft_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TECH_SERV_TYPES",
+      "type": "TABLE",
+      "name": "T_TECH_SERV_TYPES",
+      "display_name": "t_tech_serv_types",
+      "db_table": "t_tech_serv_types",
+      "columns": [
+        "tst_id"
+      ],
+      "primary_key": "tst_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TECH_SERVICES",
+      "type": "TABLE",
+      "name": "T_TECH_SERVICES",
+      "display_name": "t_tech_services",
+      "db_table": "t_tech_services",
+      "columns": [
+        "tcsv_id"
+      ],
+      "primary_key": "tcsv_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TECHNO_ON_CARD_NAT_PROFILES",
+      "type": "TABLE",
+      "name": "T_TECHNO_ON_CARD_NAT_PROFILES",
+      "display_name": "t_techno_on_card_nat_profiles",
+      "db_table": "t_techno_on_card_nat_profiles",
+      "columns": [
+        "ttcn_id"
+      ],
+      "primary_key": "ttcn_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TECHNOLOGY_TYPES",
+      "type": "TECHNOLOGY",
+      "name": "T_TECHNOLOGY_TYPES",
+      "display_name": "t_technology_types",
+      "db_table": "t_technology_types",
+      "columns": [
+        "tcty_id"
+      ],
+      "primary_key": "tcty_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_THROUGHPUTS",
+      "type": "TABLE",
+      "name": "T_THROUGHPUTS",
+      "display_name": "t_throughputs",
+      "db_table": "t_throughputs",
+      "columns": [
+        "thro_id"
+      ],
+      "primary_key": "thro_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TP_CCL_ATMS",
+      "type": "TABLE",
+      "name": "T_TP_CCL_ATMS",
+      "display_name": "t_tp_ccl_atms",
+      "db_table": "t_tp_ccl_atms",
+      "columns": [
+        "tpcc_id"
+      ],
+      "primary_key": "tpcc_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TP_INITIAL_STATES",
+      "type": "TABLE",
+      "name": "T_TP_INITIAL_STATES",
+      "display_name": "t_tp_initial_states",
+      "db_table": "t_tp_initial_states",
+      "columns": [
+        "tpis_id"
+      ],
+      "primary_key": "tpis_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TP_SHELFS",
+      "type": "TABLE",
+      "name": "T_TP_SHELFS",
+      "display_name": "t_tp_shelfs",
+      "db_table": "t_tp_shelfs",
+      "columns": [
+        "tpsf_id"
+      ],
+      "primary_key": "tpsf_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TPS",
+      "type": "TABLE",
+      "name": "T_TPS",
+      "display_name": "t_tps",
+      "db_table": "t_tps",
+      "columns": [
+        "tp_id"
+      ],
+      "primary_key": "tp_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TR_ASSIGNMENTS",
+      "type": "TABLE",
+      "name": "T_TR_ASSIGNMENTS",
+      "display_name": "t_tr_assignments",
+      "db_table": "t_tr_assignments",
+      "columns": [
+        "tass_id"
+      ],
+      "primary_key": "tass_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TR_FUNCTIONS",
+      "type": "TABLE",
+      "name": "T_TR_FUNCTIONS",
+      "display_name": "t_tr_functions",
+      "db_table": "t_tr_functions",
+      "columns": [
+        "tfct_id"
+      ],
+      "primary_key": "tfct_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TRS",
+      "type": "TABLE",
+      "name": "T_TRS",
+      "display_name": "t_trs",
+      "db_table": "t_trs",
+      "columns": [
+        "tr_id"
+      ],
+      "primary_key": "tr_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TSF_FAMILY_ASSOC",
+      "type": "TABLE",
+      "name": "T_TSF_FAMILY_ASSOC",
+      "display_name": "t_tsf_family_assoc",
+      "db_table": "t_tsf_family_assoc",
+      "columns": [
+        "tfa_id"
+      ],
+      "primary_key": "tfa_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TSF_USAGE_ASSOC",
+      "type": "TABLE",
+      "name": "T_TSF_USAGE_ASSOC",
+      "display_name": "t_tsf_usage_assoc",
+      "db_table": "t_tsf_usage_assoc",
+      "columns": [
+        "tua_assoc_id"
+      ],
+      "primary_key": "tua_assoc_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TST_CLOSED_ON_CARDS",
+      "type": "TABLE",
+      "name": "T_TST_CLOSED_ON_CARDS",
+      "display_name": "t_tst_closed_on_cards",
+      "db_table": "t_tst_closed_on_cards",
+      "columns": [
+        "scds_id"
+      ],
+      "primary_key": "scds_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TST_CLOSED_ON_SHELFS",
+      "type": "TABLE",
+      "name": "T_TST_CLOSED_ON_SHELFS",
+      "display_name": "t_tst_closed_on_shelfs",
+      "db_table": "t_tst_closed_on_shelfs",
+      "columns": [
+        "scsh_id"
+      ],
+      "primary_key": "scsh_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TST_ON_CARD_NAT_PROFILES",
+      "type": "TABLE",
+      "name": "T_TST_ON_CARD_NAT_PROFILES",
+      "display_name": "t_tst_on_card_nat_profiles",
+      "db_table": "t_tst_on_card_nat_profiles",
+      "columns": [
+        "tscn_id"
+      ],
+      "primary_key": "tscn_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TST_ON_DSLAMS",
+      "type": "TABLE",
+      "name": "T_TST_ON_DSLAMS",
+      "display_name": "t_tst_on_dslams",
+      "db_table": "t_tst_on_dslams",
+      "columns": [
+        "sods_id"
+      ],
+      "primary_key": "sods_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_TST_WITHOUT_MRTS",
+      "type": "TABLE",
+      "name": "T_TST_WITHOUT_MRTS",
+      "display_name": "t_tst_without_mrts",
+      "db_table": "t_tst_without_mrts",
+      "columns": [
+        "twmt_tst_name"
+      ],
+      "primary_key": "twmt_tst_name",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_USAGE_CONSTRAINTS",
+      "type": "TABLE",
+      "name": "T_USAGE_CONSTRAINTS",
+      "display_name": "t_usage_constraints",
+      "db_table": "t_usage_constraints",
+      "columns": [
+        "ucst_id"
+      ],
+      "primary_key": "ucst_id",
+      "foreign_keys": [],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SQL:T_VC_LOCK_RANGES",
+      "type": "TABLE",
+      "name": "T_VC_LOCK_RANGES",
+      "display_name": "t_vc_lock_ranges",
+      "db_table": "t_vc_lock_ranges",
+      "columns": [
+        "rpct_id"
+      ],
+      "primary_key": null,
+      "foreign_keys": [
+        "rpct_id"
+      ],
+      "source_file": "brasil_db.sql",
+      "confidence": "high"
+    },
+    {
+      "id": "SYSTEM:BRASIL",
+      "type": "APPLICATION",
+      "name": "BRASIL",
+      "display_name": "BRASIL",
+      "description": "BRASIL application - telecom resource management system",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:ORCHESTRA",
+      "type": "APPLICATION",
+      "name": "ORCHESTRA",
+      "display_name": "ORCHESTRA",
+      "description": "Orchestra - network element repository (référentiel NE)",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:SEBA",
+      "type": "APPLICATION",
+      "name": "SEBA",
+      "display_name": "SEBA",
+      "description": "SEBA - service management application",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:E_BASILIQ",
+      "type": "APPLICATION",
+      "name": "E_BASILIQ",
+      "display_name": "E_BASILIQ",
+      "description": "E-Basiliq - order processing system via MQ",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:IPON",
+      "type": "APPLICATION",
+      "name": "IPON",
+      "display_name": "IPON",
+      "description": "IPON - IP/ON service management",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:SCA",
+      "type": "APPLICATION",
+      "name": "SCA",
+      "display_name": "SCA",
+      "description": "SCA - service catalog application",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:ADELIA",
+      "type": "APPLICATION",
+      "name": "ADELIA",
+      "display_name": "ADELIA",
+      "description": "ADELIA - provisioning automation",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:UMI_EPC",
+      "type": "INTERFACE",
+      "name": "UMI_EPC",
+      "display_name": "UMI_EPC",
+      "description": "UMI-EPC connector - EPC movement processor",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:UMI_DICO",
+      "type": "INTERFACE",
+      "name": "UMI_DICO",
+      "display_name": "UMI_DICO",
+      "description": "UMI-DICO connector - dictionary synchronization",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:CONNECTOR_CL",
+      "type": "INTERFACE",
+      "name": "CONNECTOR_CL",
+      "display_name": "CONNECTOR_CL",
+      "description": "ConnectorCL - provisioning request processor",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:CONNECTOR_VLAN",
+      "type": "INTERFACE",
+      "name": "CONNECTOR_VLAN",
+      "display_name": "CONNECTOR_VLAN",
+      "description": "ConnectorCreationVLAN - VLAN creation handler",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:SOLICITATION_DLM",
+      "type": "INTERFACE",
+      "name": "SOLICITATION_DLM",
+      "display_name": "SOLICITATION_DLM",
+      "description": "SollicitationDLM - DLM provisioning trigger",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:SOLICITATION_FTTH",
+      "type": "INTERFACE",
+      "name": "SOLICITATION_FTTH",
+      "display_name": "SOLICITATION_FTTH",
+      "description": "SollicitationFTTH - FTTH provisioning trigger",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:RABBITMQ",
+      "type": "INFRASTRUCTURE",
+      "name": "RABBITMQ",
+      "display_name": "RABBITMQ",
+      "description": "RabbitMQ - message queue for async processing",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "SYSTEM:POSTGRESQL",
+      "type": "INFRASTRUCTURE",
+      "name": "POSTGRESQL",
+      "display_name": "POSTGRESQL",
+      "description": "PostgreSQL - BRASIL database backend",
+      "confidence": "high",
+      "source_file": "FR_docs + logs"
+    },
+    {
+      "id": "ERROR:1215",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1215",
+      "display_name": "Error 1215",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:5636",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_5636",
+      "display_name": "Error 5636",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2019",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2019",
+      "display_name": "Error 2019",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1218",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1218",
+      "display_name": "Error 1218",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1274",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1274",
+      "display_name": "Error 1274",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1236",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1236",
+      "display_name": "Error 1236",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1945",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1945",
+      "display_name": "Error 1945",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1248",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1248",
+      "display_name": "Error 1248",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1262",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1262",
+      "display_name": "Error 1262",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1308",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1308",
+      "display_name": "Error 1308",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2930",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2930",
+      "display_name": "Error 2930",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1200",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1200",
+      "display_name": "Error 1200",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1231",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1231",
+      "display_name": "Error 1231",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1216",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1216",
+      "display_name": "Error 1216",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1306",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1306",
+      "display_name": "Error 1306",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1206",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1206",
+      "display_name": "Error 1206",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1238",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1238",
+      "display_name": "Error 1238",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1233",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1233",
+      "display_name": "Error 1233",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2904",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2904",
+      "display_name": "Error 2904",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2109",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2109",
+      "display_name": "Error 2109",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3217",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3217",
+      "display_name": "Error 3217",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1270",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1270",
+      "display_name": "Error 1270",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2918",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2918",
+      "display_name": "Error 2918",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2906",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2906",
+      "display_name": "Error 2906",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1221",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1221",
+      "display_name": "Error 1221",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2919",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2919",
+      "display_name": "Error 2919",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1273",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1273",
+      "display_name": "Error 1273",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2902",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2902",
+      "display_name": "Error 2902",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1277",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1277",
+      "display_name": "Error 1277",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1212",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1212",
+      "display_name": "Error 1212",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1102",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1102",
+      "display_name": "Error 1102",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1284",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1284",
+      "display_name": "Error 1284",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1339",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1339",
+      "display_name": "Error 1339",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2021",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2021",
+      "display_name": "Error 2021",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1278",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1278",
+      "display_name": "Error 1278",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1279",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1279",
+      "display_name": "Error 1279",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1250",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1250",
+      "display_name": "Error 1250",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3326",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3326",
+      "display_name": "Error 3326",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1002",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1002",
+      "display_name": "Error 1002",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1203",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1203",
+      "display_name": "Error 1203",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3251",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3251",
+      "display_name": "Error 3251",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1338",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1338",
+      "display_name": "Error 1338",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1304",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1304",
+      "display_name": "Error 1304",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2017",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2017",
+      "display_name": "Error 2017",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2941",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2941",
+      "display_name": "Error 2941",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1583",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1583",
+      "display_name": "Error 1583",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1255",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1255",
+      "display_name": "Error 1255",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2913",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2913",
+      "display_name": "Error 2913",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1235",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1235",
+      "display_name": "Error 1235",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2938",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2938",
+      "display_name": "Error 2938",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:42",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_42",
+      "display_name": "Error 42",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2932",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2932",
+      "display_name": "Error 2932",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:7750",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_7750",
+      "display_name": "Error 7750",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2905",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2905",
+      "display_name": "Error 2905",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2800",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2800",
+      "display_name": "Error 2800",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1294",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1294",
+      "display_name": "Error 1294",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1237",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1237",
+      "display_name": "Error 1237",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2441",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2441",
+      "display_name": "Error 2441",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1292",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1292",
+      "display_name": "Error 1292",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:49O",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_49O",
+      "display_name": "Error 49O",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1293",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1293",
+      "display_name": "Error 1293",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1225",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1225",
+      "display_name": "Error 1225",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1342",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1342",
+      "display_name": "Error 1342",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1285",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1285",
+      "display_name": "Error 1285",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1265",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1265",
+      "display_name": "Error 1265",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2025",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2025",
+      "display_name": "Error 2025",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2509",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2509",
+      "display_name": "Error 2509",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3261",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3261",
+      "display_name": "Error 3261",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1302",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1302",
+      "display_name": "Error 1302",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3257",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3257",
+      "display_name": "Error 3257",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1272",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1272",
+      "display_name": "Error 1272",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2041",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2041",
+      "display_name": "Error 2041",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1343",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1343",
+      "display_name": "Error 1343",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2704",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2704",
+      "display_name": "Error 2704",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1299",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1299",
+      "display_name": "Error 1299",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1244",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1244",
+      "display_name": "Error 1244",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1230",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1230",
+      "display_name": "Error 1230",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1232",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1232",
+      "display_name": "Error 1232",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3277",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3277",
+      "display_name": "Error 3277",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3220",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3220",
+      "display_name": "Error 3220",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1288",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1288",
+      "display_name": "Error 1288",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1137",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1137",
+      "display_name": "Error 1137",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3244",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3244",
+      "display_name": "Error 3244",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2925",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2925",
+      "display_name": "Error 2925",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2016",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2016",
+      "display_name": "Error 2016",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1336",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1336",
+      "display_name": "Error 1336",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1275",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1275",
+      "display_name": "Error 1275",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1335",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1335",
+      "display_name": "Error 1335",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3235",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3235",
+      "display_name": "Error 3235",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1239",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1239",
+      "display_name": "Error 1239",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1210",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1210",
+      "display_name": "Error 1210",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2989",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2989",
+      "display_name": "Error 2989",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1264",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1264",
+      "display_name": "Error 1264",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1201",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1201",
+      "display_name": "Error 1201",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1219",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1219",
+      "display_name": "Error 1219",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1283",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1283",
+      "display_name": "Error 1283",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3018",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3018",
+      "display_name": "Error 3018",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2924",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2924",
+      "display_name": "Error 2924",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2808",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2808",
+      "display_name": "Error 2808",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1303",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1303",
+      "display_name": "Error 1303",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2541",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2541",
+      "display_name": "Error 2541",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2912",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2912",
+      "display_name": "Error 2912",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1208",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1208",
+      "display_name": "Error 1208",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2701",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2701",
+      "display_name": "Error 2701",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2910",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2910",
+      "display_name": "Error 2910",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3014",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3014",
+      "display_name": "Error 3014",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2022",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2022",
+      "display_name": "Error 2022",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2700",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2700",
+      "display_name": "Error 2700",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:9999",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_9999",
+      "display_name": "Error 9999",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1305",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1305",
+      "display_name": "Error 1305",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2708",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2708",
+      "display_name": "Error 2708",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2980",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2980",
+      "display_name": "Error 2980",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1295",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1295",
+      "display_name": "Error 1295",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2742",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2742",
+      "display_name": "Error 2742",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1222",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1222",
+      "display_name": "Error 1222",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1211",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1211",
+      "display_name": "Error 1211",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2714",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2714",
+      "display_name": "Error 2714",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2314",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2314",
+      "display_name": "Error 2314",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2328",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2328",
+      "display_name": "Error 2328",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1227",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1227",
+      "display_name": "Error 1227",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1287",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1287",
+      "display_name": "Error 1287",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1214",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1214",
+      "display_name": "Error 1214",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2001",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2001",
+      "display_name": "Error 2001",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3236",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3236",
+      "display_name": "Error 3236",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2933",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2933",
+      "display_name": "Error 2933",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2903",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2903",
+      "display_name": "Error 2903",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1269",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1269",
+      "display_name": "Error 1269",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1281",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1281",
+      "display_name": "Error 1281",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1251",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1251",
+      "display_name": "Error 1251",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1217",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1217",
+      "display_name": "Error 1217",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:4700",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_4700",
+      "display_name": "Error 4700",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1243",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1243",
+      "display_name": "Error 1243",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1297",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1297",
+      "display_name": "Error 1297",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3045",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3045",
+      "display_name": "Error 3045",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1228",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1228",
+      "display_name": "Error 1228",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1259",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1259",
+      "display_name": "Error 1259",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3245",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3245",
+      "display_name": "Error 3245",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:42C",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_42C",
+      "display_name": "Error 42C",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1263",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1263",
+      "display_name": "Error 1263",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:13000",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_13000",
+      "display_name": "Error 13000",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1282",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1282",
+      "display_name": "Error 1282",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2020",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2020",
+      "display_name": "Error 2020",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3233",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3233",
+      "display_name": "Error 3233",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2986",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2986",
+      "display_name": "Error 2986",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3004",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3004",
+      "display_name": "Error 3004",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2018",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2018",
+      "display_name": "Error 2018",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1242",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1242",
+      "display_name": "Error 1242",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1296",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1296",
+      "display_name": "Error 1296",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1286",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1286",
+      "display_name": "Error 1286",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2024",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2024",
+      "display_name": "Error 2024",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1224",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1224",
+      "display_name": "Error 1224",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1289",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1289",
+      "display_name": "Error 1289",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1261",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1261",
+      "display_name": "Error 1261",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1291",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1291",
+      "display_name": "Error 1291",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1258",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1258",
+      "display_name": "Error 1258",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3223",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3223",
+      "display_name": "Error 3223",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2935",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2935",
+      "display_name": "Error 2935",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1276",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1276",
+      "display_name": "Error 1276",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:5578",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_5578",
+      "display_name": "Error 5578",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1266",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1266",
+      "display_name": "Error 1266",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2341",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2341",
+      "display_name": "Error 2341",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:7302",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_7302",
+      "display_name": "Error 7302",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1000",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1000",
+      "display_name": "Error 1000",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1301",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1301",
+      "display_name": "Error 1301",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1245",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1245",
+      "display_name": "Error 1245",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3255",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3255",
+      "display_name": "Error 3255",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2901",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2901",
+      "display_name": "Error 2901",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3219",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3219",
+      "display_name": "Error 3219",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1340",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1340",
+      "display_name": "Error 1340",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3224",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3224",
+      "display_name": "Error 3224",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1290",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1290",
+      "display_name": "Error 1290",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1267",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1267",
+      "display_name": "Error 1267",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2923",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2923",
+      "display_name": "Error 2923",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1226",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1226",
+      "display_name": "Error 1226",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:9903",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_9903",
+      "display_name": "Error 9903",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1240",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1240",
+      "display_name": "Error 1240",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1213",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1213",
+      "display_name": "Error 1213",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3262",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3262",
+      "display_name": "Error 3262",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1298",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1298",
+      "display_name": "Error 1298",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1246",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1246",
+      "display_name": "Error 1246",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1256",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1256",
+      "display_name": "Error 1256",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1257",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1257",
+      "display_name": "Error 1257",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1271",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1271",
+      "display_name": "Error 1271",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1280",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1280",
+      "display_name": "Error 1280",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:327",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_327",
+      "display_name": "Error 327",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:2000",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_2000",
+      "display_name": "Error 2000",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1234",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1234",
+      "display_name": "Error 1234",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1229",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1229",
+      "display_name": "Error 1229",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1142",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1142",
+      "display_name": "Error 1142",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1241",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1241",
+      "display_name": "Error 1241",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:3243",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_3243",
+      "display_name": "Error 3243",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1300",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1300",
+      "display_name": "Error 1300",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1220",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1220",
+      "display_name": "Error 1220",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1307",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1307",
+      "display_name": "Error 1307",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:8859",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_8859",
+      "display_name": "Error 8859",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:1341",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_1341",
+      "display_name": "Error 1341",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    },
+    {
+      "id": "ERROR:4002",
+      "type": "ERROR_CODE",
+      "name": "BRASIL_ERROR_4002",
+      "display_name": "Error 4002",
+      "confidence": "high",
+      "source_file": "FR_docs"
+    }
+  ],
+  "edges": [
+    {
+      "source": "SQL:T_SITES",
+      "target": "SQL:T_SITES",
+      "type": "DEPENDS_ON",
+      "description": "",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": "site_id"
+    },
+    {
+      "source": "SQL:T_VC_LOCK_RANGES",
+      "target": "SQL:T_RES_PROD_CONTROLABLES",
+      "type": "DEPENDS_ON",
+      "description": "",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": "rpct_id"
+    },
+    {
+      "source": "ENTITY:NODE",
+      "target": "ENTITY:DSLAM",
+      "type": "HAS",
+      "description": "NODE contains DSLAM equipments",
+      "confidence": "high",
+      "source_file": "domain_model",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:NODE",
+      "target": "ENTITY:MSAN",
+      "type": "HAS",
+      "description": "NODE contains MSAN equipments",
+      "confidence": "high",
+      "source_file": "domain_model",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:NODE",
+      "target": "ENTITY:DISTRIBUTOR",
+      "type": "HAS",
+      "description": "NODE has physical distributor",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:DSLAM",
+      "target": "ENTITY:SHELF",
+      "type": "HAS",
+      "description": "DSLAM has logical shelves",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:DSLAM",
+      "target": "ENTITY:CARD",
+      "type": "HAS",
+      "description": "DSLAM contains cards",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:CARD",
+      "target": "ENTITY:PORT",
+      "type": "HAS",
+      "description": "CARD contains physical ports",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:SHELF",
+      "target": "ENTITY:CARD",
+      "type": "HAS",
+      "description": "SHELF groups cards",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:PORT",
+      "target": "ENTITY:REGLETTE",
+      "type": "LINKED_TO",
+      "description": "PORT linked to MDF reglette",
+      "confidence": "high",
+      "source_file": "FR_docs",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:REGLETTE",
+      "target": "ENTITY:REPARTITEUR",
+      "type": "BELONGS_TO",
+      "description": "Reglette belongs to repartiteur",
+      "confidence": "high",
+      "source_file": "FR_docs",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:EPC",
+      "target": "ENTITY:MRT",
+      "type": "HAS",
+      "description": "EPC has associated MRT (access)",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:MRT",
+      "target": "ENTITY:PORT",
+      "type": "LINKED_TO",
+      "description": "MRT linked to physical port",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:MRT",
+      "target": "ENTITY:DSLAM",
+      "type": "LINKED_TO",
+      "description": "MRT linked to DSLAM equipment",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:MRT",
+      "target": "ENTITY:CCL",
+      "type": "DEPENDS_ON",
+      "description": "MRT service depends on CCL resource",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:CCL",
+      "target": "ENTITY:VP_VC",
+      "type": "HAS",
+      "description": "CCL manages VP/VC resources",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:CCL",
+      "target": "ENTITY:VLAN",
+      "type": "HAS",
+      "description": "CCL has associated VLAN",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR_docs",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:CCL",
+      "target": "ENTITY:DSLAM",
+      "type": "LINKED_TO",
+      "description": "CCL connects DSLAM side",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:CCL",
+      "target": "ENTITY:NIP",
+      "type": "LINKED_TO",
+      "description": "CCL connects NIP/BAS side",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:MAKING_FILE",
+      "target": "ENTITY:EPC",
+      "type": "HAS",
+      "description": "Making file triggers EPC update",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:MAKING_FILE",
+      "target": "ENTITY:MRT",
+      "type": "HAS",
+      "description": "Making file has MRT impacts",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:MAKING_FILE",
+      "target": "ENTITY:OPERATOR",
+      "type": "BELONGS_TO",
+      "description": "Making file belongs to operator",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:DSLAM",
+      "target": "ENTITY:TSF",
+      "type": "HAS",
+      "description": "DSLAM has technical service functions",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + logs",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:TSF",
+      "target": "ENTITY:CCL",
+      "type": "LINKED_TO",
+      "description": "TSF linked to CCL resource",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:NODE",
+      "target": "ENTITY:DR_ZONE",
+      "type": "BELONGS_TO",
+      "description": "NODE belongs to DR geographic zone",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:MUTATION",
+      "target": "ENTITY:DSLAM",
+      "type": "LINKED_TO",
+      "description": "Mutation involves source/target DSLAM",
+      "confidence": "high",
+      "source_file": "brasil_db.sql + FR 100",
+      "via_column": null
+    },
+    {
+      "source": "ENTITY:MUTATION",
+      "target": "ENTITY:MRT",
+      "type": "DEPENDS_ON",
+      "description": "Mutation requires MRT reassignment",
+      "confidence": "high",
+      "source_file": "brasil_db.sql",
+      "via_column": null
+    },
+    {
+      "source": "SYSTEM:CONNECTOR_CL",
+      "target": "ENTITY:MAKING_FILE",
+      "type": "PROCESSES",
+      "description": "ConnectorCL processes making files",
+      "confidence": "high",
+      "source_file": "logs",
+      "via_column": null
+    },
+    {
+      "source": "SYSTEM:CONNECTOR_CL",
+      "target": "ENTITY:EPC",
+      "type": "PROCESSES",
+      "description": "ConnectorCL processes EPC updates",
+      "confidence": "high",
+      "source_file": "logs",
+      "via_column": null
+    },
+    {
+      "source": "SYSTEM:UMI_EPC",
+      "target": "ENTITY:EPC",
+      "type": "SYNCHRONIZES",
+      "description": "UMI-EPC syncs EPC movements",
+      "confidence": "high",
+      "source_file": "FR_docs + logs",
+      "via_column": null
+    },
+    {
+      "source": "SYSTEM:E_BASILIQ",
+      "target": "SYSTEM:BRASIL",
+      "type": "INTERFACES_WITH",
+      "description": "E-Basiliq exchanges data with BRASIL",
+      "confidence": "high",
+      "source_file": "FR_docs",
+      "via_column": null
+    },
+    {
+      "source": "SYSTEM:ORCHESTRA",
+      "target": "ENTITY:DSLAM",
+      "type": "MANAGES",
+      "description": "Orchestra manages DSLAM NE repository",
+      "confidence": "high",
+      "source_file": "FR_docs",
+      "via_column": null
+    },
+    {
+      "source": "SYSTEM:ORCHESTRA",
+      "target": "ENTITY:NODE",
+      "type": "MANAGES",
+      "description": "Orchestra manages node repository",
+      "confidence": "high",
+      "source_file": "FR_docs",
+      "via_column": null
+    },
+    {
+      "source": "SYSTEM:RABBITMQ",
+      "target": "SYSTEM:CONNECTOR_CL",
+      "type": "DELIVERS",
+      "description": "RabbitMQ delivers messages to ConnectorCL",
+      "confidence": "high",
+      "source_file": "logs",
+      "via_column": null
+    },
+    {
+      "source": "SYSTEM:BRASIL",
+      "target": "ENTITY:DSLAM",
+      "type": "MANAGES",
+      "description": "BRASIL manages DSLAM resources",
+      "confidence": "high",
+      "source_file": "domain_model",
+      "via_column": null
+    },
+    {
+      "source": "SYSTEM:BRASIL",
+      "target": "ENTITY:EPC",
+      "type": "MANAGES",
+      "description": "BRASIL manages EPC service records",
+      "confidence": "high",
+      "source_file": "domain_model",
+      "via_column": null
+    }
+  ],
+  "stats": {
+    "nodes_count": 360,
+    "edges_count": 36,
+    "graph_density": 0.0003,
+    "nodes_by_type": {
+      "EQUIPMENT": 4,
+      "CARD": 2,
+      "PORT": 2,
+      "SHELF": 2,
+      "NODE": 2,
+      "SERVICE": 2,
+      "NETWORK_RESOURCE": 3,
+      "ORDER": 1,
+      "ACTOR": 1,
+      "PHYSICAL": 3,
+      "OPERATION": 1,
+      "PARAMETER": 1,
+      "GEOGRAPHIC": 1,
+      "TABLE": 71,
+      "VLAN": 1,
+      "APP_CONFIG": 1,
+      "APP_PARAMETER": 1,
+      "ATM_PROFILE": 1,
+      "BAY": 1,
+      "CARD_MODEL": 1,
+      "CARD_PROFILE": 1,
+      "CARD_SOFT_VERSION": 1,
+      "CONTROLLABLE_RSC": 1,
+      "DSLAM": 1,
+      "DSLAM_CARD": 1,
+      "VCI": 1,
+      "DISTRIBUTOR": 1,
+      "DR_ZONE": 1,
+      "DSLAM_CONSTRAINT": 1,
+      "DSLAM_ASSIGNMENT": 1,
+      "EPC_ORDER_LINE": 1,
+      "EPC_VERSION": 1,
+      "EPC_VERSION_COMPONENT": 1,
+      "EPC_VERSION_IMPACT": 1,
+      "EPC": 1,
+      "ES_SCRIPT": 1,
+      "ES_LOG": 1,
+      "ES_TYPE": 1,
+      "FTTH_ONT_LOCK": 1,
+      "FUNCTION_CODE": 1,
+      "ICC_UPDATE": 1,
+      "INTERFACE": 7,
+      "LINE_PROFILE": 1,
+      "LOCAL_AREA": 1,
+      "EQUIPMENT_MODEL": 1,
+      "MAKING_FILE": 1,
+      "MANUFACTURER": 1,
+      "MEDIA_LINK": 1,
+      "MRT": 1,
+      "MSAN_USAGE": 1,
+      "MRT_SERVICE_VERSION": 1,
+      "MRT_SERVICE": 1,
+      "MRT_TYPE": 1,
+      "MRT_VERSION_IMPACT": 1,
+      "MUTATION_REQUEST": 1,
+      "NETWORK_RESOURCE_REL": 1,
+      "NO_BACK_TECHNO": 1,
+      "ONT_PROFILE": 1,
+      "OPERATOR": 1,
+      "PORT_GROUP": 1,
+      "PRESTATION": 1,
+      "CCL": 1,
+      "RESOURCE_CONTROLLER": 1,
+      "RESOURCE_ROLE": 1,
+      "RESOURCE_CONSTRAINT": 1,
+      "TECHNOLOGY": 1,
+      "APPLICATION": 7,
+      "INFRASTRUCTURE": 2,
+      "ERROR_CODE": 197
+    },
+    "edges_by_type": {
+      "DEPENDS_ON": 4,
+      "HAS": 13,
+      "LINKED_TO": 7,
+      "BELONGS_TO": 3,
+      "PROCESSES": 2,
+      "SYNCHRONIZES": 1,
+      "INTERFACES_WITH": 1,
+      "MANAGES": 4,
+      "DELIVERS": 1
+    }
+  }
+}

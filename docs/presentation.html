@@ -1,521 +1,323 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AI Support Agent — Présentation Complète</title>
-  <style>
-    :root{
-      --primary:#0ea5e9;
-      --secondary:#8b5cf6;
-      --accent:#f59e0b;
-      --dark:#0f172a;
-      --light:#f8fafc;
-      --text:#1e293b;
-      --muted:#64748b;
-    }
-    *{margin:0;padding:0;box-sizing:border-box}
-    html{scroll-behavior:smooth}
-    body{font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--text);background:var(--light);overflow-x:hidden}
-    
-    /* Hero Section */
-    .hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#334155 100%);overflow:hidden}
-    .hero::before{content:'';position:absolute;inset:0;background:url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="2" cy="2" r="1" fill="white" opacity="0.1"/></svg>');animation:starfield 120s linear infinite}
-    @keyframes starfield{0%{transform:translateY(0)}100%{transform:translateY(100px)}}
-    .hero-content{position:relative;z-index:10;text-align:center;padding:2rem;max-width:1200px}
-    .hero h1{font-size:clamp(2.5rem,6vw,5rem);font-weight:900;background:linear-gradient(90deg,#60a5fa,#a78bfa,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1.5rem;animation:fadeInUp 1s ease-out}
-    .hero p{font-size:clamp(1.1rem,2vw,1.5rem);color:rgba(255,255,255,0.85);margin-bottom:2rem;animation:fadeInUp 1s ease-out 0.2s both}
-    .hero-cta{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;animation:fadeInUp 1s ease-out 0.4s both}
-    .btn{padding:1rem 2rem;border-radius:12px;font-weight:700;text-decoration:none;transition:all 0.3s;display:inline-block}
-    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;box-shadow:0 10px 30px rgba(14,165,233,0.3)}
-    .btn-primary:hover{transform:translateY(-3px);box-shadow:0 15px 40px rgba(14,165,233,0.4)}
-    .btn-secondary{background:rgba(255,255,255,0.1);color:white;border:2px solid rgba(255,255,255,0.3);backdrop-filter:blur(10px)}
-    .btn-secondary:hover{background:rgba(255,255,255,0.2)}
-    
-    @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-    
-    /* Robot mascot */
-    .robot-float{position:fixed;right:40px;bottom:40px;z-index:9999;width:120px;height:120px;background:linear-gradient(135deg,#ffffff,#f0f9ff);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.3s;animation:float 4s ease-in-out infinite}
-    .robot-float:hover{transform:scale(1.1) translateY(-5px)}
-    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)}}
-    
-    /* Section styling */
-    section{padding:6rem 2rem;position:relative}
-    .container{max-width:1200px;margin:0 auto}
-    h2{font-size:clamp(2rem,4vw,3rem);font-weight:800;margin-bottom:3rem;text-align:center;background:linear-gradient(90deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    
-    /* Features cards */
-    .features{background:white}
-    .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:2rem}
-    .feature-card{padding:2rem;border-radius:16px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);border:1px solid rgba(14,165,233,0.1);transition:all 0.5s;opacity:0;transform:translateY(40px)}
-    .feature-card.animate{opacity:1;transform:translateY(0)}
-    .feature-card:hover{transform:translateY(-10px);box-shadow:0 20px 50px rgba(14,165,233,0.15)}
-    .feature-icon{width:60px;height:60px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;font-size:2rem}
-    .feature-card h3{font-size:1.5rem;margin-bottom:1rem;color:var(--dark)}
-    .feature-card p{color:var(--muted);line-height:1.7}
-    
-    /* Workflow timeline */
-    .workflow{background:linear-gradient(135deg,#f8fafc 0%,#e0f2fe 100%)}
-    .timeline{position:relative;padding:2rem 0}
-    .timeline::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--primary),var(--secondary));transform:translateX(-50%)}
-    .timeline-item{display:flex;align-items:center;margin:3rem 0;opacity:0;transform:translateX(-50px)}
-    .timeline-item.animate{opacity:1;transform:translateX(0);transition:all 0.7s ease-out}
-    .timeline-item:nth-child(even){flex-direction:row-reverse}
-    .timeline-item:nth-child(even){transform:translateX(50px)}
-    .timeline-content{flex:1;padding:2rem;background:white;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.08);margin:0 2rem}
-    .timeline-content h3{color:var(--primary);margin-bottom:0.5rem}
-    .timeline-dot{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));border:4px solid white;box-shadow:0 0 0 4px rgba(14,165,233,0.2);z-index:10}
-    
-    /* Architecture diagram */
-    .architecture{background:var(--dark);color:white}
-    .arch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:2rem;margin-top:3rem}
-    .arch-card{padding:2rem;background:rgba(255,255,255,0.05);border-radius:16px;border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(10px);transform:scale(0.9);opacity:0;transition:all 0.6s}
-    .arch-card.animate{transform:scale(1);opacity:1}
-    .arch-card h3{color:var(--accent);margin-bottom:1rem}
-    .arch-card ul{list-style:none;padding:0}
-    .arch-card li{padding:0.5rem 0;color:rgba(255,255,255,0.7);border-bottom:1px solid rgba(255,255,255,0.1)}
-    .arch-card li:last-child{border:none}
-    
-    /* Tech stack */
-    .tech-stack{background:white}
-    .tech-grid{display:flex;flex-wrap:wrap;gap:1.5rem;justify-content:center;margin-top:3rem}
-    .tech-badge{padding:1rem 2rem;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-radius:50px;font-weight:700;color:var(--dark);border:2px solid transparent;transition:all 0.4s;opacity:0;transform:rotate(-5deg) scale(0.8)}
-    .tech-badge.animate{opacity:1;transform:rotate(0) scale(1)}
-    .tech-badge:hover{border-color:var(--primary);transform:translateY(-5px) scale(1.05)}
-    
-    /* Stats section */
-    .stats{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;text-align:center}
-    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:3rem;margin-top:3rem}
-    .stat-card{opacity:0;transform:translateY(30px)}
-    .stat-card.animate{opacity:1;transform:translateY(0);transition:all 0.6s}
-    .stat-number{font-size:3rem;font-weight:900;margin-bottom:0.5rem}
-    .stat-label{font-size:1.1rem;opacity:0.9}
-    
-    /* CTA Section */
-    .cta{background:linear-gradient(135deg,#1e293b,#0f172a);color:white;text-align:center;padding:8rem 2rem}
-    .cta h2{color:white}
-    .cta p{font-size:1.3rem;opacity:0.9;margin-bottom:2rem}
-    
-    /* Responsive */
-    @media (max-width:768px){
-      .timeline::before{left:20px}
-      .timeline-item,.timeline-item:nth-child(even){flex-direction:column;text-align:center}
-      .timeline-content{margin:1rem 0}
-      .robot-float{width:80px;height:80px;right:20px;bottom:20px}
-    }
-    
-    /* Scroll animations */
-    .scroll-reveal{opacity:0;transform:translateY(50px);transition:all 0.8s ease-out}
-    .scroll-reveal.revealed{opacity:1;transform:translateY(0)}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Pilot AI — BRASIL</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0a; color: #fff; }
+        .slide {
+            width: 100vw; height: 100vh;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 60px 80px;
+            scroll-snap-align: start;
+            position: relative;
+        }
+        html { scroll-snap-type: y mandatory; overflow-y: scroll; scroll-behavior: smooth; }
+        .slide-1 { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
+        .slide-2 { background: linear-gradient(135deg, #2d1b1b 0%, #1a0000 40%, #1a1a2e 100%); }
+        .slide-3 { background: linear-gradient(135deg, #0a1628 0%, #1a2940 50%, #0f3460 100%); }
+        .slide-4 { background: linear-gradient(135deg, #1a1a2e 0%, #0f2a3e 50%, #0a1628 100%); }
+        .slide-5 { background: linear-gradient(135deg, #0a2810 0%, #1a3a20 50%, #1a2e1a 100%); }
+        .slide-6 { background: linear-gradient(135deg, #1a1a2e 0%, #2e1a4a 50%, #0f3460 100%); }
+
+        h1 { font-size: 3.4em; font-weight: 700; margin-bottom: 20px; text-align: center; }
+        h2 { font-size: 2.4em; font-weight: 600; margin-bottom: 30px; color: #60a5fa; text-align: center; }
+        h3 { font-size: 1.3em; font-weight: 400; margin-bottom: 20px; color: #94a3b8; text-align: center; }
+        .subtitle { font-size: 1.6em; color: #94a3b8; margin-bottom: 40px; text-align: center; line-height: 1.5; }
+        .highlight { color: #f59e0b; font-weight: 700; }
+        .accent { color: #60a5fa; }
+        .danger { color: #ef4444; font-weight: 600; }
+        .success { color: #34d399; font-weight: 600; }
+
+        table { border-collapse: collapse; margin: 20px 0; width: 100%; max-width: 950px; }
+        th, td { padding: 16px 22px; text-align: left; border-bottom: 1px solid #334155; font-size: 1em; }
+        th { background: rgba(96, 165, 250, 0.08); color: #60a5fa; font-weight: 600; }
+        tr:hover { background: rgba(255,255,255,0.03); }
+
+        .pipeline {
+            background: rgba(15, 52, 96, 0.3); border: 1px solid #334155;
+            border-radius: 16px; padding: 35px 45px; max-width: 780px;
+            font-size: 1em; line-height: 2.1;
+        }
+        .step { display: flex; align-items: center; gap: 14px; }
+        .num {
+            background: #60a5fa; color: #0a0a0a; width: 30px; height: 30px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.85em; flex-shrink: 0;
+        }
+
+        .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; max-width: 950px; }
+        .metric-card {
+            background: rgba(255,255,255,0.04); border: 1px solid #334155;
+            border-radius: 16px; padding: 28px; text-align: center;
+        }
+        .metric-card .value { font-size: 2.8em; font-weight: 700; color: #34d399; }
+        .metric-card .label { font-size: 0.95em; color: #94a3b8; margin-top: 10px; line-height: 1.4; }
+
+        .usecase {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0; max-width: 1000px; width: 100%;
+            border: 1px solid #334155; border-radius: 16px; overflow: hidden;
+        }
+        .usecase-before, .usecase-after {
+            padding: 35px 40px;
+        }
+        .usecase-before { background: rgba(239, 68, 68, 0.05); border-right: 1px solid #334155; }
+        .usecase-after { background: rgba(52, 211, 153, 0.05); }
+        .usecase-before h4 { color: #ef4444; margin-bottom: 18px; font-size: 1.2em; }
+        .usecase-after h4 { color: #34d399; margin-bottom: 18px; font-size: 1.2em; }
+        .usecase-before li, .usecase-after li {
+            list-style: none; padding: 8px 0; font-size: 0.95em; color: #cbd5e1; line-height: 1.5;
+        }
+        .usecase-before li::before { content: "✗ "; color: #ef4444; }
+        .usecase-after li::before { content: "✓ "; color: #34d399; }
+        .usecase-scenario {
+            background: rgba(96, 165, 250, 0.08); border: 1px solid #334155;
+            border-radius: 12px; padding: 18px 28px; margin-bottom: 24px;
+            max-width: 1000px; width: 100%; text-align: center;
+        }
+        .usecase-scenario strong { color: #f59e0b; }
+
+        .roadmap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; max-width: 1000px; }
+        .roadmap-col { background: rgba(255,255,255,0.03); border: 1px solid #334155; border-radius: 14px; padding: 28px; }
+        .roadmap-col h4 { color: #f59e0b; margin-bottom: 18px; font-size: 1.15em; }
+        .roadmap-col li { list-style: none; padding: 7px 0; font-size: 0.92em; color: #cbd5e1; }
+        .roadmap-col li::before { content: "→ "; color: #60a5fa; }
+
+        .tag {
+            display: inline-block; background: rgba(96, 165, 250, 0.12);
+            border: 1px solid rgba(96, 165, 250, 0.4); border-radius: 20px; padding: 5px 16px;
+            font-size: 0.85em; margin: 4px;
+        }
+        .nav {
+            position: fixed; bottom: 30px; right: 30px;
+            display: flex; gap: 8px; z-index: 100;
+        }
+        .nav a {
+            width: 12px; height: 12px; border-radius: 50%;
+            background: rgba(255,255,255,0.25); display: block; transition: background 0.3s;
+        }
+        .nav a:hover { background: #60a5fa; }
+        .footer { position: absolute; bottom: 30px; left: 80px; font-size: 0.8em; color: #475569; }
+        .quote {
+            font-size: 1.2em; font-style: italic; color: #cbd5e1; max-width: 700px;
+            text-align: center; margin-top: 30px; line-height: 1.6;
+            border-left: 3px solid #60a5fa; padding-left: 20px;
+        }
+    </style>
 </head>
 <body>
-  
-  <!-- Hero Section -->
-  <section class="hero">
-      <div class="hero-content">
-      <h1>AI Support Agent</h1>
-      <p>Assistant intelligent N3 pour diagnostiquer, analyser, classer et résoudre les incidents BRASIL — avec Classification ML Hybride (FAISS + TF-IDF + keyword boost)</p>
-      <div class="hero-cta">
-        <a href="#features" class="btn btn-primary">Découvrir</a>
-        <a href="#workflow" class="btn btn-secondary">Comment ça marche</a>
-        
-      </div>
+
+<!-- SLIDE 1 — Accroche -->
+<section class="slide slide-1" id="s1">
+    <h1>🤖 Support Pilot AI</h1>
+    <p class="subtitle">
+        Nos experts passent <span class="highlight">80% de leur temps à chercher</span><br>
+        et 20% à résoudre.<br><br>
+        <span style="color:#fff; font-weight:600;">Et si on inversait ?</span>
+    </p>
+    <div style="margin-top: 30px;">
+        <span class="tag">FastAPI</span>
+        <span class="tag">OpenRama</span>
+        <span class="tag">Qdrant</span>
+        <span class="tag">Neo4j</span>
+        <span class="tag">React</span>
     </div>
-  </section>
-  
-  <!-- Features Section -->
-  <section id="features" class="features">
-    <div class="container">
-      <h2>Fonctionnalités Principales</h2>
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon">🔬</div>
-          <h3>Pipeline N3 Knowledge Engineering</h3>
-          <p>Transforme automatiquement les logs BRASIL en procédures de diagnostic structurées, indexées dans Qdrant avec scoring de confiance.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🧠</div>
-          <h3>Moteur Diagnostic N3</h3>
-          <p>Détecte les exceptions BRASIL connues (DslamClosed, UnknownMRT, BusinessRule…) et récupère la procédure N3 adaptée avec niveau de confiance.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📂</div>
-          <h3>Log Ingestion Intelligente</h3>
-          <p>Parse 7 formats de logs BRASIL (connectorCL, transactions, sollicitations…), classifie 30+ types d'erreurs, filtre le bruit applicatif.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🔍</div>
-          <h3>Collecte Automatique</h3>
-          <p>Rassemble automatiquement les données nécessaires : logs, schémas, code source pour une analyse complète du système.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">⚙️</div>
-          <h3>Analyse Intelligente</h3>
-          <p>Transforme les données brutes en informations exploitables grâce à des workers asynchrones et des pipelines ETL avancés.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🎯</div>
-          <h3>Recherche Sémantique</h3>
-          <p>Organise le savoir dans deux collections Qdrant (<code>brasil_log_patterns</code>, <code>brasil_procedures</code>) pour retrouver les réponses instantanément.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">💬</div>
-          <h3>Chatbot Contextualisé</h3>
-          <p>Fournit des réponses utiles et des recommandations actionnables basées sur le contexte de votre système, enrichies par le moteur diagnostic N3.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">✅</div>
-          <h3>Validation Continue</h3>
-          <p>Amélioration itérative grâce aux retours d'experts et aux métriques de qualité en temps réel.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🤖</div>
-          <h3>Classification ML Hybride</h3>
-          <p>Classifie automatiquement vos tickets par cause métier grâce à un pipeline 9 étapes combinant FAISS (sémantique), TF-IDF et keyword boost BRASIL. Colonne texte source et max_features configurables depuis l'UI.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">✏️</div>
-          <h3>Correction Interactive</h3>
-          <p>Carte de correction contextuelle affichant <code>user_sig</code> et <code>inc_solution</code> pour chaque prédiction incertaine. Seuil de confiance ajustable, feedback loop automatique pour améliorer le modèle.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📊</div>
-          <h3>Observabilité</h3>
-          <p>Dashboards et métriques pour suivre les performances, les diagnostics et l'évolution du système.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🧾</div>
-          <h3>Intégration Jira</h3>
-          <p>Synchronisez vos tickets Jira pour enrichir le knowledge graph et rechercher des incidents similaires directement depuis le chatbot.</p>
-        </div>
-      </div>
+    <p class="footer">Juin 2026 — Orange / BRASIL</p>
+</section>
+
+<!-- SLIDE 2 — Problématique -->
+<section class="slide slide-2" id="s2">
+    <h2>⚠️ Le problème</h2>
+    <h3>Chaque incident N3 = une enquête manuelle coûteuse</h3>
+    <table>
+        <tr><th>Ce qu'on observe</th><th>Ce que ça coûte</th></tr>
+        <tr><td><span class="danger">279 incidents/an</span> sur BRASIL, 10 typologies récurrentes</td><td>Équipe N3 saturée, escalades en chaîne</td></tr>
+        <tr><td>Diagnostic moyen : <span class="danger">45 minutes</span> par incident</td><td>SLA dépassés, clients impactés</td></tr>
+        <tr><td>5 sources à croiser manuellement (FR, code, logs, BDD, Jira)</td><td>Dépendance aux 2-3 experts séniors</td></tr>
+        <tr><td>Capitalisation manquante des résolutions passées</td><td>Les mêmes problèmes reviennent sans cesse</td></tr>
+        <tr><td>Onboarding d'un nouvel expert : <span class="danger">2 mois en moyenne</span></td><td>Coût de formation élevé, rotation fragile</td></tr>
+    </table>
+    <p class="quote">
+        « On ne manque pas de compétences — on manque de temps pour les appliquer. »
+    </p>
+    <p class="footer">Slide 2/7</p>
+</section>
+
+<!-- SLIDE 3 — Solution -->
+<section class="slide slide-3" id="s3">
+    <h2>🏗️ Notre solution</h2>
+    <h3>Un assistant IA qui fait le travail de recherche à la place de l'expert</h3>
+    <div class="pipeline">
+        <div class="step"><span class="num">1</span> <strong>Comprend</strong> la question — détecte l'intent et l'entité réseau</div>
+        <div class="step"><span class="num">2</span> <strong>Cherche</strong> dans 210 fiches de résolution indexées</div>
+        <div class="step"><span class="num">3</span> <strong>Interroge</strong> la BDD et les logs en temps réel (SSH, lecture seule)</div>
+        <div class="step"><span class="num">4</span> <strong>Corrèle</strong> les sources — classe les hypothèses par pertinence</div>
+        <div class="step"><span class="num">5</span> <strong>Valide</strong> — bloque toute information non prouvée</div>
+        <div class="step"><span class="num">6</span> <strong>Répond</strong> — cause racine + preuves + procédure à suivre</div>
+        <div class="step"><span class="num">7</span> <strong>Apprend</strong> — capitalise chaque résolution pour le futur</div>
     </div>
-  </section>
-  
-  <!-- Workflow Timeline -->
-  <section id="workflow" class="workflow">
-    <div class="container">
-      <h2>Workflow Complet</h2>
-      <div class="timeline">
-        <div class="timeline-item">
-          <div class="timeline-content">
-            <h3>1. Collecte</h3>
-            <p>Ingestion automatique des logs BRASIL (connectorCL, transactions, sollicitations), introspection DB, clonage Git et détection des endpoints.</p>
-          </div>
-          <div class="timeline-dot"></div>
-          <div class="timeline-content" style="opacity:0"></div>
+    <p style="margin-top: 24px; color: #94a3b8; font-size: 1.05em;">
+        🔒 Mode <strong>lecture seule</strong> — l'IA cherche et propose, l'humain décide et agit.
+    </p>
+    <p class="footer">Slide 3/7</p>
+</section>
+
+<!-- SLIDE 4 — Architecture technique -->
+<section class="slide slide-4" id="s4">
+    <h2>⚙️ Architecture</h2>
+    <div style="display: flex; gap: 40px; align-items: center; max-width: 1050px; width: 100%;">
+        <!-- Schema -->
+        <div style="flex: 1; font-family: 'Fira Code', monospace; font-size: 0.85em; line-height: 1.8; background: rgba(15,52,96,0.25); border: 1px solid #334155; border-radius: 14px; padding: 28px 32px;">
+            <div style="color: #94a3b8; margin-bottom: 12px;">┌─────────────────────────────────────┐</div>
+            <div><span style="color:#f59e0b;">│</span> <strong style="color:#fff;">React</strong> <span style="color:#64748b;">(Frontend)</span></div>
+            <div style="color: #94a3b8;">└──────────────┬──────────────────────┘</div>
+            <div style="color: #94a3b8;">               │ REST API</div>
+            <div style="color: #94a3b8;">┌──────────────▼──────────────────────┐</div>
+            <div><span style="color:#f59e0b;">│</span> <strong style="color:#fff;">FastAPI</strong> <span style="color:#64748b;">(Backend Python)</span></div>
+            <div style="color: #94a3b8;">├─────────────────────────────────────┤</div>
+            <div><span style="color:#60a5fa;">│</span> L1 — Intent Resolver</div>
+            <div><span style="color:#60a5fa;">│</span> L2 — Knowledge Layer (RAG)</div>
+            <div><span style="color:#60a5fa;">│</span> L3 — Conversation State</div>
+            <div><span style="color:#60a5fa;">│</span> L4 — Live Diagnostics (SSH)</div>
+            <div><span style="color:#60a5fa;">│</span> L5 — Correlation Engine</div>
+            <div><span style="color:#60a5fa;">│</span> L6 — Validation Layer</div>
+            <div><span style="color:#60a5fa;">│</span> L7 — Response Generator</div>
+            <div><span style="color:#60a5fa;">│</span> L8 — Learning Loop</div>
+            <div style="color: #94a3b8;">└───┬─────────┬─────────┬────────┬───┘</div>
+            <div style="color: #94a3b8;">    │         │         │        │</div>
+            <div style="display:flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+                <span style="color:#34d399;">Qdrant</span><span style="color:#64748b;"> │ </span>
+                <span style="color:#34d399;">Neo4j</span><span style="color:#64748b;"> │ </span>
+                <span style="color:#34d399;">OpenRama</span><span style="color:#64748b;"> │ </span>
+                <span style="color:#34d399;">SSH/BDD</span>
+            </div>
         </div>
-        <div class="timeline-item">
-          <div class="timeline-content" style="opacity:0"></div>
-          <div class="timeline-dot"></div>
-          <div class="timeline-content">
-            <h3>2. Log Ingestion &amp; Classification</h3>
-            <p>7 stratégies de parsing, 30+ classificateurs d'erreurs BRASIL, filtrage du bruit applicatif (rollbacks, stack traces inutiles).</p>
-          </div>
+        <!-- Technos -->
+        <div style="flex: 0.7;">
+            <table style="font-size: 0.9em; max-width: 350px;">
+                <tr><th>Couche</th><th>Techno</th></tr>
+                <tr><td>Frontend</td><td>React + Tailwind</td></tr>
+                <tr><td>API</td><td>FastAPI (Python)</td></tr>
+                <tr><td>LLM</td><td>OpenRama</td></tr>
+                <tr><td>Vector DB</td><td>Qdrant</td></tr>
+                <tr><td>Graphe</td><td>Neo4j</td></tr>
+                <tr><td>Live access</td><td>SSH (Paramiko)</td></tr>
+                <tr><td>BDD prod</td><td>PostgreSQL (read-only)</td></tr>
+                <tr><td>Embeddings</td><td>sentence-transformers</td></tr>
+            </table>
         </div>
-        <div class="timeline-item">
-          <div class="timeline-content">
-            <h3>3. Knowledge Extraction N3</h3>
-            <p>Mining de templates d'erreurs, calcul de trust score (source ×0.35 + fréquence ×0.25 + validation ×0.30 + fraîcheur ×0.10), injection du catalogue BRASIL.</p>
-          </div>
-          <div class="timeline-dot"></div>
-          <div class="timeline-content" style="opacity:0"></div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-content" style="opacity:0"></div>
-          <div class="timeline-dot"></div>
-          <div class="timeline-content">
-            <h3>4. Génération de Procédures N3</h3>
-            <p>Croisement clusters tickets × log knowledge records → 27 procédures structurées (PROC-BRASIL-GEN-XXXX) avec étapes diagnostiques, causes, résolutions et escalade.</p>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-content">
-            <h3>5. Indexation Qdrant</h3>
-            <p>Vectorisation et indexation dans <code>brasil_log_patterns</code> (12 records) et <code>brasil_procedures</code> (27 procédures) pour retrieval sémantique.</p>
-          </div>
-          <div class="timeline-dot"></div>
-          <div class="timeline-content" style="opacity:0"></div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-content" style="opacity:0"></div>
-          <div class="timeline-dot"></div>
-          <div class="timeline-content">
-            <h3>6. Diagnostic N3 en temps réel</h3>
-            <p>Détection d'exceptions → retrieval procédure (catalogue inline ou Qdrant) → scoring de confiance → instruction anti-hallucination injectée au LLM.</p>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-content">
-            <h3>7. Classification ML Hybride</h3>
-            <p>Upload CSV → préparation → entraînement FAISS + TF-IDF sur la colonne texte choisie (<code>user_sig</code>, <code>inc_solution</code>…) → prédictions avec score de confiance → correction interactive via carte contextuelle.</p>
-          </div>
-          <div class="timeline-dot"></div>
-          <div class="timeline-content" style="opacity:0"></div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-content" style="opacity:0"></div>
-          <div class="timeline-dot"></div>
-          <div class="timeline-content">
-            <h3>8. Validation</h3>
-            <p>Revue humaine, corrections persistées et amélioration continue basée sur les feedbacks et le re-training du trust score.</p>
-          </div>
-        </div>
-      </div>
     </div>
-  </section>
-  
-  <!-- Architecture -->
-  <section class="architecture">
-    <div class="container">
-      <h2>Architecture Technique</h2>
-      <div class="arch-grid">
-        <div class="arch-card">
-          <h3>Frontend</h3>
-          <ul>
-            <li>React + TypeScript</li>
-            <li>Vite (build rapide)</li>
-            <li>TailwindCSS</li>
-            <li>Interface responsive</li>
-          </ul>
-        </div>
-        <div class="arch-card">
-          <h3>Backend API</h3>
-          <ul>
-            <li>FastAPI (Python)</li>
-            <li>Endpoints RESTful</li>
-            <li>Validation Pydantic</li>
-            <li>Logs structurés</li>
-          </ul>
-        </div>
-        <div class="arch-card">
-          <h3>Pipeline N3</h3>
-          <ul>
-            <li>log_knowledge_extractor.py</li>
-            <li>procedure_generator.py</li>
-            <li>knowledge_indexer.py</li>
-            <li>Trust scoring composite</li>
-          </ul>
-        </div>
-        <div class="arch-card">
-          <h3>Diagnostic Engine</h3>
-          <ul>
-            <li>DiagnosticEngine (async)</li>
-            <li>Catalogue inline (5 proc.)</li>
-            <li>Qdrant vector retrieval</li>
-            <li>Confiance HIGH/MED/LOW</li>
-          </ul>
-        </div>
-        <div class="arch-card">
-          <h3>Log Ingestion</h3>
-          <ul>
-            <li>brasil_error (Spring logs)</li>
-            <li>brasil_transaction (XML KO)</li>
-            <li>brasil_solicitation (stats)</li>
-            <li>30+ classificateurs métier</li>
-          </ul>
-        </div>
-        <div class="arch-card">
-          <h3>Bases de Données</h3>
-          <ul>
-            <li>PostgreSQL (métadonnées)</li>
-            <li>Qdrant brasil_log_patterns</li>
-            <li>Qdrant brasil_procedures</li>
-            <li>Redis (cache)</li>
-          </ul>
-        </div>
-        <div class="arch-card">
-          <h3>Classification ML</h3>
-          <ul>
-            <li>FAISS (cosinus, dim=384)</li>
-            <li>TF-IDF + keyword boost</li>
-            <li>MiniLM-L12-v2 embeddings</li>
-            <li>9-step hybrid pipeline</li>
-          </ul>
-        </div>
-        <div class="arch-card">
-          <h3>LLM &amp; IA</h3>
-          <ul>
-            <li>Groq API (inference)</li>
-            <li>DiagnosticEngine N3</li>
-            <li>HDBSCAN clustering</li>
-            <li>Trust scoring</li>
-          </ul>
-        </div>
-        <div class="arch-card">
-          <h3>Infrastructure</h3>
-          <ul>
-            <li>Docker containers</li>
-            <li>CI/CD pipelines</li>
-            <li>Monitoring (Prometheus)</li>
-            <li>Scalable horizontalement</li>
-          </ul>
-        </div>
-      </div>
+    <p class="footer">Slide 4/7</p>
+</section>
+
+<!-- SLIDE 5 — Cas d'utilisation -->
+<section class="slide slide-5" id="s5">
+    <h2>💡 Cas d'utilisation concret</h2>
+    <div class="usecase-scenario">
+        Un opérateur signale : <strong>« Suppression du DSLAM DSROB362 impossible »</strong>
     </div>
-  </section>
-  
-  <!-- Tech Stack -->
-  <section class="tech-stack">
-    <div class="container">
-      <h2>Technologies Utilisées</h2>
-      <div class="tech-grid">
-        <div class="tech-badge">Python</div>
-        <div class="tech-badge">FastAPI</div>
-        <div class="tech-badge">React</div>
-        <div class="tech-badge">TypeScript</div>
-        <div class="tech-badge">FAISS</div>
-        <div class="tech-badge">scikit-learn</div>
-        <div class="tech-badge">Qdrant</div>
-        <div class="tech-badge">PostgreSQL</div>
-        <div class="tech-badge">Redis</div>
-        <div class="tech-badge">Docker</div>
-        <div class="tech-badge">Groq</div>
-        <div class="tech-badge">SentenceTransformers</div>
-        <div class="tech-badge">MiniLM-L12-v2</div>
-        <div class="tech-badge">HDBSCAN</div>
-        <div class="tech-badge">TailwindCSS</div>
-        <div class="tech-badge">Vite</div>
-        <div class="tech-badge">Spring (BRASIL)</div>
-        <div class="tech-badge">TF-IDF</div>
-      </div>
+    <div class="usecase">
+        <div class="usecase-before">
+            <h4>❌ Avant (expert seul)</h4>
+            <ul>
+                <li>Connexion SSH au serveur BDD</li>
+                <li>Recherche manuelle dans plusieurs tables</li>
+                <li>Lecture des logs catalina.out</li>
+                <li>Consultation de 2-3 fiches FR</li>
+                <li>Rédaction de la réponse</li>
+            </ul>
+        </div>
+        <div class="usecase-after">
+            <h4>✅ Après (expert + IA)</h4>
+            <ul>
+                <li>L'IA identifie l'entité DSROB362</li>
+                <li>Interroge la BDD automatiquement</li>
+                <li>Trouve la FR applicable</li>
+                <li>Cite la méthode <code>deleteDslam()</code></li>
+                <li>Propose la procédure N3 complète</li>
+                <li>L'expert valide et agit</li>
+            </ul>
+        </div>
     </div>
-  </section>
-  
-  <!-- Stats -->
-  <section class="stats">
-    <div class="container">
-      <h2>Performance & Impact</h2>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-number">27</div>
-          <div class="stat-label">Procédures N3 générées</div>
+    <p class="footer">Slide 5/7</p>
+</section>
+
+<!-- SLIDE 6 — Gains -->
+<section class="slide slide-5" id="s6">
+    <h2>📈 Gains attendus</h2>
+    <h3>Impact mesurable dès les premiers mois</h3>
+    <div class="metrics">
+        <div class="metric-card">
+            <div class="value">-89%</div>
+            <div class="label">Temps de diagnostic<br><small>45 min → 5 min</small></div>
         </div>
-        <div class="stat-card">
-          <div class="stat-number">30+</div>
-          <div class="stat-label">Classificateurs d'erreurs BRASIL</div>
+        <div class="metric-card">
+            <div class="value">~30%</div>
+            <div class="label">Incidents déviés<br><small>résolus sans escalade </small></div>
         </div>
-        <div class="stat-card">
-          <div class="stat-number">21</div>
-          <div class="stat-label">Classes ML (inc_cause BRASIL)</div>
+        <div class="metric-card">
+            <div class="value">×4</div>
+            <div class="label">Onboarding accéléré<br><small>3 mois → 3 semaines</small></div>
         </div>
-        <div class="stat-card">
-          <div class="stat-number">9</div>
-          <div class="stat-label">Étapes pipeline ML hybride</div>
+        <div class="metric-card">
+            <div class="value">100%</div>
+            <div class="label">Capitalisation<br><small>chaque résolution mémorisée</small></div>
         </div>
-        <div class="stat-card">
-          <div class="stat-number">1 133</div>
-          <div class="stat-label">Événements de logs classifiés</div>
+        <div class="metric-card">
+            <div class="value">0</div>
+            <div class="label">Risque prod<br><small>lecture seule, aucune écriture</small></div>
         </div>
-        <div class="stat-card">
-          <div class="stat-number">5</div>
-          <div class="stat-label">Procédures inline (offline)</div>
+        <div class="metric-card">
+            <div class="value">24/7</div>
+            <div class="label">Disponibilité<br><small>pas de dépendance horaire</small></div>
         </div>
-      </div>
     </div>
-  </section>
-  
-  <!-- CTA -->
-  <section class="cta">
-    <div class="container">
-      <h2>Prêt à transformer votre support technique ?</h2>
-      <p>Déployez AI Support Agent et révolutionnez la résolution de problèmes dans votre organisation</p>
-      <div class="hero-cta">
-        <a href="#" class="btn btn-primary">Démarrer maintenant</a>
-        <a href="documentation.html" class="btn btn-secondary">Documentation</a>
-      </div>
+    <p class="footer">Slide 6/7</p>
+</section>
+
+<!-- SLIDE 7 — Vision -->
+<section class="slide slide-6" id="s7">
+    <h2>🔮 Et demain ?</h2>
+    <div class="roadmap">
+        <div class="roadmap-col">
+            <h4>Court terme</h4>
+            <ul>
+                <li>Intégration Jira bidirectionnelle</li>
+                <li>Dashboard incidents temps réel</li>
+                <li>Fine-tuning modèle BRASIL</li>
+                <li>Alertes proactives</li>
+            </ul>
+        </div>
+        <div class="roadmap-col">
+            <h4>Moyen terme</h4>
+            <ul>
+                <li>Mode semi-autonome (correction avec validation humaine)</li>
+                <li>Extension multi-applications</li>
+                <li>Analyse prédictive</li>
+            </ul>
+        </div>
+        <div class="roadmap-col">
+            <h4>Long terme</h4>
+            <ul>
+                <li>Prédiction d'incidents avant impact</li>
+                <li>Auto-remédiation supervisée</li>
+                <li>Génération auto de documentation</li>
+                <li>Marketplace de plugins IA</li>
+            </ul>
+        </div>
     </div>
-  </section>
-  
-  <!-- Robot mascot -->
-  <div class="robot-float">
-    <svg viewBox="0 0 160 160" width="80" height="80">
-      <defs>
-        <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#f8fbff"/>
-          <stop offset="1" stop-color="#e6f5ff"/>
-        </linearGradient>
-        <linearGradient id="g2" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#0ea5e9"/>
-          <stop offset="1" stop-color="#0284c7"/>
-        </linearGradient>
-      </defs>
-      <g>
-        <rect x="18" y="18" width="124" height="86" rx="18" fill="url(#g1)" stroke="#bfdbfe" stroke-width="2"/>
-        <rect x="34" y="30" width="92" height="58" rx="12" fill="url(#g2)"/>
-        <g id="eyes">
-          <ellipse cx="60" cy="50" rx="10" ry="8" fill="#0c4a6e" opacity="0.85"/>
-          <ellipse cx="100" cy="50" rx="10" ry="8" fill="#0c4a6e" opacity="0.85"/>
-          <circle id="pupilL" cx="60" cy="50" r="4" fill="#7dd3fc"/>
-          <circle id="pupilR" cx="100" cy="50" r="4" fill="#7dd3fc"/>
-          <path d="M78 72c2 4 8 4 10 0" fill="#7dd3fc" opacity="0.95"/>
-        </g>
-      </g>
-      <g transform="translate(40,88)">
-        <ellipse cx="40" cy="34" rx="40" ry="34" fill="#f3f9fb"/>
-        <rect x="8" y="6" width="64" height="36" rx="12" fill="#eff6fb" stroke="#dbeafe"/>
-      </g>
-    </svg>
-  </div>
-  
-  <script>
-    // Scroll animations
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('animate');
-        }
-      });
-    }, { threshold: 0.1 });
-    
-    // Observe all cards and timeline items
-    document.querySelectorAll('.feature-card, .timeline-item, .arch-card, .tech-badge, .stat-card').forEach(el => {
-      observer.observe(el);
-    });
-    
-    // Stagger animations for tech badges
-    const techBadges = document.querySelectorAll('.tech-badge');
-    techBadges.forEach((badge, i) => {
-      badge.style.transitionDelay = `${i * 0.05}s`;
-    });
-    
-    // Robot gaze tracking
-    const robot = document.querySelector('.robot-float');
-    const pupilL = document.getElementById('pupilL');
-    const pupilR = document.getElementById('pupilR');
-    
-    document.addEventListener('mousemove', (e) => {
-      if (!robot || !pupilL || !pupilR) return;
-      const robotRect = robot.getBoundingClientRect();
-      const centerX = robotRect.left + robotRect.width / 2;
-      const centerY = robotRect.top + robotRect.height / 2;
-      const dx = (e.clientX - centerX) / window.innerWidth * 3;
-      const dy = (e.clientY - centerY) / window.innerHeight * 2;
-      pupilL.style.transform = `translate(${dx}px, ${dy}px)`;
-      pupilR.style.transform = `translate(${dx}px, ${dy}px)`;
-    });
-    
-    // Smooth scroll
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-    });
-    
-    // Parallax effect for hero
-    window.addEventListener('scroll', () => {
-      const scrolled = window.pageYOffset;
-      const hero = document.querySelector('.hero-content');
-      if (hero) {
-        hero.style.transform = `translateY(${scrolled * 0.5}px)`;
-        hero.style.opacity = 1 - (scrolled / 500);
-      }
-    });
-  </script>
+    <p style="margin-top: 45px; font-size: 1.3em; text-align: center;">
+        🎯 <em>L'IA ne remplace pas l'expert — elle lui <span class="highlight">rend son temps</span>.</em>
+    </p>
+    <p class="footer">Slide 7/7</p>
+</section>
+
+<nav class="nav">
+    <a href="#s1"></a><a href="#s2"></a><a href="#s3"></a><a href="#s4"></a><a href="#s5"></a><a href="#s6"></a><a href="#s7"></a>
+</nav>
+
 </body>
 </html>
+

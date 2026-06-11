@@ -1,0 +1,698 @@
+{
+  "TEST_01": {
+    "question": "Suppression équipement DSROB362 impossible",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "dépendances MRT",
+        "services actifs",
+        "données résiduelles",
+        "ManageDslamBusinessImpl.deleteDslam()"
+      ],
+      "forbidden_patterns": [
+        "DELETE ",
+        "UPDATE ",
+        "hypothèse",
+        "je pense"
+      ]
+    },
+    "expected": {
+      "root_cause": "Suppression bloquée par dépendances actives (MRT/services/données résiduelles)",
+      "workflow": "delete_dslam",
+      "evidence": [
+        "dépendances MRT",
+        "services actifs",
+        "données résiduelles"
+      ],
+      "code_reference": "ManageDslamBusinessImpl.deleteDslam()",
+      "sources": [
+        "LIVE_DB",
+        "CODE",
+        "FR"
+      ]
+    }
+  },
+  "TEST_02": {
+    "question": "Quelle est la méthode Java qui supprime un DSLAM ?",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "ManageDslamBusinessImpl",
+        "deleteDslam()"
+      ],
+      "forbidden_patterns": [
+        "procédure métier",
+        "workflow FR"
+      ]
+    },
+    "expected": {
+      "root_cause": "Requête de localisation code (pas de diagnostic incident)",
+      "workflow": "code_lookup_only",
+      "evidence": [
+        "classe",
+        "méthode",
+        "fichier",
+        "ligne"
+      ],
+      "code_reference": "ManageDslamBusinessImpl.deleteDslam()",
+      "sources": [
+        "CODE"
+      ]
+    }
+  },
+  "TEST_03": {
+    "question": "Comment créer un VLAN ?",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "ManageCreationVlanBusinessImpl.creerVlan()"
+      ],
+      "forbidden_patterns": [
+        "http://",
+        "https://",
+        "menu IHM",
+        "UPDATE "
+      ]
+    },
+    "expected": {
+      "root_cause": "Demande de workflow de création VLAN",
+      "workflow": "create_vlan",
+      "evidence": [
+        "validation d'entrée",
+        "contrôle ressources",
+        "création",
+        "activation",
+        "vérification"
+      ],
+      "code_reference": "ManageCreationVlanBusinessImpl.creerVlan()",
+      "sources": [
+        "CODE",
+        "FR"
+      ]
+    }
+  },
+  "TEST_04": {
+    "question": "Pourquoi un VLAN est occupé ?",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "workflow de diagnostic"
+      ],
+      "forbidden_patterns": [
+        "preuve inventée",
+        "hallucination"
+      ]
+    },
+    "expected": {
+      "root_cause": "Ressources liées/non libérées et compteurs incohérents",
+      "workflow": "vlan_delete_diagnostic",
+      "evidence": [
+        "ressources liées",
+        "dépendances",
+        "compteurs"
+      ],
+      "code_reference": "ManageVlanBusinessImpl.deleteVlan()",
+      "sources": [
+        "LIVE_DB",
+        "FR",
+        "CODE"
+      ]
+    }
+  },
+  "TEST_05": {
+    "question": "Erreur 1300",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "1300"
+      ],
+      "forbidden_patterns": [
+        "SQL inventé"
+      ]
+    },
+    "expected": {
+      "root_cause": "Noeud IP / ORRAHD / IAR / désynchronisation",
+      "workflow": "error_1300_diagnostic_flow",
+      "evidence": [
+        "Noeud IP",
+        "ORRAHD",
+        "IAR",
+        "synchronisation"
+      ],
+      "code_reference": "",
+      "sources": [
+        "LIVE_LOG",
+        "LIVE_DB",
+        "FR"
+      ]
+    }
+  },
+  "TEST_06": {
+    "question": "1201 : Il existe déjà un dossier avec cet IAR",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "1201",
+        "IAR"
+      ],
+      "forbidden_patterns": [
+        "DELETE "
+      ]
+    },
+    "expected": {
+      "root_cause": "Dossier déjà existant pour IAR",
+      "workflow": "error_1201_diagnostic_flow",
+      "evidence": [
+        "IAR",
+        "dossier existant"
+      ],
+      "code_reference": "",
+      "sources": [
+        "LIVE_DB",
+        "FR"
+      ]
+    }
+  },
+  "TEST_07": {
+    "question": "Montre les logs de DSTEL460 aujourd'hui",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "AUCUNE PREUVE DISPONIBLE"
+      ],
+      "forbidden_patterns": [
+        "date inventée",
+        "événement inventé",
+        "client inventé"
+      ]
+    },
+    "expected": {
+      "root_cause": "Extraction de logs en fenêtre temporelle demandée",
+      "workflow": "forensic_logs",
+      "evidence": [
+        "timestamps",
+        "source log",
+        "nb événements"
+      ],
+      "code_reference": "",
+      "sources": [
+        "LIVE_LOG",
+        "SSH"
+      ]
+    }
+  },
+  "TEST_08": {
+    "question": "Depuis quel fichier log proviennent ces informations ?",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "fichier",
+        "serveur"
+      ],
+      "forbidden_patterns": [
+        "réponse générique"
+      ]
+    },
+    "expected": {
+      "root_cause": "Demande de provenance logs",
+      "workflow": "forensic_provenance",
+      "evidence": [
+        "nom fichier",
+        "serveur",
+        "date",
+        "source"
+      ],
+      "code_reference": "",
+      "sources": [
+        "LIVE_LOG",
+        "SSH",
+        "Provenance"
+      ]
+    }
+  },
+  "TEST_09": {
+    "question": "Montre les exceptions détectées",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "Aucune exception disponible"
+      ],
+      "forbidden_patterns": [
+        "exception inventée"
+      ]
+    },
+    "expected": {
+      "root_cause": "Lister uniquement exceptions réellement observées",
+      "workflow": "forensic_exceptions",
+      "evidence": [
+        "exceptions réellement présentes"
+      ],
+      "code_reference": "",
+      "sources": [
+        "LIVE_LOG",
+        "CODE"
+      ]
+    }
+  },
+  "TEST_10": {
+    "question": "Guide moi",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "symptôme",
+        "code erreur",
+        "équipement",
+        "ND"
+      ],
+      "forbidden_patterns": [
+        "diagnostic certain",
+        "cause racine certaine"
+      ]
+    },
+    "expected": {
+      "root_cause": "Mode guidage N3 sans diagnostic prématuré",
+      "workflow": "guided_n3_questioning",
+      "evidence": [
+        "symptôme",
+        "code erreur",
+        "équipement",
+        "ND"
+      ],
+      "code_reference": "",
+      "sources": [
+        "Conversation"
+      ]
+    }
+  },
+  "TEST_11": {
+    "question": "Quelle table est utilisée lors de la suppression d'un DSLAM ?",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "information indisponible"
+      ],
+      "forbidden_patterns": [
+        "table inventée"
+      ]
+    },
+    "expected": {
+      "root_cause": "Réponse uniquement basée sur code/SQL indexé",
+      "workflow": "code_table_lookup",
+      "evidence": [
+        "table",
+        "dslam"
+      ],
+      "code_reference": "ManageDslamBusinessImpl.deleteDslam()",
+      "sources": [
+        "CODE",
+        "LIVE_DB"
+      ]
+    }
+  },
+  "TEST_12": {
+    "question": "Quel workflow est exécuté lors de la création VLAN ?",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "workflow métier"
+      ],
+      "forbidden_patterns": [
+        "étape inventée"
+      ]
+    },
+    "expected": {
+      "root_cause": "Reconstruction du workflow réel create_vlan",
+      "workflow": "create_vlan",
+      "evidence": [
+        "vlan",
+        "création"
+      ],
+      "code_reference": "ManageCreationVlanBusinessImpl.creerVlan()",
+      "sources": [
+        "CODE",
+        "FR"
+      ]
+    }
+  },
+  "TEST_13": {
+    "question": "Pourquoi DSTEL460 n'a plus de VLAN disponible ?",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "FR"
+      ],
+      "forbidden_patterns": [
+        "preuve inventée"
+      ]
+    },
+    "expected": {
+      "root_cause": "Capacité/compteurs/ressources occupées",
+      "workflow": "vlan_capacity_diagnostic",
+      "evidence": [
+        "capacité",
+        "compteurs",
+        "ressources occupées",
+        "FR associé"
+      ],
+      "code_reference": "",
+      "sources": [
+        "LIVE_DB",
+        "FR"
+      ]
+    }
+  },
+  "TEST_14": {
+    "question": "Montre moi la chronologie complète de l'incident",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "chronologie"
+      ],
+      "forbidden_patterns": [
+        "ordre inventé"
+      ]
+    },
+    "expected": {
+      "root_cause": "Timeline fusionnée logs/DB/SSH/FR",
+      "workflow": "forensic_timeline",
+      "evidence": [
+        "logs",
+        "DB",
+        "SSH",
+        "FR",
+        "ordre chronologique"
+      ],
+      "code_reference": "",
+      "sources": [
+        "LIVE_LOG",
+        "LIVE_DB",
+        "SSH",
+        "FR"
+      ]
+    }
+  },
+  "TEST_15": {
+    "question": "Résume cet incident pour le dépositaire",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "non technique"
+      ],
+      "forbidden_patterns": [
+        "jargon BRASIL"
+      ]
+    },
+    "expected": {
+      "root_cause": "Résumé non technique et compréhensible",
+      "workflow": "ticket_summary_non_technical",
+      "evidence": [
+        "message simple",
+        "sans jargon"
+      ],
+      "code_reference": "",
+      "sources": [
+        "Conversation"
+      ]
+    }
+  },
+  "TEST_16": {
+    "question": "Résume cet incident pour les archives N3",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "Cause",
+        "Diagnostic",
+        "Action",
+        "Résultat",
+        "Preuves"
+      ],
+      "forbidden_patterns": [
+        "résumé vague"
+      ]
+    },
+    "expected": {
+      "root_cause": "Résumé technique structuré N3",
+      "workflow": "n3_archive_summary",
+      "evidence": [
+        "Cause",
+        "Diagnostic",
+        "Action",
+        "Résultat",
+        "Preuves"
+      ],
+      "code_reference": "",
+      "sources": [
+        "LIVE_DB",
+        "LIVE_LOG",
+        "CODE",
+        "FR"
+      ]
+    }
+  },
+  "TEST_17": {
+    "question": "Quels tickets Jira similaires existent ?",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "Aucun ticket similaire trouvé"
+      ],
+      "forbidden_patterns": [
+        "ticket inventé"
+      ]
+    },
+    "expected": {
+      "root_cause": "Recherche similaire Jira dépendante du retour backend",
+      "workflow": "jira_similarity_search",
+      "evidence": [
+        "tickets similaires"
+      ],
+      "code_reference": "",
+      "sources": [
+        "INCIDENT",
+        "JIRA"
+      ]
+    }
+  },
+  "TEST_18": {
+    "question": "Pourquoi cette suppression est bloquée ?",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "WHY",
+        "WHICH",
+        "WHERE",
+        "WHAT NEXT"
+      ],
+      "forbidden_patterns": [
+        "réponse générique"
+      ]
+    },
+    "expected": {
+      "root_cause": "Explication WHY/WHICH/WHERE/WHAT NEXT",
+      "workflow": "deletion_blocking_analysis",
+      "evidence": [
+        "WHY",
+        "WHICH",
+        "WHERE",
+        "WHAT NEXT"
+      ],
+      "code_reference": "ManageDslamBusinessImpl.deleteDslam()",
+      "sources": [
+        "LIVE_DB",
+        "CODE",
+        "FR"
+      ]
+    }
+  },
+  "TEST_19": {
+    "question": "Quelle fonction gère la création d'équipement ?",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "Code intelligence"
+      ],
+      "forbidden_patterns": [
+        "procédure métier"
+      ]
+    },
+    "expected": {
+      "root_cause": "Lookup code pur",
+      "workflow": "code_lookup_only",
+      "evidence": [
+        "fonction",
+        "classe",
+        "fichier"
+      ],
+      "code_reference": "",
+      "sources": [
+        "CODE"
+      ]
+    }
+  },
+  "TEST_20": {
+    "question": "Explique moi cette erreur comme à un collaborateur",
+    "contract": {
+      "mandatory_sections": [
+        "Diagnostic",
+        "Evidence",
+        "Workflow",
+        "Source Code",
+        "Action",
+        "Provenance"
+      ],
+      "required_mentions": [
+        "version vulgarisée"
+      ],
+      "forbidden_patterns": [
+        "information inventée"
+      ]
+    },
+    "expected": {
+      "root_cause": "Vulgarisation alignée sur même cause racine",
+      "workflow": "followup_reasoning",
+      "evidence": [
+        "erreur",
+        "explication"
+      ],
+      "code_reference": "",
+      "sources": [
+        "Conversation",
+        "LIVE_LOG",
+        "LIVE_DB"
+      ]
+    }
+  }
+}

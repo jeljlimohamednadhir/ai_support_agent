@@ -1,0 +1,720 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support Pilot AI — Présentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-alt: #f1f5f9;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --primary: #0284c7;
+      --primary-soft: #e0f2fe;
+      --dark: #0f172a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Inter", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    .container { width: min(1180px, 94%); margin: 0 auto; }
+
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #0c4a6e 100%);
+      color: #fff;
+      padding: 32px 0 56px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+    }
+
+    .logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #38bdf8, #0284c7);
+    }
+
+    .badge {
+      font-size: 12px;
+      font-weight: 700;
+      color: #bae6fd;
+      border: 1px solid rgba(186, 230, 253, .35);
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .hero h1 {
+      font-size: clamp(30px, 5vw, 50px);
+      line-height: 1.08;
+      margin-bottom: 14px;
+    }
+
+    .hero p {
+      color: rgba(255, 255, 255, .84);
+      max-width: 64ch;
+      margin-bottom: 18px;
+    }
+
+    .cta-row { display: flex; flex-wrap: wrap; gap: 10px; }
+
+    .btn {
+      text-decoration: none;
+      padding: 11px 15px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .btn-primary { color: #0c4a6e; background: #e0f2fe; }
+    .btn-secondary { color: #f8fafc; border: 1px solid rgba(255,255,255,.3); }
+
+    .hero-card {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .hero-card h3 { font-size: 18px; margin-bottom: 12px; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .kpi {
+      background: rgba(2, 132, 199, .16);
+      border: 1px solid rgba(186, 230, 253, .16);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .kpi strong { display: block; font-size: 22px; margin-bottom: 2px; }
+    .kpi span, .hero-card p { font-size: 13px; color: rgba(255,255,255,.78); }
+
+    section { padding: 52px 0; }
+    section.alt { background: var(--surface-alt); }
+
+    h2 { font-size: 30px; margin-bottom: 8px; }
+    .sub { max-width: 78ch; color: var(--muted); margin-bottom: 24px; }
+
+    .grid-2, .grid-4 { display: grid; gap: 14px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .card h3 { font-size: 18px; margin-bottom: 8px; }
+    .card p, .card li { color: var(--muted); font-size: 14px; }
+
+    .card ul {
+      margin-left: 18px;
+      margin-top: 8px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .pill {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border: 1px solid #bae6fd;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .journey { display: grid; gap: 14px; }
+
+    .journey-step {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--primary);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .journey-step h3 { font-size: 17px; margin-bottom: 8px; }
+    .journey-step p, .journey-step li { color: var(--muted); font-size: 14px; }
+
+    .journey-step ul {
+      margin-left: 18px;
+      margin-top: 8px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .snapshot {
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 16px;
+      padding: 18px;
+      border: 1px solid rgba(148, 163, 184, .18);
+    }
+
+    .snapshot + .snapshot { margin-top: 14px; }
+
+    .snapshot-label {
+      display: inline-block;
+      margin-bottom: 10px;
+      background: rgba(14, 165, 233, .16);
+      color: #7dd3fc;
+      border: 1px solid rgba(125, 211, 252, .18);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .qa { display: grid; gap: 10px; }
+
+    .q, .a {
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+    }
+
+    .q {
+      background: rgba(30, 41, 59, .96);
+      border: 1px solid rgba(148, 163, 184, .15);
+    }
+
+    .a {
+      background: rgba(2, 132, 199, .12);
+      border: 1px solid rgba(125, 211, 252, .16);
+    }
+
+    .a ul {
+      margin-top: 8px;
+      margin-left: 18px;
+      display: grid;
+      gap: 5px;
+    }
+
+    .highlight {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 14px;
+      padding: 16px;
+      color: #92400e;
+    }
+
+    .highlight ul {
+      margin-top: 8px;
+      margin-left: 18px;
+      display: grid;
+      gap: 5px;
+    }
+
+    .chart-wrap {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 14px;
+    }
+
+    .bar-chart {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 160px 1fr 52px;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .bar-label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .bar-track {
+      background: #e2e8f0;
+      border-radius: 999px;
+      height: 11px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #38bdf8, #0284c7);
+    }
+
+    .bar-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      text-align: right;
+    }
+
+    .donut-card {
+      display: grid;
+      place-items: center;
+      gap: 10px;
+    }
+
+    .donut {
+      width: 164px;
+      height: 164px;
+      border-radius: 999px;
+      background: conic-gradient(#0284c7 0 88%, #dbeafe 88% 100%);
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+
+    .donut::before {
+      content: "";
+      width: 110px;
+      height: 110px;
+      border-radius: 999px;
+      background: #fff;
+      position: absolute;
+    }
+
+    .donut-value {
+      position: relative;
+      z-index: 1;
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+      text-align: center;
+      line-height: 1.1;
+    }
+
+    .roadmap-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .roadmap-tag {
+      display: inline-block;
+      margin-bottom: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: #e0f2fe;
+      border: 1px solid #bae6fd;
+      color: #0c4a6e;
+    }
+
+    .cta {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #fff;
+      border-radius: 18px;
+      padding: 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .cta h3 { font-size: 24px; margin-bottom: 6px; }
+    .cta p { color: rgba(255,255,255,.9); max-width: 60ch; }
+
+    footer {
+      padding: 24px 0 34px;
+      text-align: center;
+      color: #475569;
+      font-size: 13px;
+    }
+
+    @media (max-width: 980px) {
+      .hero, .grid-2, .grid-4, .chart-wrap, .roadmap-grid { grid-template-columns: 1fr; }
+      .bar-row { grid-template-columns: 1fr; gap: 6px; }
+      .bar-val { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="topbar">
+        <div class="brand"><div class="logo">⚡</div><span>Support Pilot AI</span></div>
+        <span class="badge">Présentation N3 &amp; Management</span>
+      </div>
+      <div class="hero">
+        <div>
+          <h1>Un copilote d’exploitation pour comprendre plus vite, décider plus juste, capitaliser durablement.</h1>
+          <p>
+            Support Pilot AI n’est pas seulement un chatbot. C’est une plateforme d’assistance au diagnostic qui relie les procédures,
+            les données live, les logs, l’historique incident et les mécanismes de résolution pour produire des réponses utiles à la fois
+            pour un ingénieur N3 en action et pour un manager qui suit la performance.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#usage">Voir le parcours utilisateur</a>
+            <a class="btn btn-secondary" href="#snapshots">Voir les snapshots Q/R</a>
+          </div>
+          <div class="pill-row">
+            <span class="pill">Corrélation multi-source</span>
+            <span class="pill">Réponses actionnables</span>
+            <span class="pill">Traçabilité des preuves</span>
+            <span class="pill">Vision opérationnelle</span>
+          </div>
+        </div>
+        <div class="hero-card">
+          <h3>Ce que le projet apporte concrètement</h3>
+          <div class="kpi-grid">
+            <div class="kpi"><strong>110</strong><span>tests unitaires (README/Quickstart)</span></div>
+            <div class="kpi"><strong>4</strong><span>modules de tests coeur validés</span></div>
+            <div class="kpi"><strong>25</strong><span>catégories de routage sémantique</span></div>
+            <div class="kpi"><strong>~3200</strong><span>fichiers Java scannés (Code Intel)</span></div>
+          </div>
+          <p>Indicateurs factuels issus du projet : tests, couverture fonctionnelle et capacité d’analyse code/données.</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="container">
+      <h2>Ce que le projet est réellement</h2>
+      <p class="sub">Une chaîne complète, pas un écran unique : ingestion de connaissance, accès live, raisonnement, réponse opérable et capitalisation.</p>
+      <div class="grid-4">
+        <article class="card">
+          <h3>Sources exploitées</h3>
+          <ul>
+            <li>FR et documentation métier</li>
+            <li>Logs applicatifs et traces live</li>
+            <li>Données DB et états runtime</li>
+            <li>Historique incident et signaux RCA</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Moteurs du projet</h3>
+          <ul>
+            <li>Orchestrateur live multi-source</li>
+            <li>Chatbot de diagnostic conversationnel</li>
+            <li>Mécanismes forensiques et corrélation</li>
+            <li>Classification et capitalisation ML</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Sortie côté N3</h3>
+          <ul>
+            <li>Cause probable et confiance</li>
+            <li>Preuves triées par source</li>
+            <li>Actions ordonnées et prudentes</li>
+            <li>Limites runtime explicitement déclarées</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Sortie côté management</h3>
+          <ul>
+            <li>Temps gagné sur l’enquête</li>
+            <li>Qualité et traçabilité du diagnostic</li>
+            <li>Incidents récurrents identifiés</li>
+            <li>Mesure de la valeur opérationnelle</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt" id="indicateurs">
+    <div class="container">
+      <h2>Indicateurs et graphiques opérationnels</h2>
+      <p class="sub">Des visuels basés sur des chiffres présents dans le repo (README, QUICKSTART, implémentation chatbot).</p>
+      <div class="chart-wrap">
+        <article class="card">
+          <h3>Mesures factuelles du projet</h3>
+          <div class="bar-chart">
+            <div class="bar-row">
+              <span class="bar-label">Tests unitaires</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 92%;"></div></div>
+              <span class="bar-val">110</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">Modules testés</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 64%;"></div></div>
+              <span class="bar-val">4</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">Catégories de routage</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 76%;"></div></div>
+              <span class="bar-val">25</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">Fichiers Java analysés</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 88%;"></div></div>
+              <span class="bar-val">~3200</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card donut-card">
+          <h3>Garde-fous anti-hallucination</h3>
+          <div class="donut" aria-label="Garde-fous anti-hallucination" style="background: conic-gradient(#0284c7 0 100%, #dbeafe 100% 100%);">
+            <div class="donut-value">3<br><span style="font-size:12px;font-weight:600;color:#64748b;">fonctions clés</span></div>
+          </div>
+          <p style="text-align:center; max-width: 30ch;">`_has_real_live_evidence`, `_partition_live_context_blocks`, `_live_logs_runtime_available`.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt" id="usage">
+    <div class="container">
+      <h2>Parcours utilisateur réaliste</h2>
+      <p class="sub">Voici ce qu’un ingénieur N3 et son manager voient réellement sur un incident, sans discours trop théorique.</p>
+      <div class="journey">
+        <article class="journey-step">
+          <h3>1. L’incident arrive</h3>
+          <p>Un ticket BRASIL remonte avec un échec de suppression, un code d’erreur connu, mais des symptômes incomplets.</p>
+          <ul>
+            <li>Le N3 veut comprendre si le problème vient d’un verrou, d’un état métier ou d’un incident déjà connu.</li>
+            <li>Le pilotage veut savoir si l’incident est isolé, son impact et le temps de traitement attendu.</li>
+          </ul>
+        </article>
+        <article class="journey-step">
+          <h3>2. Support Pilot AI corrèle</h3>
+          <p>Le système relie automatiquement les blocs FR, les signaux logs, les preuves DB et l’historique similaire avant de répondre.</p>
+          <ul>
+            <li>Les sources live restent séparées des sources documentaires.</li>
+            <li>Si un accès runtime n’est pas disponible, la réponse le dit explicitement au lieu d’inventer.</li>
+          </ul>
+        </article>
+        <article class="journey-step">
+          <h3>3. Le N3 reçoit une réponse exploitable</h3>
+          <p>La réponse ne se contente pas d’expliquer : elle propose une lecture de cause, une hiérarchie de preuves et une séquence d’actions.</p>
+          <ul>
+            <li>Cause probable avec niveau de confiance</li>
+            <li>Preuves DB, logs et FR clairement distinguées</li>
+            <li>Actions immédiates, actions conditionnelles et points de vigilance</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="snapshots">
+    <div class="container">
+      <h2>Snapshots de questions / réponses</h2>
+      <p class="sub">Des exemples courts, crédibles et directement montrables en présentation. Assez concrets pour les N3, assez lisibles pour les managers.</p>
+
+      <div class="snapshot">
+        <span class="snapshot-label">Snapshot 1 — Incident suppression BRASIL</span>
+        <div class="qa">
+          <div class="q"><strong>Question N3 :</strong> « Pourquoi la suppression du ND `0142785811` échoue avec `B4002` ? »</div>
+          <div class="a">
+            <strong>Réponse Support Pilot AI :</strong>
+            <ul>
+              <li><strong>Cause probable :</strong> conflit de concurrence sur l’enregistrement parent.</li>
+              <li><strong>Preuve log :</strong> `lock wait timeout` observé à `17:42:03`.</li>
+              <li><strong>Preuve DB :</strong> état bloquant détecté sur l’objet métier concerné.</li>
+              <li><strong>Référence FR :</strong> procédure de suppression, section sur les cas de verrouillage.</li>
+              <li><strong>Action proposée :</strong> vérifier la session bloquante, confirmer le verrou, puis rejouer l’opération.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="snapshot">
+        <span class="snapshot-label">Snapshot 2 — Question prudence / anti-hallucination</span>
+        <div class="qa">
+          <div class="q"><strong>Question manager :</strong> « Est-ce que la réponse repose sur du réel ou seulement sur la documentation ? »</div>
+          <div class="a">
+            <strong>Réponse Support Pilot AI :</strong>
+            <ul>
+              <li><strong>Sources utilisées :</strong> FR + preuves DB live.</li>
+              <li><strong>Limitation déclarée :</strong> recherche logs indisponible sur cet environnement au moment de la requête.</li>
+              <li><strong>Conséquence :</strong> diagnostic livré avec confiance intermédiaire, sans présenter de preuve log inexistante.</li>
+              <li><strong>Valeur :</strong> on obtient une réponse exploitable, mais transparente sur ses limites.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="snapshot">
+        <span class="snapshot-label">Snapshot 3 — Lecture pilotage</span>
+        <div class="qa">
+          <div class="q"><strong>Question manager :</strong> « Qu’est-ce que le projet m’apporte au-delà d’une aide ponctuelle au diagnostic ? »</div>
+          <div class="a">
+            <strong>Réponse Support Pilot AI :</strong>
+            <ul>
+              <li>Une baisse du temps d’enquête sur les incidents récurrents.</li>
+              <li>Une homogénéisation des diagnostics entre les ingénieurs et les shifts.</li>
+              <li>Une vision des causes dominantes et des procédures à industrialiser.</li>
+              <li>Une capitalisation continue : chaque incident bien traité aide le suivant.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="container">
+      <h2>Capacités opérationnelles consolidées</h2>
+      <p class="sub">La valeur d’usage est intégrée directement dans le flux d’incident : diagnostic, preuve, décision et capitalisation.</p>
+      <div class="grid-4">
+        <article class="card">
+          <h3>Décision plus rapide</h3>
+          <ul>
+            <li>Réponse structurée dès la première requête.</li>
+            <li>Lecture directe cause → preuve → action.</li>
+            <li>Moins d’allers-retours entre outils.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Fiabilité renforcée</h3>
+          <ul>
+            <li>Preuves live séparées de la documentation.</li>
+            <li>Limites runtime explicitement indiquées.</li>
+            <li>Garde-fous anti-hallucination actifs.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Suivi pilotable</h3>
+          <ul>
+            <li>Indicateurs lisibles en continu.</li>
+            <li>Historique des causes récurrentes.</li>
+            <li>Priorisation des chantiers d’amélioration.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Capitalisation continue</h3>
+          <ul>
+            <li>Retour d’expérience injecté dans la base.</li>
+            <li>Mise à jour des procédures assistée.</li>
+            <li>Réutilisation sur incidents similaires.</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="roadmap-metier">
+    <div class="container">
+      <h2>Futures améliorations métier</h2>
+      <p class="sub">Roadmap orientée exploitation : plus de temps réel, plus d’automatisation documentaire, plus de précision.</p>
+      <div class="roadmap-grid">
+        <article class="card">
+          <span class="roadmap-tag">T1</span>
+          <h3>Live streaming serveur &amp; logs</h3>
+          <ul>
+            <li>Ingestion continue des logs applicatifs et système.</li>
+            <li>Détection en flux des signaux critiques (timeouts, locks, anomalies).</li>
+            <li>Corrélation quasi temps réel avec incidents en cours.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="roadmap-tag">T1-T2</span>
+          <h3>Monitoring unifié métier + technique</h3>
+          <ul>
+            <li>Dashboard unique SLA, MTTR, causes racines, charge équipe.</li>
+            <li>Alertes proactives par criticité métier.</li>
+            <li>Vue manager par service, produit, région ou client.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="roadmap-tag">T2</span>
+          <h3>Documentation automatique</h3>
+          <ul>
+            <li>Génération post-incident (RCA, actions, validation).</li>
+            <li>Mise à jour assistée des procédures FR.</li>
+            <li>Création de runbooks à partir des résolutions confirmées.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="roadmap-tag">T2</span>
+          <h3>Exactitude de réponse renforcée</h3>
+          <ul>
+            <li>Scoring de confiance par source et par étape.</li>
+            <li>Réduction des faux positifs via feedback supervisé N3.</li>
+            <li>Mode “preuve obligatoire” sur incidents critiques.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="roadmap-tag">T3</span>
+          <h3>Actions semi-automatisées</h3>
+          <ul>
+            <li>Exécution guidée de remédiations standardisées.</li>
+            <li>Validation humaine obligatoire sur actions sensibles.</li>
+            <li>Historique d’exécution signé pour audit.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="roadmap-tag">T3</span>
+          <h3>Prévision incidents &amp; capacity planning</h3>
+          <ul>
+            <li>Prédiction des incidents récurrents par fenêtre horaire.</li>
+            <li>Recommandation de staffing N3.</li>
+            <li>Simulation d’impact avant pics de charge.</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Message de clôture</h2>
+      <p class="sub">Support Pilot AI évolue d’un assistant de diagnostic vers une plateforme d’orchestration opérationnelle en temps réel.</p>
+      <div class="cta" style="margin-top: 18px;">
+        <div>
+          <h3>Un projet ancré dans le réel opérationnel</h3>
+          <p>Support Pilot AI combine base de connaissance, diagnostic live, contrôle de fiabilité et capitalisation continue pour fiabiliser durablement le traitement des incidents BRASIL.</p>
+        </div>
+        <a class="btn btn-primary" href="#roadmap-metier">Voir la roadmap métier</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>Support Pilot AI · Support de présentation · N3 &amp; managers · 2026</footer>
+</body>
+</html>

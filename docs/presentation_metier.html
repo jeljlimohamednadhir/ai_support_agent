@@ -1,0 +1,367 @@
+﻿<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Outil d'Aide au Support v2.0 — Présentation</title>
+  <style>
+    :root{--primary:#0ea5e9;--secondary:#8b5cf6;--accent:#f59e0b;--dark:#0f172a;--light:#f8fafc;--text:#1e293b;--muted:#64748b}
+    *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+    body{font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--text);background:var(--light);overflow-x:hidden}
+    /* Hero */
+    .hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#334155 100%);overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="2" cy="2" r="1" fill="white" opacity="0.1"/></svg>');animation:starfield 120s linear infinite}
+    @keyframes starfield{0%{transform:translateY(0)}100%{transform:translateY(100px)}}
+    .hero-content{position:relative;z-index:10;text-align:center;padding:2rem;max-width:1100px}
+    .hero-eyebrow{display:inline-block;background:rgba(14,165,233,0.15);border:1px solid rgba(14,165,233,0.3);color:#7dd3fc;padding:.45rem 1.2rem;border-radius:50px;font-size:.82rem;font-weight:600;margin-bottom:1.5rem;letter-spacing:.05em}
+    .hero h1{font-size:clamp(2.2rem,6vw,4.5rem);font-weight:900;background:linear-gradient(90deg,#60a5fa,#a78bfa,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1.5rem;line-height:1.15;animation:fadeInUp 1s ease-out}
+    .hero p{font-size:clamp(1rem,2vw,1.3rem);color:rgba(255,255,255,.8);margin-bottom:2.5rem;max-width:700px;margin-left:auto;margin-right:auto;line-height:1.7;animation:fadeInUp 1s ease-out .2s both}
+    .hero-cta{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;animation:fadeInUp 1s ease-out .4s both}
+    .btn{padding:.9rem 2rem;border-radius:12px;font-weight:700;text-decoration:none;transition:all .3s;display:inline-block;font-size:.95rem}
+    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;box-shadow:0 10px 30px rgba(14,165,233,.3)}
+    .btn-primary:hover{transform:translateY(-3px);box-shadow:0 15px 40px rgba(14,165,233,.4)}
+    .btn-secondary{background:rgba(255,255,255,.1);color:white;border:2px solid rgba(255,255,255,.3);backdrop-filter:blur(10px)}
+    .btn-secondary:hover{background:rgba(255,255,255,.2)}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+    /* Nav */
+    .nav{position:sticky;top:0;z-index:100;background:rgba(15,23,42,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.07)}
+    .nav-inner{max-width:1100px;margin:0 auto;padding:.8rem 2rem;display:flex;align-items:center;gap:2rem}
+    .nav-logo{font-weight:800;color:white;font-size:.95rem;margin-right:auto}
+    .nav-inner a{color:rgba(255,255,255,.6);text-decoration:none;font-size:.85rem;font-weight:600;transition:color .2s}
+    .nav-inner a:hover{color:var(--primary)}
+    /* Layout */
+    section{padding:5rem 2rem}.container{max-width:1100px;margin:0 auto}
+    h2{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin-bottom:.8rem;text-align:center;background:linear-gradient(90deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .section-sub{text-align:center;color:var(--muted);margin-bottom:3rem;max-width:680px;margin-left:auto;margin-right:auto;line-height:1.7}
+    /* Observation cards */
+    .obs-section{background:white}
+    .obs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem}
+    .obs-card{padding:1.8rem;border-radius:16px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);border:1px solid rgba(14,165,233,.1);transition:all .5s;opacity:0;transform:translateY(40px);position:relative;overflow:hidden}
+    .obs-card.animate{opacity:1;transform:translateY(0)}
+    .obs-card:hover{transform:translateY(-8px);box-shadow:0 20px 50px rgba(14,165,233,.12)}
+    .obs-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--primary),var(--secondary))}
+    .obs-num{font-size:2.5rem;font-weight:900;color:rgba(14,165,233,.15);line-height:1;margin-bottom:.7rem}
+    .obs-card h3{font-size:1rem;font-weight:700;color:var(--dark);margin-bottom:.6rem}
+    .obs-card p{font-size:.87rem;color:var(--muted);line-height:1.6}
+    /* Features */
+    .features-section{background:linear-gradient(135deg,#f8fafc 0%,#e0f2fe 100%)}
+    .feature-rows{display:flex;flex-direction:column;gap:1.5rem}
+    .feature-row{display:grid;grid-template-columns:70px 1fr;gap:1.5rem;align-items:start;padding:1.8rem 2rem;background:white;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.06);border:1px solid rgba(14,165,233,.08);transition:all .5s;opacity:0;transform:translateX(-40px)}
+    .feature-row.animate{opacity:1;transform:translateX(0)}
+    .feature-row:hover{transform:translateX(6px);box-shadow:0 10px 40px rgba(14,165,233,.12)}
+    .feat-icon-wrap{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0}
+    .feat-body h3{font-size:1.05rem;font-weight:700;color:var(--dark);margin-bottom:.5rem}
+    .feat-body p{font-size:.88rem;color:var(--muted);line-height:1.65}
+    .feat-note{display:inline-block;margin-top:.6rem;font-size:.78rem;color:var(--primary);font-weight:600;background:rgba(14,165,233,.08);padding:.25rem .8rem;border-radius:20px}
+    /* Stats */
+    .stats-section{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;text-align:center}
+    .stats-section h2{color:white;background:none;-webkit-text-fill-color:white}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2rem;margin-top:2.5rem}
+    .stat-card{background:rgba(255,255,255,.12);border-radius:16px;padding:2rem 1.5rem;border:1px solid rgba(255,255,255,.15);opacity:0;transform:translateY(30px);transition:all .6s}
+    .stat-card.animate{opacity:1;transform:translateY(0)}
+    .stat-number{font-size:2.8rem;font-weight:900;line-height:1;margin-bottom:.6rem}
+    .stat-label{font-size:.9rem;opacity:.85;line-height:1.4}
+    .stat-note{font-size:.78rem;opacity:.65;margin-top:.4rem;line-height:1.4}
+    /* Compare */
+    .compare-section{background:white}
+    .compare-wrap{display:grid;grid-template-columns:1fr 1fr;gap:2rem}
+    @media(max-width:640px){.compare-wrap{grid-template-columns:1fr}}
+    .compare-col{border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.07);border:1px solid rgba(0,0,0,.07);opacity:0;transform:translateY(30px);transition:all .6s}
+    .compare-col.animate{opacity:1;transform:translateY(0)}
+    .compare-head{padding:1rem 1.5rem;font-weight:700;font-size:.95rem;display:flex;align-items:center;gap:.5rem}
+    .compare-head.before{background:#fff7ed;color:#9a3412;border-bottom:1px solid #fed7aa}
+    .compare-head.after{background:linear-gradient(135deg,rgba(14,165,233,.08),rgba(139,92,246,.08));color:#0369a1;border-bottom:1px solid rgba(14,165,233,.2)}
+    .compare-item{padding:.85rem 1.5rem;font-size:.88rem;color:var(--muted);border-bottom:1px solid #f1f5f9;display:flex;align-items:flex-start;gap:.6rem;background:white}
+    .compare-item:last-child{border:none}
+    .compare-item .dot{flex-shrink:0;margin-top:5px;width:7px;height:7px;border-radius:50%}
+    .before .dot{background:#f97316}.after .dot{background:var(--primary)}
+    /* Roadmap */
+    .roadmap-section{background:linear-gradient(135deg,#f8fafc 0%,#e0f2fe 100%)}
+    .roadmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem}
+    .rm-card{border-radius:16px;padding:1.8rem;background:white;box-shadow:0 4px 20px rgba(0,0,0,.06);border:1px solid rgba(14,165,233,.08);opacity:0;transform:translateY(30px);transition:all .5s;position:relative;overflow:hidden}
+    .rm-card.animate{opacity:1;transform:translateY(0)}
+    .rm-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--primary),var(--secondary))}
+    .rm-phase{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:.25rem .8rem;border-radius:20px;display:inline-block;margin-bottom:1rem}
+    .phase-now{background:#dcfce7;color:#15803d}
+    .phase-next{background:rgba(14,165,233,.1);color:var(--primary)}
+    .phase-later{background:#f3e8ff;color:#7c3aed}
+    .rm-card h3{font-size:.97rem;font-weight:700;color:var(--dark);margin-bottom:.8rem}
+    .rm-card ul{list-style:none;padding:0}
+    .rm-card li{font-size:.86rem;color:var(--muted);padding:.3rem 0;border-bottom:1px solid #f8fafc;display:flex;gap:.5rem;line-height:1.5}
+    .rm-card li:last-child{border:none}
+    .rm-card li::before{content:'–';color:var(--primary);flex-shrink:0}
+    /* Alerts */
+    .alerts-section{background:var(--dark);color:white}
+    .alerts-section h2{color:white;background:none;-webkit-text-fill-color:white}
+    .alerts-section .section-sub{color:rgba(255,255,255,.55)}
+    .alerts-stack{display:flex;flex-direction:column;gap:1rem}
+    .alert-box{border-radius:12px;padding:1.2rem 1.5rem;font-size:.9rem;line-height:1.65;display:flex;gap:.8rem;align-items:flex-start;opacity:0;transform:translateY(20px);transition:all .5s}
+    .alert-box.animate{opacity:1;transform:translateY(0)}
+    .alert-warning{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fde68a}
+    .alert-info{background:rgba(14,165,233,.1);border:1px solid rgba(14,165,233,.3);color:#7dd3fc}
+    .alert-neutral{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.65)}
+    .alert-box .ai{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+    /* CTA */
+    .cta-section{background:linear-gradient(135deg,#1e293b,#0f172a);color:white;text-align:center;padding:7rem 2rem}
+    .cta-section h2{color:white;background:none;-webkit-text-fill-color:white;margin-bottom:1rem}
+    .cta-section p{font-size:1.1rem;opacity:.8;margin-bottom:2.5rem;line-height:1.7;max-width:550px;margin-left:auto;margin-right:auto}
+    .cta-links{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2.5rem}
+    .meta-pills{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
+    .meta-pill{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:.6rem 1.2rem;font-size:.82rem;color:rgba(255,255,255,.5);text-align:left}
+    .meta-pill strong{display:block;color:rgba(255,255,255,.85);font-size:.88rem;margin-bottom:.1rem}
+    /* Robot */
+    .robot-float{position:fixed;right:40px;bottom:40px;z-index:9999;width:110px;height:110px;background:linear-gradient(135deg,#ffffff,#f0f9ff);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .3s;animation:float 4s ease-in-out infinite}
+    .robot-float:hover{transform:scale(1.1) translateY(-5px)}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)}}
+    @media(max-width:768px){section{padding:3.5rem 1.2rem}.feature-row{grid-template-columns:1fr;gap:1rem}.robot-float{width:80px;height:80px;right:16px;bottom:16px}}
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <span class="nav-logo">Outil d'Aide au Support</span>
+    <a href="#contexte">Contexte</a>
+    <a href="#fonctionnalites">Fonctionnalités</a>
+    <a href="#indicateurs">Indicateurs</a>
+    <a href="#perimetre">Périmètre</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-eyebrow">Usage interne · Présentation aux équipes dirigeantes · Mai 2026</div>
+    <h1>Automatiser les tâches répétitives<br>du support technique</h1>
+    <p>Un outil développé en interne pour réduire le temps de traitement des incidents, fiabiliser la qualification des demandes et capitaliser la connaissance des équipes. Il s'appuie sur un pipeline déterministe multi-couches, un moteur de vérité anti-hallucination, et n'invoque le LLM que lorsque la confiance le justifie.</p>
+    <div class="hero-cta">
+      <a href="#fonctionnalites" class="btn btn-primary">Ce que fait l'outil</a>
+      <a href="#indicateurs" class="btn btn-secondary">Résultats observés</a>
+    </div>
+  </div>
+</section>
+
+<section id="contexte" class="obs-section">
+  <div class="container">
+    <h2>Contexte &amp; Observations</h2>
+    <p class="section-sub">Ces constats ont été remontés par les équipes de support et ont motivé le développement de cet outil. Ils ne sont pas exhaustifs mais représentatifs des situations courantes.</p>
+    <div class="obs-grid">
+      <div class="obs-card"><div class="obs-num">01</div><h3>Recherche d'information chronophage</h3><p>Avant de commencer un diagnostic, une part importante du temps est consacrée à retrouver des informations dispersées — logs, historiques, procédures — dans des sources différentes.</p></div>
+      <div class="obs-card"><div class="obs-num">02</div><h3>Connaissance concentrée sur peu de personnes</h3><p>Certains incidents ne peuvent être traités efficacement que par un ou deux experts. Cette dépendance crée des délais lors des absences et un risque opérationnel réel.</p></div>
+      <div class="obs-card"><div class="obs-num">03</div><h3>Qualification des tickets variable</h3><p>La catégorisation des demandes dépend de l'agent traitant. Cette inconsistance complique le routage et l'analyse des tendances d'incidents.</p></div>
+      <div class="obs-card"><div class="obs-num">04</div><h3>Résolutions rarement capitalisées</h3><p>Des problèmes identiques sont parfois traités plusieurs fois sans que les résolutions passées soient retrouvées ou documentées de manière structurée.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="fonctionnalites" class="features-section">
+  <div class="container">
+    <h2>Ce que fait l'outil</h2>
+    <p class="section-sub">L'outil s'articule autour de quatre fonctions, actuellement opérationnelles sur le périmètre applicatif initial.</p>
+    <div class="feature-rows">
+      <div class="feature-row">
+        <div class="feat-icon-wrap">🔍</div>
+        <div class="feat-body">
+          <h3>Aide au diagnostic d'incidents</h3>
+          <p>Lorsqu'un incident survient, l'outil analyse le message d'erreur via un pipeline déterministe 8 couches (RAG vectoriel, corrélations, graphe causal). Il propose une procédure de résolution issue de la base de connaissance construite par les équipes N3 — avec un score de confiance explicite. L'agent valide ou ajuste la proposition.</p>
+          <span class="feat-note">Proposition disponible en moins de 2 minutes — la décision finale reste à l'agent</span>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feat-icon-wrap">🗂️</div>
+        <div class="feat-body">
+          <h3>Qualification automatique des tickets</h3>
+          <p>L'outil propose une catégorie et une cause pour chaque ticket entrant, en s'appuyant sur l'historique de qualification. Quand la confiance est faible, la demande est signalée explicitement pour revue humaine plutôt que forcée dans une catégorie.</p>
+          <span class="feat-note">Les cas atypiques ou hors-périmètre sont identifiés et signalés — pas de classification silencieuse</span>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feat-icon-wrap">💬</div>
+        <div class="feat-body">
+          <h3>Assistant conversationnel</h3>
+          <p>Un assistant permet d'interroger la base de connaissance interne en langage naturel. Il cite ses sources et indique son niveau de confiance. S'il ne dispose pas d'informations suffisantes, il le signale plutôt que d'inventer une réponse.</p>
+          <span class="feat-note">Basé exclusivement sur la documentation interne validée</span>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feat-icon-wrap">📖</div>
+        <div class="feat-body">
+          <h3>Capitalisation des résolutions</h3>
+          <p>Chaque correction apportée par un agent enrichit la base de connaissance via une boucle d'apprentissage continue. Les résolutions deviennent des ressources partagées sans effort de saisie supplémentaire — et améliorent directement la précision des diagnostics futurs.</p>
+          <span class="feat-note">La base s'améliore avec l'usage — pas de saisie manuelle requise</span>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feat-icon-wrap">🛡️</div>
+        <div class="feat-body">
+          <h3>Fiabilité garantie — zéro hallucination</h3>
+          <p>Un moteur de vérité valide chaque réponse contre les index réels (128 tables SQL, 3 200 fichiers source). Les requêtes SQL en écriture et les commandes shell sont bloquées systématiquement. L'outil ne peut pas inventer des informations qu'il ne possède pas.</p>
+          <span class="feat-note">LLM = formateur uniquement — jamais source de vérité</span>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feat-icon-wrap">📂</div>
+        <div class="feat-body">
+          <h3>Traçabilité complète — provenance des sources</h3>
+          <p>Chaque réponse forensique affiche ses sources exactes : fichier de log, table SQL avec serveur, méthode Java avec numéro de ligne, fiche FR de référence. L'agent peut vérifier et auditer chaque diagnostic en quelques secondes.</p>
+          <span class="feat-note">Traçabilité complète — chaque diagnostic est auditable</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section> class="stats-section">
+  <div class="container">
+    <h2>Indicateurs observés</h2>
+    <p class="section-sub" style="color:rgba(255,255,255,.7)">Chiffres issus des premiers mois d'utilisation sur le périmètre actuel. Ils sont donnés à titre indicatif.</p>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-number">~2 min</div><div class="stat-label">Diagnostic initial proposé</div><div class="stat-note">Vs. 20 à 60 min de recherche manuelle</div></div>
+      <div class="stat-card"><div class="stat-number">~85 %</div><div class="stat-label">Tickets qualifiés automatiquement</div><div class="stat-note">15 % restants signalés pour revue humaine</div></div>
+      <div class="stat-card"><div class="stat-number">27</div><div class="stat-label">Procédures N3 documentées</div><div class="stat-note">Construites depuis l'historique incidents</div></div>
+      <div class="stat-card"><div class="stat-number">51</div><div class="stat-label">Fiches de résolution indexées</div><div class="stat-note">Skip LLM automatique si confiance &gt; 90 %</div></div>
+      <div class="stat-card"><div class="stat-number">0</div><div class="stat-label">Hallucinations tolérées</div><div class="stat-note">Moteur de vérité — LLM = formateur uniquement</div></div>
+      <div class="stat-card"><div class="stat-number">110</div><div class="stat-label">Tests automatisés</div><div class="stat-note">0 échec · 4 suites indépendantes</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="compare-section">
+  <div class="container">
+    <h2>Ce qui change pour les équipes</h2>
+    <p class="section-sub">Sur les situations couvertes par l'outil, voici les différences concrètes dans le quotidien des agents.</p>
+    <div class="compare-wrap">
+      <div class="compare-col">
+        <div class="compare-head before">⚠️ Sans l'outil</div>
+        <div class="compare-item"><span class="dot"></span>Recherche manuelle dans les logs, wikis, e-mails</div>
+        <div class="compare-item"><span class="dot"></span>Sollicitation de l'expert pour les cas complexes courants</div>
+        <div class="compare-item"><span class="dot"></span>Qualification à l'appréciation de l'agent</div>
+        <div class="compare-item"><span class="dot"></span>Résolution consignée dans un fichier ou pas du tout</div>
+        <div class="compare-item"><span class="dot"></span>Un nouvel arrivant doit apprendre de zéro</div>
+      </div>
+      <div class="compare-col">
+        <div class="compare-head after">✅ Avec l'outil</div>
+        <div class="compare-item"><span class="dot"></span>Procédure proposée immédiatement, sources citées et vérifiables</div>
+        <div class="compare-item"><span class="dot"></span>Expert sollicité sur les cas hors-périmètre uniquement</div>
+        <div class="compare-item"><span class="dot"></span>Qualification proposée, l'agent valide ou corrige</div>
+        <div class="compare-item"><span class="dot"></span>Chaque correction enrichit automatiquement la base</div>
+        <div class="compare-item"><span class="dot"></span>La base de connaissance est accessible dès l'arrivée</div>
+        <div class="compare-item"><span class="dot"></span>0 hallucination — moteur de vérité actif à chaque réponse</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="perimetre" class="roadmap-section">
+  <div class="container">
+    <h2>Périmètre &amp; feuille de route</h2>
+    <p class="section-sub">L'outil est opérationnel sur un premier périmètre. Son architecture modulaire permet une extension progressive à d'autres applications.</p>
+    <div class="roadmap">
+      <div class="rm-card">
+        <span class="rm-phase phase-now">Déployé — Mai 2026</span>
+        <h3>Périmètre actuel</h3>
+        <ul>
+          <li>Diagnostic d'incidents applicatifs</li>
+          <li>Classification automatique des tickets</li>
+          <li>Assistant conversationnel (base interne)</li>
+          <li>Capitalisation des résolutions</li>
+          <li>Intégration outil de ticketing existant</li>
+          <li>Moteur de vérité anti-hallucination</li>
+          <li>Traçabilité automatique des sources</li>
+          <li>Workflows opérationnels déterministes</li>
+        </ul>
+      </div>
+      <div class="rm-card">
+        <span class="rm-phase phase-next">Envisagé</span>
+        <h3>Extension à d'autres applications</h3>
+        <ul>
+          <li>Adaptation à d'autres systèmes applicatifs</li>
+          <li>Vue consolidée multi-périmètres</li>
+          <li>Base de connaissance par domaine métier</li>
+          <li>Indicateurs de suivi par équipe</li>
+        </ul>
+      </div>
+      <div class="rm-card">
+        <span class="rm-phase phase-later">À étudier</span>
+        <h3>Évolutions futures</h3>
+        <ul>
+          <li>Détection de tendances d'incidents</li>
+          <li>Recommandations de maintenance préventive</li>
+          <li>Rapport automatique de qualité de service</li>
+          <li>À confirmer selon retours terrain</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alerts-section">
+  <div class="container">
+    <h2>Points de vigilance</h2>
+    <p class="section-sub">Éléments à prendre en compte pour une utilisation réaliste et pérenne de l'outil.</p>
+    <div class="alerts-stack">
+      <div class="alert-box alert-warning"><span class="ai">⚠️</span><span><strong>L'outil ne remplace pas le jugement humain.</strong> Les propositions de diagnostic et de qualification sont des suggestions. L'agent reste responsable de la décision finale. Sur les incidents complexes ou hors-périmètre, l'escalade vers un expert reste nécessaire.</span></div>
+      <div class="alert-box alert-info"><span class="ai">ℹ️</span><span><strong>La qualité dépend de l'historique disponible.</strong> Plus l'historique d'incidents est riche et documenté, plus les suggestions sont pertinentes. Sur un nouveau périmètre, une phase d'apprentissage est nécessaire avant d'obtenir des résultats fiables.</span></div>
+      <div class="alert-box alert-neutral"><span class="ai">📋</span><span><strong>L'extension à de nouveaux périmètres nécessite un cadrage préalable.</strong> Chaque domaine applicatif requiert une analyse des données disponibles, une adaptation du vocabulaire métier et une validation avec les équipes concernées — compter 2 à 4 semaines.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="container">
+    <h2>Prochaine étape</h2>
+    <p>Pour évaluer la pertinence d'une extension sur un autre périmètre, un atelier de 2h avec les équipes concernées permet d'identifier les cas d'usage prioritaires et les prérequis.</p>
+    <div class="cta-links">
+      <a href="presentation.html" class="btn btn-primary">Version technique détaillée</a>
+      <a href="documentation.html" class="btn btn-secondary">Documentation complète</a>
+    </div>
+    <div class="meta-pills">
+      <div class="meta-pill"><strong>Statut</strong>Opérationnel — périmètre initial</div>
+      <div class="meta-pill"><strong>Nouveau périmètre</strong>2 à 4 semaines (selon données)</div>
+      <div class="meta-pill"><strong>Prérequis</strong>Historique d'incidents + équipe référente</div>
+    </div>
+  </div>
+</section>
+
+<div class="robot-float">
+  <svg viewBox="0 0 160 160" width="75" height="75">
+    <defs>
+      <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#f8fbff"/><stop offset="1" stop-color="#e6f5ff"/></linearGradient>
+      <linearGradient id="g2" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0ea5e9"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>
+    </defs>
+    <rect x="18" y="18" width="124" height="86" rx="18" fill="url(#g1)" stroke="#bfdbfe" stroke-width="2"/>
+    <rect x="34" y="30" width="92" height="58" rx="12" fill="url(#g2)"/>
+    <ellipse cx="60" cy="50" rx="10" ry="8" fill="#0c4a6e" opacity="0.85"/>
+    <ellipse cx="100" cy="50" rx="10" ry="8" fill="#0c4a6e" opacity="0.85"/>
+    <circle id="pupilL" cx="60" cy="50" r="4" fill="#7dd3fc"/>
+    <circle id="pupilR" cx="100" cy="50" r="4" fill="#7dd3fc"/>
+    <path d="M78 72c2 4 8 4 10 0" fill="#7dd3fc" opacity="0.95"/>
+    <g transform="translate(40,88)"><ellipse cx="40" cy="34" rx="40" ry="34" fill="#f3f9fb"/><rect x="8" y="6" width="64" height="36" rx="12" fill="#eff6fb" stroke="#dbeafe"/></g>
+  </svg>
+</div>
+
+<script>
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('animate'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.obs-card,.feature-row,.stat-card,.compare-col,.rm-card,.alert-box').forEach(el => observer.observe(el));
+  document.querySelectorAll('.feature-row').forEach((el,i) => el.style.transitionDelay = `${i*.1}s`);
+  document.querySelectorAll('.obs-card').forEach((el,i) => el.style.transitionDelay = `${i*.08}s`);
+  document.querySelectorAll('.stat-card').forEach((el,i) => el.style.transitionDelay = `${i*.08}s`);
+  const pupilL = document.getElementById('pupilL'), pupilR = document.getElementById('pupilR'), robot = document.querySelector('.robot-float');
+  document.addEventListener('mousemove', e => {
+    if (!robot||!pupilL||!pupilR) return;
+    const r = robot.getBoundingClientRect();
+    const dx = (e.clientX-(r.left+r.width/2))/window.innerWidth*3;
+    const dy = (e.clientY-(r.top+r.height/2))/window.innerHeight*2;
+    pupilL.style.transform = `translate(${dx}px,${dy}px)`;
+    pupilR.style.transform = `translate(${dx}px,${dy}px)`;
+  });
+  document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault(); const t = document.querySelector(a.getAttribute('href'));
+    if (t) t.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
+  window.addEventListener('scroll', () => {
+    const s = window.pageYOffset, hero = document.querySelector('.hero-content');
+    if (hero) { hero.style.transform = `translateY(${s*.4}px)`; hero.style.opacity = 1-(s/600); }
+  });
+</script>
+</body>
+</html>

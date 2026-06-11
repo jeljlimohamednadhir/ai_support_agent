@@ -1,0 +1,548 @@
+{
+  "generated_at": "2026-04-02T14:51:49.511156",
+  "pipeline_version": "2.0",
+  "total_patterns": 23,
+  "log_files_scanned": [
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\connectorUMIepc_mouvement_20260302.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\errors_sample.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\exceptions_sample.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_49mapp_transaction.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_AccesBrasil_DLM_20260305.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_AccesBrasil_retrofit_20260305.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_AccesFTTHBrasil_accessManagement_20260305.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_AccesFTTHBrasil_customerConsultation_20260305.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_AccesFTTHBrasil_manageTechnicalConfiguration_20260305.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_connectorCL_20260305.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_connectorCL_activity_20260305.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_connectorCL_mouvement_20260305.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_connectorCreationVlan_20260305.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_connectorUMIepc_mouvement_20260305.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationDLM_202602.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationDLM_202603.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationFTTHAccessManagement_202602.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationFTTHAccessManagement_202603.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationFTTHCustomerConsultation_202602.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationFTTHCustomerConsultation_202603.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationFTTHManageTechnicalConfiguration_202602.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationFTTHManageTechnicalConfiguration_202603.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationRETROFIT_202602.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationRETROFIT_202603.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationSEBAR_202602.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationSEBAR_202603.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationSEBAU_202602.log",
+    "C:\\Users\\n.jeljli\\OneDrive - orange.com\\Bureau\\ai-support-agent\\data_pipeline\\input\\sample_sollicitationSEBAU_202603.log"
+  ],
+  "patterns": [
+    {
+      "id": "LOG-PATTERN-001",
+      "pattern_regex": "DSLAM .* closed for production",
+      "error_type": "DSLAM_CLOSED_FOR_PRODUCTION",
+      "component": "PortBooker / ManageTRProductionBusinessImpl",
+      "impacted_entities": [
+        "DSLAM",
+        "CARD",
+        "PORT"
+      ],
+      "probable_causes": [
+        "DSLAM manually closed for maintenance",
+        "DSLAM status set to CLOSED in Orchestra NE repository",
+        "DSLAM decommissioned but services not migrated"
+      ],
+      "recommended_checks": [
+        "Check eqpt_prod_status in t_equipments for target DSLAM",
+        "Verify Orchestra NE status for same DSLAM",
+        "Check if maintenance ticket exists for this DSLAM",
+        "Run: SELECT eqpt_name, eqpt_prod_status FROM t_equipments WHERE eqpt_name = '<DSLAM_NAME>'"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-PATTERN-002",
+      "pattern_regex": "Card .* closed for production",
+      "error_type": "CARD_CLOSED_FOR_PRODUCTION",
+      "component": "PortBooker / ManageTRProductionBusinessImpl",
+      "impacted_entities": [
+        "CARD",
+        "PORT",
+        "DSLAM"
+      ],
+      "probable_causes": [
+        "Card hardware failure flagged",
+        "Card manually closed for maintenance",
+        "Card prod_status set to CLOSED in t_cards"
+      ],
+      "recommended_checks": [
+        "Check card_prod_status in t_cards for target card",
+        "Verify card number and chassis in t_d_dslam_xdsl_cards",
+        "Check if other cards on same DSLAM are available",
+        "Run: SELECT card_num, card_prod_status FROM t_cards WHERE eqpt_id = (SELECT eqpt_id FROM t_equipments WHERE eqpt_name='<DSLAM_NAME>')"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-PATTERN-003",
+      "pattern_regex": "No port found with such constraints",
+      "error_type": "PORT_NOT_FOUND",
+      "component": "PortBooker / RechercherBrochesService",
+      "impacted_entities": [
+        "PORT",
+        "DSLAM",
+        "CARD"
+      ],
+      "probable_causes": [
+        "DSLAM TOC at 100% (saturated)",
+        "port_attribuable field incorrectly set to 0",
+        "All available ports already occupied",
+        "Port counters desynchronized (port_logical_occup_cpt mismatch)"
+      ],
+      "recommended_checks": [
+        "Run CalculerToc.ksh script (FR 001)",
+        "Check dsme_mnl_available_port_count in t_d_dslam_manelems",
+        "Verify port_attribuable = 1 for available ports",
+        "Check t_d_dslam_xdsl_cards.dxcd_auto_available_port_count",
+        "Run FR 1583B procedure if port counters suspect"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-PATTERN-004",
+      "pattern_regex": "Aucune MRT Access DSLAM ne correspond aux critères",
+      "error_type": "MRT_NOT_FOUND",
+      "component": "ManageGetEptXdslTranslatorBusinessImpl / ObtenirEptXdslService",
+      "impacted_entities": [
+        "MRT",
+        "DSLAM"
+      ],
+      "probable_causes": [
+        "MRT identifier expired or deleted",
+        "Data migration incomplete",
+        "DSLAM node changed without MRT update",
+        "Incorrect search criteria"
+      ],
+      "recommended_checks": [
+        "Search mrtd_id in t_mrt_access_dslams",
+        "Check if recent data migration occurred",
+        "Verify mrtd_nd and mrtd_customer_id match",
+        "Check BRASIL-SEBA synchronization status"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-PATTERN-005",
+      "pattern_regex": "Identifiant de Macro Ressource Technique .* inconnu",
+      "error_type": "MRT_ID_UNKNOWN",
+      "component": "LibererRessourcesXdslService",
+      "impacted_entities": [
+        "MRT",
+        "MAKING_FILE"
+      ],
+      "probable_causes": [
+        "MRT already deleted before liberation",
+        "Wrong MRT ID in making file",
+        "Data synchronization issue between systems"
+      ],
+      "recommended_checks": [
+        "SELECT * FROM t_mrt_access_dslams WHERE mrtd_id = <ID>",
+        "Check t_making_files.mkfl_current_crc_id for the order",
+        "Verify Orchestra referential for MRT status"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-PATTERN-006",
+      "pattern_regex": "Le NumeroCCL est obligatoire dans le cas d'une offre CEV",
+      "error_type": "CCL_MISSING_FOR_CEV",
+      "component": "AffecterRessourcesXdslService",
+      "impacted_entities": [
+        "CCL",
+        "MAKING_FILE",
+        "EPC"
+      ],
+      "probable_causes": [
+        "CEV offer but no CCL number provided in order",
+        "Incorrect business process type for CEV",
+        "CCL not provisioned on target DSLAM"
+      ],
+      "recommended_checks": [
+        "Check rpct_ccl_name in t_res_prod_controlables for target DSLAM",
+        "Verify offer type is correctly set as CEV",
+        "Check t_making_files.mkfl_business_process value",
+        "Verify CCL provisioned in Francia for this DSLAM/NIP pair"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-PATTERN-007",
+      "pattern_regex": "L'identifiant d'EPC .* est déjà utilisé par un autre EPC",
+      "error_type": "EPC_DUPLICATE_ID",
+      "component": "AffecterRessourcesXdslService",
+      "impacted_entities": [
+        "EPC"
+      ],
+      "probable_causes": [
+        "Duplicate EPC creation attempt",
+        "Message replayed from backout queue",
+        "Order system sent duplicate request"
+      ],
+      "recommended_checks": [
+        "SELECT * FROM t_epcs WHERE epc_epc_id = '<EPC_ID>'",
+        "Check MQ backout queue for duplicate messages",
+        "Verify E-Basiliq order deduplication"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-PATTERN-008",
+      "pattern_regex": "Identifiant de dossier de réalisation .* inconnu",
+      "error_type": "MAKING_FILE_UNKNOWN",
+      "component": "ModifierDonneesCommercialesEptXdslService / AffecterRessourcesXdslService",
+      "impacted_entities": [
+        "MAKING_FILE",
+        "EPC"
+      ],
+      "probable_causes": [
+        "Making file already closed or archived",
+        "Wrong file ID in message",
+        "Concurrent modification deleted the file",
+        "NIFolderID field incorrect"
+      ],
+      "recommended_checks": [
+        "SELECT * FROM t_making_files WHERE mkfl_file_id = '<FILE_ID>'",
+        "Check mkfl_status is not CLOSED/CANCELLED",
+        "Verify IdEpc format in FR 012 procedure"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-PATTERN-009",
+      "pattern_regex": "L'accès est déjà en cours de modification",
+      "error_type": "CONCURRENT_MODIFICATION",
+      "component": "AffecterRessourcesXdslService",
+      "impacted_entities": [
+        "MAKING_FILE",
+        "EPC",
+        "MRT"
+      ],
+      "probable_causes": [
+        "Another making file in progress for same ND",
+        "Previous order not fully completed",
+        "Deadlock left a file in intermediate state"
+      ],
+      "recommended_checks": [
+        "SELECT * FROM t_making_files WHERE mkfl_nd = '<ND>' AND mkfl_status = 'IN_PROGRESS'",
+        "Check if a deadlock recovery is pending",
+        "Wait for active order to complete before retrying"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-PATTERN-010",
+      "pattern_regex": "Un accès client existe déjà avec le même identifiant",
+      "error_type": "MRT_CHEMIN_DUPLICATE",
+      "component": "AffecterRessourcesXdslService",
+      "impacted_entities": [
+        "MRT",
+        "EPC"
+      ],
+      "probable_causes": [
+        "MRTChemin ID already assigned to another MRTAccesDslam",
+        "Previous order partially executed",
+        "Data inconsistency between Brasil and Orchestra"
+      ],
+      "recommended_checks": [
+        "SELECT * FROM t_mrt_access_dslams WHERE mrtd_crc_mrt_id = '<MRT_CHEMIN_ID>'",
+        "Identify all MRTs using same crc_mrt_id",
+        "Apply FR procedure to clean duplicate assignment"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-PATTERN-011",
+      "pattern_regex": "deadlock detected",
+      "error_type": "DB_DEADLOCK",
+      "component": "AbstractBrasilMDBBean / ConnectorCLMDBBean / PostgreSQL",
+      "impacted_entities": [
+        "MAKING_FILE",
+        "PORT",
+        "CCL"
+      ],
+      "probable_causes": [
+        "Concurrent provisioning transactions on same DSLAM",
+        "High load causing transaction conflicts",
+        "Long-running transactions blocking others"
+      ],
+      "recommended_checks": [
+        "Check PostgreSQL pg_locks for blocking queries",
+        "Monitor ConnectorCL thread count",
+        "Check retry counter - max 3 retries with 55s delay",
+        "Review t_making_files for stuck orders after deadlock"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-PATTERN-012",
+      "pattern_regex": "Resources not found for following TechServiceFunction",
+      "error_type": "TSF_RESOURCES_NOT_FOUND",
+      "component": "LogicalResBooker / ManageNetworkTRProductionBusinessImpl",
+      "impacted_entities": [
+        "TSF",
+        "CCL",
+        "DSLAM"
+      ],
+      "probable_causes": [
+        "TSF not provisioned on target DSLAM",
+        "CCL for this TSF saturated or inactive",
+        "Routing misconfiguration in t_d_rsc_dslam_tsfs"
+      ],
+      "recommended_checks": [
+        "Check t_d_rsc_dslam_tsfs for target DSLAM",
+        "Verify t_res_prod_controlables status for related CCL",
+        "Check t_res_prod_roles for DSLAM/NIP binding",
+        "Run FR 137 routing check procedure"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-PATTERN-013",
+      "pattern_regex": "current transaction is aborted, commands ignored",
+      "error_type": "TX_ABORTED",
+      "component": "SqlExceptionHelper / PostgreSQL",
+      "impacted_entities": [
+        "MAKING_FILE"
+      ],
+      "probable_causes": [
+        "Previous statement in same transaction failed (usually after deadlock)",
+        "Transaction not rolled back before continuing"
+      ],
+      "recommended_checks": [
+        "Check if preceded by deadlock error",
+        "Verify ConnectorCL retry logic executed rollback",
+        "Check t_making_files for orphaned in-progress orders"
+      ],
+      "confidence": "high",
+      "source_file": "data_pipeline/input/*.log"
+    },
+    {
+      "id": "LOG-LOG-B300908AC916",
+      "pattern_regex": "DslamClosedForProductionException",
+      "error_type": "DslamClosedForProductionException",
+      "component": "BRASIL/provisioning_engine",
+      "impacted_entities": [
+        "SEBA",
+        "ORCHESTRA"
+      ],
+      "probable_causes": [
+        "Le DSLAM cible est marqué comme fermé à la production dans le référentiel NE. Toute commande de provisioning sur ce DSLAM est bloquée."
+      ],
+      "recommended_checks": [
+        "Vérifier le statut du DSLAM dans ORCHESTRA → Référentiel NE → Recherche par DSLAM_ID",
+        "Contrôler la date de mise en production et la raison de fermeture",
+        "Vérifier la cohérence entre BRASIL et SEBA sur l'état du NE",
+        "Identifier si une opération de maintenance est en cours (ticket réseau)"
+      ],
+      "confidence": "medium",
+      "source_file": "data_pipeline/output/log_knowledge.json"
+    },
+    {
+      "id": "LOG-LOG-4E4FEE8EE71F",
+      "pattern_regex": "UnknownMRTIdException",
+      "error_type": "UnknownMRTIdException",
+      "component": "BRASIL/routing_engine",
+      "impacted_entities": [
+        "SEBA"
+      ],
+      "probable_causes": [
+        "L'identifiant MRT référencé est introuvable ou a expiré dans le référentiel BRASIL. Cause typique : migration de données incomplète ou identifiant créé localement sans propagation."
+      ],
+      "recommended_checks": [
+        "Rechercher l'identifiant MRT dans BRASIL Admin → Référentiel → MRT",
+        "Vérifier si une migration de données a eu lieu récemment",
+        "Contrôler la synchronisation entre BRASIL et SEBA sur ce MRT_ID",
+        "Vérifier les logs de migration pour ce MRT_ID"
+      ],
+      "confidence": "medium",
+      "source_file": "data_pipeline/output/log_knowledge.json"
+    },
+    {
+      "id": "LOG-LOG-545F7860A49D",
+      "pattern_regex": "AvailableNetworkResourcesDisallowProductionException",
+      "error_type": "AvailableNetworkResourcesDisallowProductionException",
+      "component": "BRASIL/resource_manager",
+      "impacted_entities": [
+        "ORCHESTRA",
+        "SEBA"
+      ],
+      "probable_causes": [
+        "Les ressources réseau disponibles sur l'équipement cible sont insuffisantes ou bloquées. Le DSLAM est peut-être saturé (compteurs à 100%) ou en état de restriction."
+      ],
+      "recommended_checks": [
+        "Vérifier le taux d'occupation du DSLAM dans ORCHESTRA",
+        "Contrôler les compteurs de ports disponibles sur le NE cible",
+        "Vérifier si d'autres commandes simultanées utilisent les mêmes ressources",
+        "Analyser les logs ORCHESTRA pour des alertes de saturation"
+      ],
+      "confidence": "medium",
+      "source_file": "data_pipeline/output/log_knowledge.json"
+    },
+    {
+      "id": "LOG-LOG-F2D1B3A7A148",
+      "pattern_regex": "DslamUnreachableException",
+      "error_type": "DslamUnreachableException",
+      "component": "BRASIL/network_connector",
+      "impacted_entities": [
+        "ORCHESTRA",
+        "SEBA"
+      ],
+      "probable_causes": [
+        "Le DSLAM n'est pas joignable depuis BRASIL. Panne matérielle, problème réseau sur le flux de supervision, ou équipement hors ligne."
+      ],
+      "recommended_checks": [
+        "Ping/trace le DSLAM depuis le serveur BRASIL",
+        "Vérifier le statut dans ORCHESTRA → Supervision NE",
+        "Contacter l'équipe réseau pour diagnostic terrain",
+        "Vérifier les alertes NetManager/NMS sur ce DSLAM"
+      ],
+      "confidence": "medium",
+      "source_file": "data_pipeline/output/log_knowledge.json"
+    },
+    {
+      "id": "LOG-LOG-D0CBA9602039",
+      "pattern_regex": "CommandValidationException",
+      "error_type": "CommandValidationException",
+      "component": "BRASIL/command_processor",
+      "impacted_entities": [
+        "ADELIA",
+        "SEBA"
+      ],
+      "probable_causes": [
+        "La commande ne respecte pas les règles de validation métier BRASIL. Le dossier client est incomplet ou les prérequis de la commande ne sont pas satisfaits."
+      ],
+      "recommended_checks": [
+        "Consulter le message d'erreur détaillé dans les logs BRASIL pour le champ en erreur",
+        "Vérifier la complétude du dossier client dans BRASIL",
+        "Contrôler le séquencement : une commande précédente est-elle en attente ?",
+        "Vérifier les données ADELIA associées au client"
+      ],
+      "confidence": "medium",
+      "source_file": "data_pipeline/output/log_knowledge.json"
+    },
+    {
+      "id": "LOG-LOG-5E7D9BF8158B",
+      "pattern_regex": "BusinessRuleViolationException",
+      "error_type": "BusinessRuleViolationException",
+      "component": "BRASIL/business_rules_engine",
+      "impacted_entities": [
+        "ADELIA"
+      ],
+      "probable_causes": [
+        "Une règle métier BRASIL a été violée. Le code erreur 1300 est souvent associé à ce type d'exception."
+      ],
+      "recommended_checks": [
+        "Identifier la règle violée dans les logs (champ violated_rule)",
+        "Vérifier si le code erreur 1300 est présent dans les logs",
+        "Contrôler les données du dossier client vs les critères de la règle",
+        "Consulter la documentation de la règle métier concernée"
+      ],
+      "confidence": "medium",
+      "source_file": "data_pipeline/output/log_knowledge.json"
+    },
+    {
+      "id": "LOG-LOG-97119FA11E3D",
+      "pattern_regex": "ConnectorUnavailableException",
+      "error_type": "ConnectorUnavailableException",
+      "component": "BRASIL/integration_layer",
+      "impacted_entities": [
+        "SEBA",
+        "IPON",
+        "ARTEMIS",
+        "SCA",
+        "ORCHESTRA"
+      ],
+      "probable_causes": [
+        "Le connecteur vers un système tiers est indisponible. Causes possibles : système tiers down, timeout réseau, certificat SSL expiré, mauvaise configuration endpoint."
+      ],
+      "recommended_checks": [
+        "Identifier le système tiers concerné dans les logs (champ upstream_system)",
+        "Tester la connectivité réseau vers l'endpoint du système tiers",
+        "Vérifier le statut du service tiers (supervision)",
+        "Contrôler la validité du certificat SSL si HTTPS",
+        "Vérifier les logs du système tiers pour des erreurs côté serveur"
+      ],
+      "confidence": "medium",
+      "source_file": "data_pipeline/output/log_knowledge.json"
+    },
+    {
+      "id": "LOG-LOG-201C5ED33525",
+      "pattern_regex": "IntegrationTimeoutException",
+      "error_type": "IntegrationTimeoutException",
+      "component": "BRASIL/integration_layer",
+      "impacted_entities": [
+        "SEBA",
+        "ORCHESTRA",
+        "IPON"
+      ],
+      "probable_causes": [
+        "Une requête vers un système tiers a dépassé le délai d'attente configuré. Le système tiers répond trop lentement ou est surchargé."
+      ],
+      "recommended_checks": [
+        "Mesurer le temps de réponse actuel du système tiers",
+        "Vérifier la charge du système tiers (CPU/mémoire)",
+        "Consulter les logs du système tiers pour des lenteurs",
+        "Vérifier si le timeout BRASIL est configuré de façon appropriée"
+      ],
+      "confidence": "medium",
+      "source_file": "data_pipeline/output/log_knowledge.json"
+    },
+    {
+      "id": "LOG-LOG-E332BFBA5ECE",
+      "pattern_regex": "SessionExpiredException",
+      "error_type": "SessionExpiredException",
+      "component": "BRASIL/access_management",
+      "impacted_entities": [],
+      "probable_causes": [
+        "La session utilisateur a expiré prématurément. Causes : timeout configuré trop court, inactivité prolongée, problème JWT."
+      ],
+      "recommended_checks": [
+        "Vérifier la durée de session configurée dans BRASIL (security config)",
+        "Contrôler si le problème est reproductible pour tous les utilisateurs",
+        "Vérifier les logs d'accès pour le pattern d'expiration",
+        "Contrôler la synchronisation horaire entre les serveurs (NTP)"
+      ],
+      "confidence": "medium",
+      "source_file": "data_pipeline/output/log_knowledge.json"
+    },
+    {
+      "id": "LOG-LOG-0592BEE3224C",
+      "pattern_regex": "ProvisioningTimeoutException",
+      "error_type": "ProvisioningTimeoutException",
+      "component": "BRASIL/provisioning_engine",
+      "impacted_entities": [
+        "SEBA",
+        "ORCHESTRA"
+      ],
+      "probable_causes": [
+        "La commande de provisioning n'a pas reçu de confirmation dans le délai imparti. SEBA ou ORCHESTRA n'a pas répondu à temps."
+      ],
+      "recommended_checks": [
+        "Vérifier l'état de la commande dans SEBA",
+        "Contrôler les logs ORCHESTRA pour la commande concernée",
+        "Vérifier si SEBA traite normalement les autres commandes",
+        "Consulter la file d'attente SEBA pour détecter un blocage"
+      ],
+      "confidence": "medium",
+      "source_file": "data_pipeline/output/log_knowledge.json"
+    }
+  ]
+}
