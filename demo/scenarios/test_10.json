@@ -1,0 +1,38 @@
+{
+  "id": "TEST_10",
+  "tier": "GOLDEN",
+  "category": "guide_me",
+  "question": "Guide moi",
+  "expected_root_cause": "Mode guidage N3 sans diagnostic prématuré",
+  "expected_workflow": "guided_n3_questioning",
+  "expected_evidence": [
+    "symptôme",
+    "code erreur",
+    "équipement",
+    "ND"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "Conversation"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "symptôme",
+      "code erreur",
+      "équipement",
+      "ND"
+    ],
+    "forbidden_patterns": [
+      "diagnostic certain",
+      "cause racine certaine"
+    ]
+  }
+}

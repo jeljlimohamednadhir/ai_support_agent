@@ -1,0 +1,39 @@
+{
+  "id": "TEST_03",
+  "tier": "GOLDEN",
+  "category": "vlan_creation",
+  "question": "Comment créer un VLAN ?",
+  "expected_root_cause": "Demande de workflow de création VLAN",
+  "expected_workflow": "create_vlan",
+  "expected_evidence": [
+    "validation d'entrée",
+    "contrôle ressources",
+    "création",
+    "activation",
+    "vérification"
+  ],
+  "expected_code_reference": "ManageCreationVlanBusinessImpl.creerVlan()",
+  "expected_sources": [
+    "CODE",
+    "FR"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "ManageCreationVlanBusinessImpl.creerVlan()"
+    ],
+    "forbidden_patterns": [
+      "http://",
+      "https://",
+      "menu IHM",
+      "UPDATE "
+    ]
+  }
+}

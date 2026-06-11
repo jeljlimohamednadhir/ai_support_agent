@@ -1,1 +1,65 @@
 {"timestamp": "2026-03-08T00:53:20.082334", "ticket_id": "0", "original_label": "ANNULATION UTILISATEUR", "corrected_label": "INCOHERENCE DE DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:24:06.271209", "ticket_id": "0", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:32:14.951846", "ticket_id": "0", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:32:41.644527", "ticket_id": "1", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "MECONNAISSANCE USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:32:51.773168", "ticket_id": "2", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:33:14.850670", "ticket_id": "3", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:33:25.428107", "ticket_id": "4", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:34:18.925262", "ticket_id": "5", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "BON USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:34:40.680625", "ticket_id": "6", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:34:54.087254", "ticket_id": "7", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "MECONNAISSANCE USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:35:08.457279", "ticket_id": "8", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "MECONNAISSANCE USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:35:35.699633", "ticket_id": "9", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DEMANDE DE TRAVAUX", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:35:49.361931", "ticket_id": "10", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "MECONNAISSANCE USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:36:05.957964", "ticket_id": "11", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DEMANDE DE TRAVAUX", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:36:19.348977", "ticket_id": "12", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:36:38.125704", "ticket_id": "13", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:37:08.971778", "ticket_id": "14", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "APPLICATION COMPOSANT - FONCTIONNALITE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:37:24.044115", "ticket_id": "15", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:37:36.586740", "ticket_id": "16", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "MECONNAISSANCE USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:38:10.930563", "ticket_id": "17", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DEMANDE DE TRAVAUX", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:38:33.292059", "ticket_id": "18", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "INTERFACE AUTRE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:38:47.889642", "ticket_id": "19", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "NON CONFORMITE PROFIL OU DROITS", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:39:02.427559", "ticket_id": "20", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:40:07.554993", "ticket_id": "21", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "APPLICATIF", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:40:28.072217", "ticket_id": "22", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DEMANDE DE TRAVAUX", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:40:41.290992", "ticket_id": "23", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DEMANDE DE TRAVAUX", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:40:55.214580", "ticket_id": "24", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:41:07.212194", "ticket_id": "25", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "MECONNAISSANCE USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:41:17.242429", "ticket_id": "26", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DEMANDE DE TRAVAUX", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:48:01.701942", "ticket_id": "27", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "INTERFACE AUTRE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:48:15.946090", "ticket_id": "28", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "MECONNAISSANCE USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:48:28.413166", "ticket_id": "29", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "BON USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:48:44.932350", "ticket_id": "30", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "NON CONFORMITE PROFIL OU DROITS", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:48:55.226669", "ticket_id": "31", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "BON USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:49:26.617376", "ticket_id": "32", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:49:41.577093", "ticket_id": "33", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "UTILISATEUR", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:49:58.790692", "ticket_id": "34", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:50:09.284954", "ticket_id": "35", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:50:24.283269", "ticket_id": "36", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "NON CONFORMITE PROFIL OU DROITS", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:50:32.746067", "ticket_id": "37", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DEMANDE DE TRAVAUX", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:50:57.067113", "ticket_id": "38", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "INTERFACE AUTRE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:51:16.783577", "ticket_id": "39", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "BON USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:51:25.635416", "ticket_id": "40", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:51:36.153213", "ticket_id": "41", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "BON USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:51:45.019883", "ticket_id": "42", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:52:27.368273", "ticket_id": "43", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:52:39.846642", "ticket_id": "44", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "TRAITEMENT IMPOSSIBLE - DESCRIPTION INCOMPLETE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:52:53.125938", "ticket_id": "45", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "TRAITEMENT IMPOSSIBLE - DESCRIPTION INCOMPLETE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:53:06.178238", "ticket_id": "46", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "BON USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:53:25.653579", "ticket_id": "47", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:54:21.696808", "ticket_id": "48", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "BON USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:54:40.353822", "ticket_id": "49", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:54:49.727216", "ticket_id": "50", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DEMANDE DE TRAVAUX", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:54:59.816822", "ticket_id": "51", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:55:40.225644", "ticket_id": "52", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:56:01.718473", "ticket_id": "53", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "UTILISATEUR - INCIDENT DISPARU", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:56:24.859635", "ticket_id": "54", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "BON USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:56:33.610519", "ticket_id": "55", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DEMANDE DE TRAVAUX", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:56:52.916633", "ticket_id": "56", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "ANNULATION UTILISATEUR", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:57:45.956859", "ticket_id": "57", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "BON USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T10:57:56.358048", "ticket_id": "58", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "UTILISATEUR - INCIDENT DISPARU", "text": null, "reason": null}
+{"timestamp": "2026-03-18T11:08:46.596429", "ticket_id": "59", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "DONNEES", "text": null, "reason": null}
+{"timestamp": "2026-03-18T12:21:27.448900", "ticket_id": "60", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "BON USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T12:21:48.089893", "ticket_id": "61", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "BON USAGE", "text": null, "reason": null}
+{"timestamp": "2026-03-18T12:22:01.383346", "ticket_id": "62", "original_label": "INCOHERENCE CORRIGEE PAR OUTIL OU SCRIPT", "corrected_label": "INTERFACE ORCHESTRA", "text": null, "reason": null}

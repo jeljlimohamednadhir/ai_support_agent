@@ -26,8 +26,8 @@
   <rect class="bg" x="0" y="0" width="1600" height="900"/>
 
   <!-- Header -->
-  <text class="title" x="80" y="60">Workflow narratif — AI Support Agent</text>
-  <text class="subtitle" x="80" y="85">Étapes racontées : de la collecte à la validation humaine</text>
+  <text class="title" x="80" y="60">Workflow narratif â€” OpsPilot AI</text>
+  <text class="subtitle" x="80" y="85">Ã‰tapes racontÃ©es : de la collecte Ã  la validation humaine</text>
 
   <!-- Step 1: Collecte -->
   <g transform="translate(60,120)">
@@ -35,9 +35,9 @@
     <circle cx="60" cy="80" r="40" fill="#60a5fa"/>
     <text class="stepnum" x="60" y="92" text-anchor="middle">1</text>
     <text class="title" x="140" y="50">Collecte</text>
-    <text class="body" x="140" y="80">Récupération automatique des sources :</text>
-    <text class="body" x="140" y="104">- Repos Git, fichiers de logs, schémas DB, documentation</text>
-    <text class="body" x="140" y="128">- Création d'un job de collecte (Postgres)</text>
+    <text class="body" x="140" y="80">RÃ©cupÃ©ration automatique des sources :</text>
+    <text class="body" x="140" y="104">- Repos Git, fichiers de logs, schÃ©mas DB, documentation</text>
+    <text class="body" x="140" y="128">- CrÃ©ation d'un job de collecte (Postgres)</text>
   </g>
 
   <!-- Step 2: Workers -->
@@ -48,7 +48,7 @@
     <text class="title" x="140" y="50">Analyse asynchrone</text>
     <text class="body" x="140" y="80">Workers (Celery) traitent les jobs :</text>
     <text class="body" x="140" y="104">- Parsing AST, extraction de fonctions/endpoints</text>
-    <text class="body" x="140" y="128">- Génération d'embeddings & normalisation des logs</text>
+    <text class="body" x="140" y="128">- GÃ©nÃ©ration d'embeddings & normalisation des logs</text>
   </g>
 
   <!-- Step 3: Indexation -->
@@ -57,9 +57,9 @@
     <circle cx="60" cy="80" r="40" fill="#06b6d4"/>
     <text class="stepnum" x="60" y="92" text-anchor="middle">3</text>
     <text class="title" x="140" y="50">Indexation & Graphe</text>
-    <text class="body" x="140" y="80">- Entities & relations → Neo4j</text>
-    <text class="body" x="140" y="104">- Documents & snippets → Qdrant (embeddings)</text>
-    <text class="body" x="140" y="128">- Métadonnées → PostgreSQL</text>
+    <text class="body" x="140" y="80">- Entities & relations â†’ Neo4j</text>
+    <text class="body" x="140" y="104">- Documents & snippets â†’ Qdrant (embeddings)</text>
+    <text class="body" x="140" y="128">- MÃ©tadonnÃ©es â†’ PostgreSQL</text>
   </g>
 
   <!-- Curved connectors (narrative flow) -->
@@ -72,9 +72,9 @@
     <circle cx="60" cy="80" r="40" fill="#f59e0b"/>
     <text class="stepnum" x="60" y="92" text-anchor="middle">4</text>
     <text class="title" x="140" y="50">Conversation / RAG</text>
-    <text class="body" x="140" y="80">- Recherche sémantique via Qdrant</text>
+    <text class="body" x="140" y="80">- Recherche sÃ©mantique via Qdrant</text>
     <text class="body" x="140" y="104">- Contextualisation avec Neo4j</text>
-    <text class="body" x="140" y="128">- Génération de réponse par le LLM</text>
+    <text class="body" x="140" y="128">- GÃ©nÃ©ration de rÃ©ponse par le LLM</text>
   </g>
 
   <!-- Step 5: Validation -->
@@ -84,7 +84,7 @@
     <text class="stepnum" x="60" y="92" text-anchor="middle">5</text>
     <text class="title" x="140" y="50">Validation Humaine</text>
     <text class="body" x="140" y="80">- Experts relisent & corrigent</text>
-    <text class="body" x="140" y="104">- Feedback -> amélioration des règles</text>
+    <text class="body" x="140" y="104">- Feedback -> amÃ©lioration des rÃ¨gles</text>
     <text class="body" x="140" y="128">- Historique & audit dans PostgreSQL</text>
   </g>
 
@@ -94,7 +94,7 @@
 
   <!-- Footer explanation -->
   <text class="subtitle" x="80" y="860">Histoire :</text>
-  <text class="body" x="80" y="885">1) Le système collecte les sources. 2) Les workers analysent et extraient. 3) Les résultats sont indexés (graphe + vecteurs). 4) Le chatbot utilise ces indices pour répondre. 5) Les experts valident et bouclent l'amélioration.</text>
+  <text class="body" x="80" y="885">1) Le systÃ¨me collecte les sources. 2) Les workers analysent et extraient. 3) Les rÃ©sultats sont indexÃ©s (graphe + vecteurs). 4) Le chatbot utilise ces indices pour rÃ©pondre. 5) Les experts valident et bouclent l'amÃ©lioration.</text>
 
 </svg>
 <?xml version="1.0" encoding="UTF-8"?>
@@ -115,17 +115,17 @@
   <!-- Collector -->
   <rect class="box" x="40" y="60" width="220" height="90" rx="12"/>
   <text class="title" x="150" y="95" text-anchor="middle">Collecte</text>
-  <text class="desc" x="150" y="115" text-anchor="middle">Git · Logs · DB · Docs</text>
+  <text class="desc" x="150" y="115" text-anchor="middle">Git Â· Logs Â· DB Â· Docs</text>
 
   <!-- Worker -->
   <rect class="box" x="320" y="60" width="220" height="90" rx="12"/>
   <text class="title" x="430" y="95" text-anchor="middle">Workers</text>
-  <text class="desc" x="430" y="115" text-anchor="middle">Parsing · Extraction · Embeddings</text>
+  <text class="desc" x="430" y="115" text-anchor="middle">Parsing Â· Extraction Â· Embeddings</text>
 
   <!-- Knowledge Graph -->
   <rect class="box" x="600" y="60" width="220" height="90" rx="12"/>
   <text class="title" x="710" y="95" text-anchor="middle">Knowledge Graph</text>
-  <text class="desc" x="710" y="115" text-anchor="middle">Neo4j (relations & entités)</text>
+  <text class="desc" x="710" y="115" text-anchor="middle">Neo4j (relations & entitÃ©s)</text>
 
   <!-- Vector Store -->
   <rect class="box" x="880" y="60" width="220" height="90" rx="12"/>
@@ -135,12 +135,12 @@
   <!-- Chatbot -->
   <rect class="box" x="320" y="220" width="220" height="90" rx="12"/>
   <text class="title" x="430" y="255" text-anchor="middle">Chatbot</text>
-  <text class="desc" x="430" y="275" text-anchor="middle">RAG + LLM génératif</text>
+  <text class="desc" x="430" y="275" text-anchor="middle">RAG + LLM gÃ©nÃ©ratif</text>
 
   <!-- Validation -->
   <rect class="box" x="600" y="220" width="220" height="90" rx="12"/>
   <text class="title" x="710" y="255" text-anchor="middle">Validation Humaine</text>
-  <text class="desc" x="710" y="275" text-anchor="middle">Review · Corrections · Feedback</text>
+  <text class="desc" x="710" y="275" text-anchor="middle">Review Â· Corrections Â· Feedback</text>
 
   <!-- Arrows -->
   <line class="arrow" x1="260" y1="105" x2="320" y2="105"/>
@@ -151,5 +151,5 @@
   <line class="arrow" x1="540" y1="265" x2="600" y2="265"/>
 
   <!-- Footnote -->
-  <text class="desc" x="20" y="580">Workflow: Collecte → Workers (analyse) → Knowledge Graph & Vector Store → Chatbot → Validation</text>
+  <text class="desc" x="20" y="580">Workflow: Collecte â†’ Workers (analyse) â†’ Knowledge Graph & Vector Store â†’ Chatbot â†’ Validation</text>
 </svg>

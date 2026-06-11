@@ -1,0 +1,32 @@
+{
+  "id": "TEST_15",
+  "tier": "GOLDEN",
+  "category": "incident_history",
+  "question": "Résume cet incident pour le dépositaire",
+  "expected_root_cause": "Résumé non technique et compréhensible",
+  "expected_workflow": "ticket_summary_non_technical",
+  "expected_evidence": [
+    "message simple",
+    "sans jargon"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "Conversation"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "non technique"
+    ],
+    "forbidden_patterns": [
+      "jargon BRASIL"
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "TEST_11",
+  "tier": "GOLDEN",
+  "category": "code_lookup",
+  "question": "Quelle table est utilisée lors de la suppression d'un DSLAM ?",
+  "expected_root_cause": "Réponse uniquement basée sur code/SQL indexé",
+  "expected_workflow": "code_table_lookup",
+  "expected_evidence": [
+    "table indexée"
+  ],
+  "expected_code_reference": "ManageDslamBusinessImpl.deleteDslam()",
+  "expected_sources": [
+    "CODE",
+    "LIVE_DB"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "information indisponible"
+    ],
+    "forbidden_patterns": [
+      "table inventée"
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "id": "TEST_20",
+  "tier": "GOLDEN",
+  "category": "followup_reasoning",
+  "question": "Explique moi cette erreur comme à un collaborateur",
+  "expected_root_cause": "Vulgarisation alignée sur même cause racine",
+  "expected_workflow": "followup_reasoning",
+  "expected_evidence": [
+    "vulgarisation",
+    "même cause racine"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "Conversation",
+    "LIVE_LOG",
+    "LIVE_DB"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "version vulgarisée"
+    ],
+    "forbidden_patterns": [
+      "information inventée"
+    ]
+  }
+}

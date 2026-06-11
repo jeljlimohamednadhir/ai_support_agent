@@ -149,3 +149,6 @@ podman exec -it ai-support-postgres psql -U postgres -d ai_support_agent
 
 **Vous êtes prêt ! 🎉**
 
+
+wsl -d Ubuntu-24.04 -e bash -c "podman start ai-support-qdrant ai-support-neo4j ai-support-postgres ai-support-redis"
+

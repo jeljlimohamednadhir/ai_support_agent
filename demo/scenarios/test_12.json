@@ -1,0 +1,34 @@
+{
+  "id": "TEST_12",
+  "tier": "GOLDEN",
+  "category": "workflow_analysis",
+  "question": "Quel workflow est exécuté lors de la création VLAN ?",
+  "expected_root_cause": "Reconstruction du workflow réel create_vlan",
+  "expected_workflow": "create_vlan",
+  "expected_evidence": [
+    "services appelés",
+    "validations",
+    "ordre réel"
+  ],
+  "expected_code_reference": "ManageCreationVlanBusinessImpl.creerVlan()",
+  "expected_sources": [
+    "CODE",
+    "FR"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "workflow métier"
+    ],
+    "forbidden_patterns": [
+      "étape inventée"
+    ]
+  }
+}

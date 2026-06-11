@@ -1,0 +1,36 @@
+{
+  "id": "TEST_04",
+  "tier": "GOLDEN",
+  "category": "vlan_deletion",
+  "question": "Pourquoi un VLAN est occupé ?",
+  "expected_root_cause": "Ressources liées/non libérées et compteurs incohérents",
+  "expected_workflow": "vlan_delete_diagnostic",
+  "expected_evidence": [
+    "ressources liées",
+    "dépendances",
+    "compteurs"
+  ],
+  "expected_code_reference": "ManageVlanBusinessImpl.deleteVlan()",
+  "expected_sources": [
+    "LIVE_DB",
+    "FR",
+    "CODE"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "workflow de diagnostic"
+    ],
+    "forbidden_patterns": [
+      "preuve inventée",
+      "hallucination"
+    ]
+  }
+}

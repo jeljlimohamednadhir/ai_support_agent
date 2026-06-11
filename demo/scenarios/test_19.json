@@ -1,0 +1,33 @@
+{
+  "id": "TEST_19",
+  "tier": "GOLDEN",
+  "category": "code_lookup",
+  "question": "Quelle fonction gère la création d'équipement ?",
+  "expected_root_cause": "Lookup code pur",
+  "expected_workflow": "code_lookup_only",
+  "expected_evidence": [
+    "fonction",
+    "classe",
+    "fichier"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "CODE"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "Code intelligence"
+    ],
+    "forbidden_patterns": [
+      "procédure métier"
+    ]
+  }
+}

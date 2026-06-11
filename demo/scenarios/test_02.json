@@ -1,0 +1,36 @@
+{
+  "id": "TEST_02",
+  "tier": "GOLDEN",
+  "category": "code_lookup",
+  "question": "Quelle est la méthode Java qui supprime un DSLAM ?",
+  "expected_root_cause": "Requête de localisation code (pas de diagnostic incident)",
+  "expected_workflow": "code_lookup_only",
+  "expected_evidence": [
+    "classe",
+    "méthode",
+    "fichier",
+    "ligne"
+  ],
+  "expected_code_reference": "ManageDslamBusinessImpl.deleteDslam()",
+  "expected_sources": [
+    "CODE"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "ManageDslamBusinessImpl",
+      "deleteDslam()"
+    ],
+    "forbidden_patterns": [
+      "procédure métier",
+      "workflow FR"
+    ]
+  }
+}

@@ -1,627 +1,355 @@
-# 🤖 Genergy IA — Assistant Technique Intelligent BRASIL
+# 🧠 BRASIL N3 — Forensic AI Support Platform
 
-**Version 1.2.0** | ✅ Production Ready
+**Version 2.0.0** | ✅ Production Ready — Stabilization Pass Complete
 
-Une plateforme complète d'assistance technique basée sur l'IA qui combine RAG (Retrieval-Augmented Generation), Knowledge Graph et Vector Store pour fournir des réponses expertes et traçables sur le système **BRASIL** (51 Fiches de Résolution indexées, 128 tables DB).
+Plateforme d'assistance forensique N3 pour le système **BRASIL** (Orange Telecom).  
+Combine RAG, intelligence du code source Java, diagnostics live SSH/PostgreSQL, et un moteur de vérité déterministe pour assister les ingénieurs N3 sans hallucination.
 
-> **Branche active** : `feature/multi-tenant-intelligence-platform`
-> **LLM** : Groq `qwen/qwen3-32b` | **Embedding** : `paraphrase-multilingual-MiniLM-L12-v2` (dim=384)
+> **Branche active** : `feature/multi-tenant-intelligence-platform`  
+> **LLM** : Groq `qwen/qwen3-32b` (formateur uniquement — jamais source de vérité)  
+> **Embedding** : `paraphrase-multilingual-MiniLM-L12-v2` (dim=384)  
+> **Base de connaissance** : 51 FRs indexées · 128 tables BRASIL · ~3 200 fichiers Java analysés
 
 ## 📋 Table des Matières
 
 - [Vue d'ensemble](#-vue-densemble)
-- [Fonctionnalités](#-fonctionnalités)
 - [Architecture](#-architecture)
-- [Installation](#-installation)
+- [Démarrage rapide](#-démarrage-rapide)
+- [Fonctionnalités](#-fonctionnalités)
+- [Moteurs de stabilisation](#-moteurs-de-stabilisation)
+- [Intelligence du code source](#-intelligence-du-code-source)
+- [Pipeline anti-hallucination](#-pipeline-anti-hallucination)
+- [Tests](#-tests)
 - [Configuration](#-configuration)
-- [Utilisation](#-utilisation)
-- [Documentation](#-documentation)
 - [Technologies](#-technologies)
-- [Développement](#-développement)
-- [CI/CD](#-cicd)
-- [Support](#-support)
+
+---
 
 ## 🎯 Vue d'ensemble
 
-**Genergy IA** est une solution complète qui :
+La plateforme assiste les ingénieurs N3 BRASIL avec :
 
-- 🔍 **Recherche intelligente** : Vector store (Qdrant) + Knowledge Graph (Neo4j)
-- 💬 **Chatbot RAG** : Réponses contextuelles avec sources citées
-- 📊 **Visualisation** : Graphe de connaissances interactif
-- ⚙️ **Configuration centralisée** : Tout gérable depuis l'UI
-- 🤖 **Workers automatisés** : Sync Jira + Build Graph (Celery + Beat)
-- 📈 **Monitoring temps réel** : Dashboard Flower pour les workers
-- ✅ **Validation humaine** : Amélioration continue de l'IA
-- 🚀 **Prêt pour la production** : Tests, CI/CD, documentation complète
+| Capacité | Description |
+|---|---|
+| 🔍 **Diagnostics live** | SSH → logs Tomcat · PostgreSQL readonly · Corrélation runtime |
+| 📖 **Base de connaissance** | 51 FRs BRASIL · 128 tables DB · ~3 200 fichiers Java indexés |
+| 🧠 **Intelligence code** | Résolution de méthodes Java, chaînes d'appel, validateurs, exceptions |
+| 🛡️ **Truth Enforcement** | Bloque SQL mutations · Invalide tables inexistantes · Refuse scripts shell |
+| 🧭 **Semantic Routing** | 25 catégories opérationnelles · Langue française N3 · Multi-label |
+| 📂 **Provenance** | Chaque réponse cite : fichier log · table DB · classe Java · FR · serveur |
+| 🔄 **Workflow Intelligence** | Étapes opérationnelles DSLAM/VLAN/équipements depuis code + FRs |
+| 💾 **Mémoire forensique** | Persistance cross-tour (2h TTL) — contexte conservé entre les questions |
 
-### Cas d'usage
+### Principe fondamental
 
-**Question** : "Qu'est-ce que la table t_ports et comment l'interroger ?"
+```
+LLM = formateur / naturaliseur uniquement
+Moteur déterministe = source de vérité principale
+```
 
-**L'IA répond** :
-- Description de la table et ses colonnes
-- Relations avec d'autres tables (via le graphe)
-- Exemples de requêtes SQL
-- Fiches de résolution associées
-- Sources traçables (liens vers la documentation)
+Le LLM ne raisonne jamais sur des logs bruts, des données DB, ou du code source directement.
+Toutes les preuves viennent de pipelines déterministes vérifiés.
 
-## ✨ Fonctionnalités
-
-### 🤖 Assistant Conversationnel
-- Chatbot intelligent avec RAG
-- Détection de requêtes déterministes (ex: "les 5 derniers Jira")
-- Affichage des sources avec badges interactifs
-- Historique des conversations
-- Feedback utilisateur
-
-### 🔄 Automatisation (Workers Celery)
-- **Sync Jira** : Synchronisation automatique horaire des tickets
-- **Build Graph** : Reconstruction du knowledge graph toutes les 6h
-- **Monitoring Flower** : Dashboard temps réel sur port 5555
-- **Celery Beat** : Planification flexible des tâches
-- **Scalable** : Architecture multi-workers
-
-### 📊 Base de Connaissances
-- Visualisation du graphe (nodes + relations)
-- Recherche sémantique
-- Statistiques en temps réel
-- Export des données
-
-### ⚙️ Configuration Centralisée
-- **LLM & IA** : Provider, modèle, température, tokens
-- **Bases de données** : Neo4j, Qdrant, PostgreSQL
-- **Interface** : Thème, langue, préférences
-- **Jira** : URL, authentification, projet par défaut
-- Chiffrement des valeurs sensibles
-
-### 📈 Dashboard
-- Statistiques globales
-- Activité récente
-- Métriques de performance
-- Graphiques d'évolution
-
-### ✅ Validation
-- Validation des réponses de l'IA
-- Corrections et feedback
-- Amélioration continue
+---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Frontend (React + TypeScript)             │
-│  Chat │ Knowledge Graph │ Dashboard │ Validation │ Settings │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                    ┌─────────┴─────────┐
-                    │                   │
-                    ▼                   ▼
-┌────────────────────────────────────────────────────────────┐
-│                   Backend API (FastAPI)                     │
-│  Chatbot │ Config │ Knowledge │ Validation │ Dashboard     │
-└────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                    Frontend  React + TypeScript                   │
+│          Chat │ Knowledge Graph │ Dashboard │ Validation          │
+└──────────────────────────────────────────────────────────────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    ▼                           ▼
+        ┌─────────────────────┐    ┌─────────────────────────┐
+        │  FastAPI  :8000     │    │  Semantic Intent Router  │
+        │  chatbot_service.py │◄───│  25 catégories          │
+        └─────────────────────┘    └─────────────────────────┘
                     │
-        ┌───────────┼───────────┬───────────┐
-        ▼           ▼           ▼           ▼
-   ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐
-   │ Neo4j  │  │ Qdrant │  │Postgres│  │ Groq   │
-   │(Graph) │  │(Vector)│  │  (DB)  │  │ (LLM)  │
-   └────────┘  └────────┘  └────────┘  └────────┘
+     ┌──────────────┼──────────────┬──────────────────┐
+     ▼              ▼              ▼                  ▼
+┌─────────┐  ┌──────────┐  ┌──────────────┐  ┌──────────────┐
+│Qdrant   │  │Execution │  │  Live Diag   │  │  Truth       │
+│51 FRs   │  │Graph     │  │  SSH+Psql    │  │  Enforcement │
+│128 tbls │  │~3200 .java│  │  Forensic   │  │  Engine      │
+└─────────┘  └──────────┘  └──────────────┘  └──────────────┘
+                    │
+     ┌──────────────┼──────────────┬──────────────────┐
+     ▼              ▼              ▼                  ▼
+┌─────────┐  ┌──────────┐  ┌──────────────┐  ┌──────────────┐
+│Provenance│  │Workflow  │  │  Forensic    │  │  Response    │
+│Engine   │  │Intellig. │  │  Memory      │  │  Quality     │
+│📂 Sources│  │🧩 Steps  │  │  (2h TTL)   │  │  (Phase 7)   │
+└─────────┘  └──────────┘  └──────────────┘  └──────────────┘
 ```
 
-### Composants Principaux
+---
 
-- **Frontend** : React 18, TypeScript, Vite, TailwindCSS
-- **Backend** : FastAPI, SQLAlchemy, Pydantic
-- **Workers** : Celery + Redis (Jira Sync, Graph Builder, Analyzers)
-- **Scheduler** : Celery Beat (tâches périodiques)
-- **Monitoring** : Flower Dashboard (port 5555)
-- **Knowledge Graph** : Neo4j (relations et corrélations)
-- **Vector Store** : Qdrant (embeddings sémantiques)
-- **LLM** : Groq (Llama), OpenAI, Anthropic
-- **Database** : PostgreSQL (métadonnées, config)
-
-## 🚀 Installation
+## 🚀 Démarrage rapide
 
 ### Prérequis
 
-- **Python** 3.11+
-- **Node.js** 18+
-- **Docker** ou **Podman**
-- **Neo4j** 5.x
-- **Qdrant** 1.x
+- Python 3.11+ · Node.js 18+ · PostgreSQL · Qdrant · Groq API key
+- Code source BRASIL Java disponible localement
 
-### 1. Cloner le Projet
+### Lancer le serveur
+
+```powershell
+$env:PYTHONPATH="d:\ai-support-agent\backend"
+$env:BRASIL_SOURCE_ROOT="d:\ai-support-agent\brasil-default\brasil-default"
+$env:PYTHONIOENCODING="utf-8"
+$env:DEMO_MODE="true"
+Set-Location D:\ai-support-agent\backend
+.venv\Scripts\python.exe -W ignore::DeprecationWarning -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+> ⚠️ Le premier démarrage déclenche un scan du code source (~20s). Les appels suivants sont instantanés.
+
+### Vérification
 
 ```bash
-git clone <repository-url>
-cd ai-support-agent
+curl http://localhost:8000/health
+# → {"status": "healthy", "version": "2.0.0", "service": "ai-support-agent"}
 ```
 
-### 2. Backend
-           │              │              │              │
-           ▼              ▼              ▼              ▼
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│  PostgreSQL  │  │    Redis     │  │    Neo4j     │  │   Qdrant     │
-│  (Metadata)  │  │   (Cache)    │  │   (Graph)    │  │  (Vectors)   │
-└──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘
-                         │
-                         ▼
-           ┌───────────────────────────────┐
-           │     Celery Workers (AI)        │
-           │  Code│Logs│DB│Doc Analyzers   │
-           └───────────────────────────────┘
+### Exemples d'utilisation
+
+```bash
+# Trouver une fonction Java
+curl -X POST http://localhost:8000/api/v1/chatbot/chat \
+  -H "Content-Type: application/json" \
+  -d '{"content":"quelle fonction supprime un DSLAM ?","app_id":"brasil"}'
+
+# Workflow opérationnel
+curl -X POST http://localhost:8000/api/v1/chatbot/chat \
+  -d '{"content":"comment créer un VLAN étape par étape ?","app_id":"brasil"}'
+
+# Exceptions Java
+curl -X POST http://localhost:8000/api/v1/chatbot/chat \
+  -d '{"content":"quelles exceptions sont levées lors de la suppression ?","app_id":"brasil"}'
 ```
 
-## 🧭 Workflow
-
-Le workflow décrit le parcours principal des données : collecte → analyse → indexation dans le graphe & vector store → réponses via le chatbot → validation humaine. Ci‑dessous deux représentations visuelles : une carte mentale et un schéma de workflow.
-
-![Carte mentale](docs/mindmap.svg)
-
-![Workflow](docs/workflow.svg)
-
-**Démo interactive :** ouvrez `docs/workflow.html` dans votre navigateur pour une version animée et narrative du workflow (GSAP).
-
-**Démo cinématique :** ouvrez `docs/workflow_cinematic.html` pour une expérience visuelle plus avancée (caméra, particules, timeline GSAP).
-
-
-### Composants principaux
-
-1. **Collecteur** : Git, Logs, Base de données, Documentation
-2. **Analyseur IA** : Extraction règles métier, patterns, anomalies
-3. **Knowledge Graph** : Neo4j + Qdrant pour relations et recherche sémantique
-4. **Validation Humaine** : Interface pour corrections et amélioration
-5. **Chatbot Expert** : LLM + RAG sur le graphe de connaissance
-6. **Workers** : Analyse asynchrone en arrière-plan
+---
 
 ## ✨ Fonctionnalités
 
-### 🔍 Collecte Automatique
-- ✅ Clone et analyse de dépôts Git
-- ✅ Parsing de code (fonctions, classes, dépendances)
-- ✅ Collecte de logs (fichiers, syslog, cloud)
-- ✅ Introspection de schémas DB
-- ✅ Indexation de documentation (Markdown, PDF, API specs)
+### 🔎 Résolution de fonctions Java
 
-### 🧠 Analyse IA
-- ✅ Extraction de règles métier
-- ✅ Analyse de flux applicatifs
-- ✅ Détection d'anomalies dans les logs
-- ✅ Identification de patterns d'erreurs
-- ✅ Analyse de comportements
+```
+Question: "quelle méthode Java supprime un DSLAM ?"
 
-### 💬 Chatbot Expert
-- ✅ Réponses contextuelles
-- ✅ Diagnostic de problèmes
-- ✅ Suggestions de solutions
-- ✅ Références vers code/logs pertinents
+→ 🔎 Fonction dans le code source — DSLAM
+  Opération: delete_equipment
+  🟦 ManageDslamBusinessImpl.deleteDslam()       ligne 1787
+  🟦 ManageDslamManagerImpl.deleteDslamManager() ligne 128
+  ⚠ Validateur: checkProductionInfoIsPresent()
+     Condition: si services actifs → suppression bloquée
+```
 
-### ✅ Validation & Amélioration
-- ✅ Interface de validation humaine
-- ✅ Corrections et feedback
-- ✅ Métriques de qualité
-- ✅ Amélioration continue
+### 🧩 Workflow Intelligence
 
-## 🚀 Installation
+```
+Question: "comment supprimer un DSLAM ?"
 
-### ⚠️ Important : Podman au lieu de Docker
+→ 🧩 Workflow — Suppression d'un DSLAM (Source: code)
+  1. Vérifier l'absence de services actifs
+     → ManageDslamBusinessImpl.checkProductionInfoIsPresent()
+     ⚠️ Si services actifs → suppression bloquée
+  2. Contrôler les dépendances MRT
+     → ManageDslamBusinessImpl.checkMrtDependencies()
+  3. Vérifier les données résiduelles (t_mrt_access_dslams)
+  4. Lancer ManageDslamBusinessImpl.deleteDslam()
+  5. Confirmer en base (t_equipments)
+  6. Vérifier le retrait des ressources associées
+```
 
-Ce projet utilise **Podman** comme moteur de conteneurisation (pas Docker).
+### 📂 Provenance automatique
 
-**Pourquoi Podman ?**
-- 🔒 **Rootless** : Plus sécurisé, pas besoin de droits admin
-- 🐳 **Compatible Docker** : Même syntaxe, mêmes images
-- 🏢 **Enterprise-ready** : Approuvé par Orange/RedHat
-- 💰 **Gratuit** : Pas de licence commerciale requise
+```
+📂 Sources des informations
+📋 runtime_log:
+  - connectorCL_20260515.log | server: op49mwa11 | conf: 85%
+🗄️ database:
+  - t_equipments | server: op49mdb11 | conf: 95%
+⚙️ source_code:
+  - ManageDslamBusinessImpl.deleteDslam() | ligne: 1787 | conf: 100%
+📄 FR:
+  - FR-DSLAM-189 | conf: 90%
+```
 
-### Prérequis
+### 🛡️ Vérité garantie
 
-- **Podman Desktop** + podman-compose
-- Python 3.11+
-- Node.js 20+ (pour le frontend)
-- Git
+- `DELETE FROM t_equipments` → `🚫 Commande SQL de mutation bloquée`
+- Table `t_fake_table` → `⚠️\`t_fake_table\`` (non présente dans le schéma indexé)
+- Script `bash deploy.sh` → `🚫 Commande shell bloquée`
+- Placeholder `[NOM_EQPT]` → requête retirée automatiquement
 
-### Installation rapide avec Podman (Recommandé)
+---
 
-#### 🪟 Windows
+## 🔬 Moteurs de stabilisation
+
+### Phase 1 — Truth Enforcement (`truth_enforcement.py`)
+
+| Check | Action |
+|---|---|
+| SQL `UPDATE/DELETE/INSERT/ALTER/DROP/TRUNCATE` | Bloqué · remplacé par message sécurisé |
+| Script `bash/sh/shell` | Bloqué · fenced block remplacé |
+| Placeholder SQL `[NOM]` | Requête entière retirée |
+| Table inconnue `t_xyz` | Flaggée `⚠️` en strict mode |
+| Méthode Java introuvable | Journalisée (non remplacée) |
+
+### Phase 2 — Semantic Intent Router (`semantic_intent_router.py`)
+
+25 catégories opérationnelles — classification pure regex, sans LLM :
+
+```
+"quelle fonction supprime un dslam"  → source_code_lookup → find_code_function
+"comment créer un VLAN"              → workflow_navigation → forensic_workflow
+"depuis quels logs viennent ces infos" → evidence_provenance → forensic_evidence
+"quelles exceptions sont levées"     → exception_lookup → forensic_exceptions
+"pourquoi le VLAN est occupé"        → runtime_diagnostic + dependency_analysis
+```
+
+### Phase 3 — Provenance Engine (`provenance_engine.py`)
+
+Chaque evidence block inclut automatiquement :
+`source_type · source_name · file · table · class · method · timestamp · server · confidence`
+
+### Phase 4 — Workflow Intelligence (`workflow_intelligence.py`)
+
+Workflows opérationnels indexés depuis code + FRs. Si inconnu → message d'incertitude explicite, **jamais** d'étapes inventées.
+
+### Phase 6 — SQL Readonly (`response_quality.py`)
+
+`enforce_readonly_sql()` — premier filtre dans `full_quality_check()`. Bloque toute mutation avant toute autre transformation.
+
+### Phase 7 — Response Quality (`response_quality.py`)
+
+50+ patterns de filler supprimés : "N'hésitez pas à", "Cordialement", "Il semble que", "Probablement", "Veuillez vérifier", etc.
+
+---
+
+## 🧠 Intelligence du code source
+
+### Execution Graph Cache
+
+Scan de ~3 200 fichiers Java BRASIL au démarrage → `execution_graph_cache.json`
+
+```
+delete_equipment → ManageDslamBusinessImpl.deleteDslam():1787
+create_vlan      → ManageCreationVlanBusinessImpl.creerVlan():1221
+                   ManageVlanBusinessImpl.createVlan():1612
+```
+
+### 65 mappings d'opérations (`operation_graph.py`)
+
+Couvre : `delete_equipment`, `create_vlan`, `create_equipment`, `replay_order`, `mass_replay`, `mutation_request`, `fix_counter`, `check_toc`, `forensic_exceptions`, `forensic_db_state`, `rollback`, `check_residual_data`, `check_active_services`, `check_foreign_keys`, etc.
+
+### Mémoire forensique cross-tour (`forensic_memory.py`)
+
+```python
+ForensicMemoryStore: 200 conversations max · TTL 2h · LRU eviction
+ForensicSnapshot:    intent · entity · operation · bundle_ref · exceptions
+```
+
+---
+
+## 🧪 Tests
 
 ```powershell
-# 1. Installer Podman Desktop
-# Télécharger: https://podman-desktop.io/downloads
+cd D:\ai-support-agent\backend
 
-# 2. Installer podman-compose
-pip install podman-compose
+# Suite complète (110 tests)
+$env:PYTHONPATH="D:\ai-support-agent\backend"
+.venv\Scripts\python.exe -m pytest tests/ -v --tb=short
 
-# 3. Cloner le projet
-git clone <repo-url>
-cd ai-support-agent
+# Par module
+pytest tests/test_truth_enforcement.py    # 24 tests — SQL/shell/placeholder blocking
+pytest tests/test_provenance.py           # 22 tests — ProvenanceRecord + Engine
+pytest tests/test_semantic_router.py      # 32 tests — 25 catégories · multi-label
+pytest tests/test_workflow_intelligence.py # 32 tests — workflows · anti-hallucination
 
-# 4. Configurer l'environnement
-# Le fichier .env est déjà créé avec la clé Groq
-
-# 5. Lancer avec le script PowerShell
-.\podman.ps1 up -Detached
-
-# Ou avec podman-compose
-podman-compose up -d
+# Intégration end-to-end (serveur requis)
+.venv\Scripts\python.exe tests/run_tests.py
 ```
 
-#### 🐧 Linux (WSL/Ubuntu)
+**Résultats** : 110/110 ✅ — 0 régression
 
-```bash
-# 1. Installer Podman automatiquement
-chmod +x install-podman.sh
-./install-podman.sh
-
-# 2. Recharger le terminal
-source ~/.bashrc
-
-# 3. Lancer l'application
-podman-compose up -d
-```
-
-📖 **Guide complet Podman** : Voir [PODMAN_GUIDE.md](PODMAN_GUIDE.md)
-
-#### ⚙️ Alternative avec Docker (non recommandé)
-
-```bash
-# Seulement si Docker est déjà installé et que vous ne pouvez pas utiliser Podman
-docker-compose up -d
-```
-
-Les services seront disponibles sur :
-- Frontend : http://localhost:3000 (ou 5173 en dev)
-- Backend API : http://localhost:8000
-- API Docs : http://localhost:8000/docs
-- **Flower Dashboard** : http://localhost:5555 (Workers)
-- Neo4j Browser : http://localhost:7474
-- Qdrant : http://localhost:6333
-
-### Démarrage des Workers ⚡
-
-#### Windows (PowerShell)
-```powershell
-cd workers
-.\start_workers.ps1
-
-# Menu :
-# 1 - Celery Worker (traitement tâches)
-# 2 - Celery Beat (planification)
-# 3 - Flower (monitoring)
-# 4 - Tout démarrer
-```
-
-#### Linux/Mac (Bash)
-```bash
-cd workers
-./start_workers.sh
-
-# Même menu interactif
-```
-
-**Workers automatiques :**
-- 🔄 Sync Jira toutes les heures
-- 📊 Build Graph toutes les 6 heures
-- 📈 Monitoring sur http://localhost:5555
-
-### Installation manuelle
-
-#### Backend
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
-# Configurer .env
-uvicorn app.main:app --reload
-```
-
-#### Frontend
-
-```bash
-cd frontend
-npm install
-cp .env.example .env
-npm run dev
-```
-
-#### Workers
-
-```bash
-cd workers
-pip install -r requirements.txt
-celery -A celery_app worker --loglevel=info
-```
+---
 
 ## ⚙️ Configuration
 
-### Variables d'environnement essentielles
+### Variables d'environnement essentielles (`backend/.env`)
 
-**Backend (.env)**
 ```env
+# LLM
+GROQ_API_KEY=gsk_...
+LLM_MODEL=qwen/qwen3-32b
+
 # Base de données
 POSTGRES_SERVER=localhost
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_password
 POSTGRES_DB=ai_support_agent
 
-# IA/LLM
-OPENAI_API_KEY=sk-...
-LLM_PROVIDER=openai
-LLM_MODEL=gpt-4-turbo-preview
+# Qdrant
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
 
-# Neo4j (Knowledge Graph)
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=password
+# SSH (diagnostics live)
+SSH_ENABLED=true
+SSH_HOST=op49mwa11
+SSH_USER=brasil
+SSH_PASSWORD=...
 
-# Jira (Workers)
-JIRA_URL=https://your-company.atlassian.net
-JIRA_USER=user@company.com
-JIRA_TOKEN=your_jira_api_token
-JIRA_PROJECT_KEY=PROJ
+# Code source BRASIL
+BRASIL_SOURCE_ROOT=d:\ai-support-agent\brasil-default\brasil-default
 
-# Redis (Celery)
-REDIS_URL=redis://localhost:6379/0
-
-# Sécurité
-SECRET_KEY=your-secret-key-min-32-characters
+# Mode démo (pas de SSH requis)
+DEMO_MODE=true
 ```
 
-**Frontend (.env)**
-```env
-VITE_API_BASE_URL=http://localhost:8000/api/v1
-```
-
-## 📖 Utilisation
-
-### 1. Collecter les données
-
-```bash
-# Via API
-curl -X POST http://localhost:8000/api/v1/collector/collect/code \
-  -H "Content-Type: application/json" \
-  -d '{"repo_url": "https://github.com/user/repo", "branch": "main"}'
-```
-
-### 2. Analyser avec l'IA
-
-```bash
-curl -X POST http://localhost:8000/api/v1/analyzer/analyze/behavior \
-  -H "Content-Type: application/json" \
-  -d '{"scenario": "Que se passe-t-il quand un user non vérifié accède à admin?"}'
-```
-
-### 3. Utiliser le chatbot
-
-Ouvrir http://localhost:3000/chat et poser vos questions !
-
-### 4. Valider les insights
-
-Aller sur http://localhost:3000/validation pour approuver/corriger les insights générés par l'IA.
-
-## 🛠️ Développement
-
-### Structure du projet
-
-```
-ai-support-agent/
-├── backend/              # API FastAPI
-│   ├── app/
-│   │   ├── api/         # Endpoints REST
-│   │   ├── core/        # Configuration, sécurité
-│   │   ├── models/      # Modèles DB
-│   │   ├── schemas/     # Schémas Pydantic
-│   │   └── services/    # Logique métier
-│   └── tests/
-├── frontend/            # Interface React
-│   ├── src/
-│   │   ├── components/  # Composants UI
-│   │   ├── pages/       # Pages
-│   │   └── services/    # API client
-├── workers/             # Workers Celery
-│   ├── code_analyzer/
-│   ├── log_analyzer/
-│   ├── db_analyzer/
-│   └── doc_analyzer/
-├── infrastructure/      # Docker, K8s, Terraform
-│   ├── docker/
-│   └── k8s/
-└── docs/               # Documentation
-```
-
-### Lancer les tests
-
-```bash
-# Backend
-cd backend
-pytest tests/ --cov=app
-
-# Frontend
-cd frontend
-npm test
-```
-
-### Ajouter un nouveau endpoint
-
-1. Créer le endpoint dans `backend/app/api/v1/endpoints/`
-2. Ajouter le schéma dans `backend/app/schemas/`
-3. Implémenter la logique dans `backend/app/services/`
-4. Ajouter les tests dans `backend/tests/`
-
-## 🚢 Déploiement
-
-### Podman Compose (Développement/Staging)
-
-```bash
-# Windows (avec script PowerShell)
-.\podman.ps1 up -Detached
-
-# Ou avec podman-compose
-podman-compose up -d
-```
-
-### Kubernetes (Production)
-
-```bash
-# Appliquer les manifests
-kubectl apply -f infrastructure/k8s/
-
-# Vérifier le déploiement
-kubectl get pods
-kubectl get services
-```
-
-### CI/CD
-
-Le pipeline GitHub Actions :
-1. Teste backend et frontend
-2. Build les images Docker
-3. Push vers le registry
-4. Déploie sur Kubernetes
-
-## 🔧 Technologies
-
-### Backend
-- **FastAPI** : Framework web Python asynchrone
-- **SQLAlchemy** : ORM pour PostgreSQL
-- **Celery + Beat** : Queue de tâches + planification
-- **Redis** : Broker Celery et cache
-- **Neo4j** : Base de données graphe
-- **Qdrant** : Vector store pour recherche sémantique
-- **Jira API** : Intégration tickets (workers)
-
-### Frontend
-- **React 18** : Library UI
-- **TypeScript** : Typage statique
-- **TailwindCSS** : Framework CSS
-- **React Query** : Gestion état serveur
-- **Vite** : Build tool
-
-### Workers & Automation
-- **Celery** : Tâches asynchrones distribuées
-- **Celery Beat** : Planification (cron-like)
-- **Flower** : Monitoring workers (dashboard web)
-- **Redis** : Broker et backend Celery
-- **Jira Library** : Client Python pour Jira API
-
-### IA/ML
-- **OpenAI GPT-4** : Génération et analyse
-- **Anthropic Claude** : Alternative LLM
-- **LangChain** : Orchestration LLM
-- **Sentence Transformers** : Embeddings
-
-### Infrastructure
-- **Podman** : Conteneurisation (alternative rootless à Docker)
-- **Kubernetes** : Orchestration
-- **GitHub Actions** : CI/CD
-- **Prometheus** : Monitoring
-- **Grafana** : Visualisation
-
-## 📚 Documentation complémentaire
-
-### Guides Principaux
-- [**FINAL_COMPLETION.md**](FINAL_COMPLETION.md) - ✅ Guide complet du projet finalisé
-- [**WORKERS_GUIDE.md**](docs/WORKERS_GUIDE.md) - 🤖 Guide détaillé des workers Celery
-- [**DEV_GUIDE.md**](docs/DEV_GUIDE.md) - Architecture et développement
-- [**USER_GUIDE.md**](docs/USER_GUIDE.md) - Guide utilisateur de l'interface
-
-### Documentation Technique
-- [Architecture détaillée](docs/ARCHITECTURE.md)
-- [Guide API](docs/API.md)
-- [Modèle de données](docs/DATA_MODEL.md)
-- [Workflow IA](docs/AI_WORKFLOW.md)
-- [Sécurité](docs/SECURITY.md)
-
-### Planification Scrum
-- [Plan Projet](docs/PROJECT_PLAN.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Timeline](docs/TIMELINE.md)
-- [User Stories](docs/USER_STORIES.md)
-- [Sprint Backlog](docs/SPRINT_BACKLOG.md)
-
-### Podman
-- [Guide Podman](PODMAN_GUIDE.md)
-- [Migration Docker → Podman](PODMAN_MIGRATION.md)
-- [Setup Podman](PODMAN_SETUP.md)
-
-## 🧠 Base de Connaissance BRASIL
-
-### Collections Qdrant
-
-| Collection | Points | Contenu |
-|---|---|---|
-| `brasil_procedures` | **82** | 51 FRs indexées + procédures canoniques |
-| `code_knowledge` | **197** | 128 tables BRASIL + procédures schéma |
-| `brasil_log_patterns` | **12** | Patterns erreurs logs |
-
-### Injection des FRs
-
-Les 51 Fiches de Résolution BRASIL sont dans `backend/FR/` et indexées dans Qdrant :
+### Injection de la base de connaissance
 
 ```powershell
 cd backend
 
-# Indexation incrémentale (nouvelles FRs uniquement)
-.venv/Scripts/python.exe scripts/knowledge/inject_all_fr.py
+# Indexer toutes les FRs (51 fiches de résolution)
+.venv\Scripts\python.exe scripts\knowledge\inject_all_fr.py
 
-# Ré-indexer tout
-.venv/Scripts/python.exe scripts/knowledge/inject_all_fr.py --force
+# Réindexer tout
+.venv\Scripts\python.exe scripts\knowledge\inject_all_fr.py --force
 
-# Lister les FRs détectées sans indexer
-.venv/Scripts/python.exe scripts/knowledge/inject_all_fr.py --list
+# Vérifier le contenu Qdrant
+.venv\Scripts\python.exe scripts\maintenance\check_qdrant_frs.py
 ```
 
-Le script `inject_all_fr.py` :
-- Auto-détecte le numéro FR depuis le nom du fichier
-- Parse les .docx : symptômes, causes racines, étapes de résolution, SQL, tables, exceptions Java
-- UUID déterministe → idempotent (ré-indexation safe)
+---
 
-### Pipeline RAG hybride
+## 🔧 Technologies
 
-- **Mode 1 (FR_RICH)** : Requête avec correspondance directe dans la base de connaissance
-- **Mode 2 (FR_WEAK)** : Recherche hybride Qdrant + `_schema_priority`
-  - Si la requête contient `t_xxx`, `colonnes`, `schéma` → les tables DB ont la priorité
-  - Si la requête contient `impossible`, `comment faire`, `FR xxx` → les FRs ont la priorité
+| Couche | Technologie |
+|---|---|
+| **Backend** | FastAPI · SQLAlchemy · Python 3.13 |
+| **LLM** | Groq `qwen/qwen3-32b` (6000 TPM) |
+| **Vector DB** | Qdrant (embeddings paraphrase-multilingual) |
+| **Live Diag** | SSH Paramiko · PostgreSQL readonly |
+| **Code Intel** | Scan Java ~3200 fichiers · AST-like extraction |
+| **Frontend** | React 18 · TypeScript · Vite · TailwindCSS |
+| **Auth** | JWT · bcrypt |
+| **Tests** | pytest · 110 tests unitaires |
 
 ---
 
-## 🔧 Correctifs importants (v1.1 → v1.2)
+## 📁 Structure du projet
 
-### Bug 1 — Guard procédures dans `_extract_equipment_name`
-- **Symptôme** : "Suppression DSLAM impossible" déclenchait une recherche de logs d'équipement
-- **Fix** : `_PROC_CONTEXT_PATTERN` + `_JAVA_EXCEPTION_PATTERN` dans `chatbot_service.py`
+Voir [STRUCTURE.md](STRUCTURE.md) pour l'arborescence complète.
 
-### Bug 2 — Summarize sans historique
-- **Symptôme** : Le mode summarize ne fonctionnait pas si l'historique était vide
-- **Fix** : Suppression de la condition `and history` dans le handler
+## 📚 Documentation historique
 
-### Bug 3 — `_FOLLOWUP_PATTERNS` sur-déclenchement
-- **Symptôme** : "comment je peux extraire le schéma..." héritait du contexte VLAN précédent
-- **Fix** : `"comment"` seul retiré des triggers ; seulement `"comment ça"`, `"comment cela"` etc. déclenchent la reformulation
-
-### Bug 4 — Merge mode2 : tables DB prioritaires sur les FRs
-- **Symptôme** : "Suppression VLAN impossible" → `lst_vlan_usage` (table DB) dominait sur FR 190
-- **Fix** : `_schema_priority` flag dans `mode2_fr_weak.py` — merge conditionnel selon le type de requête
-
----
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! Voir [CONTRIBUTING.md](docs/CONTRIBUTING.md)
+Les rapports de phases précédentes sont archivés dans [`docs/history/`](docs/history/).
 
 ## 📄 Licence
 
-MIT License - voir [LICENSE](LICENSE)
-
-## 👥 Support
-
-- Issues GitHub : [github.com/user/ai-support-agent/issues](https://github.com)
-- Documentation : [STRUCTURE.md](STRUCTURE.md)
-
----
-
-**Fait avec ❤️ pour améliorer le support technique**
+MIT License — voir [LICENSE](LICENSE)

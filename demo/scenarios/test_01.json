@@ -1,0 +1,41 @@
+{
+  "id": "TEST_01",
+  "tier": "GOLDEN",
+  "category": "equipment_deletion",
+  "question": "Suppression équipement DSROB362 impossible",
+  "expected_root_cause": "Suppression bloquée par dépendances actives (MRT/services/données résiduelles)",
+  "expected_workflow": "delete_dslam",
+  "expected_evidence": [
+    "dépendances MRT",
+    "services actifs",
+    "données résiduelles"
+  ],
+  "expected_code_reference": "ManageDslamBusinessImpl.deleteDslam()",
+  "expected_sources": [
+    "LIVE_DB",
+    "CODE",
+    "FR"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "dépendances MRT",
+      "services actifs",
+      "données résiduelles",
+      "ManageDslamBusinessImpl.deleteDslam()"
+    ],
+    "forbidden_patterns": [
+      "DELETE ",
+      "UPDATE ",
+      "hypothèse",
+      "je pense"
+    ]
+  }
+}

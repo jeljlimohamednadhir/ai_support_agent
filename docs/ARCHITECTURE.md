@@ -1,8 +1,8 @@
-# Architecture Technique - AI Support Agent
+# Architecture Technique - OpsPilot AI
 
 ## Vue d'ensemble
 
-Ce document décrit l'architecture technique complète du système AI Support Agent.
+Ce document dÃ©crit l'architecture technique complÃ¨te du systÃ¨me OpsPilot AI.
 
 ## Diagramme d'architecture global
 
@@ -80,9 +80,9 @@ graph TB
     API --> Redis
 ```
 
-## Flux de données
+## Flux de donnÃ©es
 
-### 1. Collecte de données
+### 1. Collecte de donnÃ©es
 
 ```mermaid
 sequenceDiagram
@@ -144,7 +144,7 @@ sequenceDiagram
     Chatbot->>User: Response with sources
 ```
 
-## Modèle de données
+## ModÃ¨le de donnÃ©es
 
 ### PostgreSQL Schema
 
@@ -264,19 +264,19 @@ CREATE TABLE validation_tasks (
 }
 ```
 
-## Composants détaillés
+## Composants dÃ©taillÃ©s
 
 ### Backend API (FastAPI)
 
-**Responsabilités** :
+**ResponsabilitÃ©s** :
 - Exposition des endpoints REST
 - Authentification et autorisation
-- Validation des requêtes
+- Validation des requÃªtes
 - Orchestration des services
 
 **Endpoints principaux** :
 - `/api/v1/chatbot/*` - Chatbot conversationnel
-- `/api/v1/collector/*` - Collecte de données
+- `/api/v1/collector/*` - Collecte de donnÃ©es
 - `/api/v1/analyzer/*` - Analyse IA
 - `/api/v1/knowledge/*` - Knowledge graph
 - `/api/v1/validation/*` - Validation humaine
@@ -286,47 +286,47 @@ CREATE TABLE validation_tasks (
 **Code Analyzer Worker** :
 - Clone Git repositories
 - Parse code avec AST/Tree-sitter
-- Extrait fonctions, classes, dépendances
+- Extrait fonctions, classes, dÃ©pendances
 - Construit le graphe de code
 
 **Log Analyzer Worker** :
 - Collecte logs depuis diverses sources
 - Parse et normalise
-- Détecte patterns et anomalies
-- Corrèle avec le code
+- DÃ©tecte patterns et anomalies
+- CorrÃ¨le avec le code
 
 **DB Analyzer Worker** :
-- Introspection de schémas
+- Introspection de schÃ©mas
 - Analyse des relations
-- Génération de diagrammes ER
-- Mapping code ↔ DB
+- GÃ©nÃ©ration de diagrammes ER
+- Mapping code â†” DB
 
 **Doc Analyzer Worker** :
 - Parse documentation (MD, HTML, PDF)
 - Extraction de contenu
-- Génération d'embeddings
+- GÃ©nÃ©ration d'embeddings
 - Indexation dans vector store
 
 ### Knowledge Graph (Neo4j)
 
-**Objectif** : Représenter les relations entre tous les éléments
+**Objectif** : ReprÃ©senter les relations entre tous les Ã©lÃ©ments
 
 **Cas d'usage** :
-- Trouver toutes les fonctions qui accèdent à une table
-- Identifier les endpoints impactés par un changement
-- Tracer le flux d'une requête utilisateur
-- Comprendre les dépendances
+- Trouver toutes les fonctions qui accÃ¨dent Ã  une table
+- Identifier les endpoints impactÃ©s par un changement
+- Tracer le flux d'une requÃªte utilisateur
+- Comprendre les dÃ©pendances
 
 ### Vector Store (Qdrant)
 
-**Objectif** : Recherche sémantique rapide
+**Objectif** : Recherche sÃ©mantique rapide
 
 **Cas d'usage** :
 - Trouver du code similaire
 - Rechercher dans la documentation
-- Identifier des solutions à des problèmes similaires
+- Identifier des solutions Ã  des problÃ¨mes similaires
 
-## Sécurité
+## SÃ©curitÃ©
 
 ### Authentification
 - JWT tokens
@@ -340,30 +340,30 @@ CREATE TABLE validation_tasks (
 
 ### Audit
 - Logging de toutes les actions
-- Traçabilité des validations
+- TraÃ§abilitÃ© des validations
 - Historique des modifications
 
-## Scalabilité
+## ScalabilitÃ©
 
 ### Horizontal scaling
-- Backend : Multiple instances derrière load balancer
+- Backend : Multiple instances derriÃ¨re load balancer
 - Workers : Pool de workers Celery
 - Databases : Read replicas
 
 ### Caching
 - Redis pour cache API
-- Cache de résultats d'analyse
+- Cache de rÃ©sultats d'analyse
 - Session storage
 
 ### Performance
-- Pagination des résultats
+- Pagination des rÃ©sultats
 - Lazy loading
-- Compression des réponses
+- Compression des rÃ©ponses
 - CDN pour assets statiques
 
-## Monitoring & Observabilité
+## Monitoring & ObservabilitÃ©
 
-### Métriques (Prometheus)
+### MÃ©triques (Prometheus)
 - API latency
 - Request rate
 - Error rate
@@ -395,7 +395,8 @@ CREATE TABLE validation_tasks (
 ## Evolution future
 
 - Support multi-langages
-- Analyse en temps réel
-- Intégration Slack/Teams
+- Analyse en temps rÃ©el
+- IntÃ©gration Slack/Teams
 - API publique
 - Marketplace de plugins
+

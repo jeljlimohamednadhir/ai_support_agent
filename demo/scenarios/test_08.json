@@ -1,0 +1,37 @@
+{
+  "id": "TEST_08",
+  "tier": "GOLDEN",
+  "category": "forensic_logs",
+  "question": "Depuis quel fichier log proviennent ces informations ?",
+  "expected_root_cause": "Demande de provenance logs",
+  "expected_workflow": "forensic_provenance",
+  "expected_evidence": [
+    "nom fichier",
+    "serveur",
+    "date",
+    "source"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "LIVE_LOG",
+    "SSH",
+    "Provenance"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "fichier",
+      "serveur"
+    ],
+    "forbidden_patterns": [
+      "réponse générique"
+    ]
+  }
+}

@@ -22,6 +22,87 @@ OUTPUT_FILE = Path(__file__).parent / "output" / "fr_parsed.json"
 
 
 # ─────────────────────────────────────────────
+# Encoding normalizer — fix mojibake / latin1-in-utf8
+# ─────────────────────────────────────────────
+
+def _fix_encoding(text: str) -> str:
+    """
+    Repair text that was stored as latin-1/cp1252 but decoded as UTF-8
+    (common "mojibake" pattern: 'supprimÃ©' → 'supprimé').
+
+    Strategy (applied in order):
+      1. ftfy — best-in-class heuristic fixer (optional dependency)
+      2. Fallback: re-encode as latin-1, decode as utf-8
+      3. Fallback: unidecode normalisation of residual non-ASCII
+    """
+    if not text:
+        return text
+
+    # Strategy 1: ftfy (optional)
+    try:
+        import ftfy  # type: ignore
+        fixed = ftfy.fix_text(text)
+        if fixed != text:
+            return fixed
+    except ImportError:
+        pass
+
+    # Strategy 2: latin-1 → utf-8 round-trip
+    try:
+        fixed = text.encode("latin-1").decode("utf-8")
+        return fixed
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        pass
+
+    # Strategy 3: strip non-decodable characters
+    return text.encode("utf-8", errors="ignore").decode("utf-8")
+
+
+# Common mojibake substitutions as a compile-time fallback table
+_MOJIBAKE_TABLE: list[tuple[str, str]] = [
+    # latin-1 mojibake (Ã©  etc.) -> correct UTF-8
+    ("\u00c3\u00a9", "\u00e9"),  # é
+    ("\u00c3\u00a8", "\u00e8"),  # è
+    ("\u00c3\u00aa", "\u00ea"),  # ê
+    ("\u00c3\u00ab", "\u00eb"),  # ë
+    ("\u00c3\u00a0", "\u00e0"),  # à  (Ã )
+    ("\u00c3\u00a2", "\u00e2"),  # â
+    ("\u00c3\u00a4", "\u00e4"),  # ä
+    ("\u00c3\u00ae", "\u00ee"),  # î
+    ("\u00c3\u00af", "\u00ef"),  # ï
+    ("\u00c3\u00b4", "\u00f4"),  # ô
+    ("\u00c3\u00b6", "\u00f6"),  # ö
+    ("\u00c3\u00b9", "\u00f9"),  # ù
+    ("\u00c3\u00bb", "\u00fb"),  # û
+    ("\u00c3\u00bc", "\u00fc"),  # ü
+    ("\u00c3\u00a7", "\u00e7"),  # ç
+    ("\u00c3\u00a6", "\u00e6"),  # æ
+    ("\u00c3\u0153", "\u0153"),  # œ  (Åœ)
+    ("\u00c3\u2030", "\u00c9"),  # É
+    ("\u00c3\u20ac", "\u00c0"),  # À
+    ("\u00c3\u2021", "\u00c7"),  # Ç
+    # smart quotes / dashes
+    ("\u00e2\u20ac\u2122", "\u2019"),  # right single quote
+    ("\u00e2\u20ac\u0153", "\u201c"),  # left double quote
+    ("\u00e2\u20ac\u009d", "\u201d"),  # right double quote
+    ("\u00e2\u20ac\u201c", "\u2013"),  # en dash
+    ("\u00e2\u20ac\u201d", "\u2014"),  # em dash
+    ("\u00c2\u00ab", "\u00ab"),  # «
+    ("\u00c2\u00bb", "\u00bb"),  # »
+    ("\u00c2\u00a0", " "),         # non-breaking space
+    ("\u00e2\u20ac\u00a6", "\u2026"),  # ellipsis
+]
+
+def normalize_text(text: str) -> str:
+    """Apply encoding fix then mojibake table as belt-and-suspenders."""
+    text = _fix_encoding(text)
+    for bad, good in _MOJIBAKE_TABLE:
+        if bad in text:
+            text = text.replace(bad, good)
+    return text
+
+
+# ─────────────────────────────────────────────
 # Extraction du numéro et titre depuis le nom de fichier
 # ─────────────────────────────────────────────
 
@@ -35,9 +116,9 @@ def parse_filename(filename: str) -> dict:
     if match:
         return {
             "number": match.group(1).strip(),
-            "title": match.group(2).strip()
+            "title": normalize_text(match.group(2).strip())
         }
-    return {"number": "???", "title": stem}
+    return {"number": "???", "title": normalize_text(stem)}
 
 
 # ─────────────────────────────────────────────
@@ -56,7 +137,7 @@ def extract_docx(path: Path) -> dict:
 
     paragraphs = []
     for para in doc.paragraphs:
-        text = para.text.strip()
+        text = normalize_text(para.text.strip())
         if text:
             paragraphs.append({
                 "style": para.style.name,
@@ -68,7 +149,10 @@ def extract_docx(path: Path) -> dict:
     tables_text = []
     for table in doc.tables:
         for row in table.rows:
-            row_text = " | ".join(cell.text.strip() for cell in row.cells if cell.text.strip())
+            row_text = " | ".join(
+                normalize_text(cell.text.strip())
+                for cell in row.cells if cell.text.strip()
+            )
             if row_text:
                 tables_text.append(row_text)
 

@@ -1,0 +1,38 @@
+{
+  "id": "TEST_14",
+  "tier": "GOLDEN",
+  "category": "forensic_timeline",
+  "question": "Montre moi la chronologie complète de l'incident",
+  "expected_root_cause": "Timeline fusionnée logs/DB/SSH/FR",
+  "expected_workflow": "forensic_timeline",
+  "expected_evidence": [
+    "logs",
+    "DB",
+    "SSH",
+    "FR",
+    "ordre chronologique"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "LIVE_LOG",
+    "LIVE_DB",
+    "SSH",
+    "FR"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "chronologie"
+    ],
+    "forbidden_patterns": [
+      "ordre inventé"
+    ]
+  }
+}

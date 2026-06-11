@@ -1,0 +1,32 @@
+{
+  "id": "TEST_09",
+  "tier": "GOLDEN",
+  "category": "followup_reasoning",
+  "question": "Montre les exceptions détectées",
+  "expected_root_cause": "Lister uniquement exceptions réellement observées",
+  "expected_workflow": "forensic_exceptions",
+  "expected_evidence": [
+    "exceptions réellement présentes"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "LIVE_LOG",
+    "CODE"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "Aucune exception disponible"
+    ],
+    "forbidden_patterns": [
+      "exception inventée"
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "id": "TEST_07",
+  "tier": "GOLDEN",
+  "category": "forensic_logs",
+  "question": "Montre les logs de DSTEL460 aujourd'hui",
+  "expected_root_cause": "Extraction de logs en fenêtre temporelle demandée",
+  "expected_workflow": "forensic_logs",
+  "expected_evidence": [
+    "timestamps",
+    "source log",
+    "nb événements"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "LIVE_LOG",
+    "SSH"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "AUCUNE PREUVE DISPONIBLE"
+    ],
+    "forbidden_patterns": [
+      "date inventée",
+      "événement inventé",
+      "client inventé"
+    ]
+  }
+}

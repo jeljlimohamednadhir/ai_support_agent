@@ -1,0 +1,36 @@
+{
+  "id": "TEST_05",
+  "tier": "GOLDEN",
+  "category": "error_1300",
+  "question": "Erreur 1300",
+  "expected_root_cause": "Noeud IP / ORRAHD / IAR / désynchronisation",
+  "expected_workflow": "error_1300_diagnostic_flow",
+  "expected_evidence": [
+    "Noeud IP",
+    "ORRAHD",
+    "IAR",
+    "synchronisation"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "LIVE_LOG",
+    "LIVE_DB",
+    "FR"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "1300"
+    ],
+    "forbidden_patterns": [
+      "SQL inventé"
+    ]
+  }
+}

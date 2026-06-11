@@ -1,0 +1,42 @@
+{
+  "id": "TEST_16",
+  "tier": "GOLDEN",
+  "category": "incident_history",
+  "question": "Résume cet incident pour les archives N3",
+  "expected_root_cause": "Résumé technique structuré N3",
+  "expected_workflow": "n3_archive_summary",
+  "expected_evidence": [
+    "Cause",
+    "Diagnostic",
+    "Action",
+    "Résultat",
+    "Preuves"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "LIVE_DB",
+    "LIVE_LOG",
+    "CODE",
+    "FR"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "Cause",
+      "Diagnostic",
+      "Action",
+      "Résultat",
+      "Preuves"
+    ],
+    "forbidden_patterns": [
+      "résumé vague"
+    ]
+  }
+}

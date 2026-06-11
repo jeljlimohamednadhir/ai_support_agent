@@ -1,0 +1,34 @@
+{
+  "id": "TEST_06",
+  "tier": "GOLDEN",
+  "category": "error_1201",
+  "question": "1201 : Il existe déjà un dossier avec cet IAR",
+  "expected_root_cause": "Dossier déjà existant pour IAR",
+  "expected_workflow": "error_1201_diagnostic_flow",
+  "expected_evidence": [
+    "IAR",
+    "dossier existant"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "LIVE_DB",
+    "FR"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "1201",
+      "IAR"
+    ],
+    "forbidden_patterns": [
+      "DELETE "
+    ]
+  }
+}

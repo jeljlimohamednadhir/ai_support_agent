@@ -1,0 +1,35 @@
+{
+  "id": "TEST_13",
+  "tier": "GOLDEN",
+  "category": "root_cause_analysis",
+  "question": "Pourquoi DSTEL460 n'a plus de VLAN disponible ?",
+  "expected_root_cause": "Capacité/compteurs/ressources occupées",
+  "expected_workflow": "vlan_capacity_diagnostic",
+  "expected_evidence": [
+    "capacité",
+    "compteurs",
+    "ressources occupées",
+    "FR associé"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "LIVE_DB",
+    "FR"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "FR"
+    ],
+    "forbidden_patterns": [
+      "preuve inventée"
+    ]
+  }
+}

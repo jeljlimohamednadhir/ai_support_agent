@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AI Support Agent — Documentation Complète</title>
+  <title>OpsPilot AI v4.0 â€” Documentation ComplÃ¨te</title>
   <style>
     :root{
       --primary:#0ea5e9;
@@ -120,13 +120,13 @@
   <!-- Header -->
   <header class="header">
     <nav class="nav">
-      <div class="logo">AI Support Agent</div>
+      <div class="logo">OpsPilot AI</div>
       <div class="nav-links">
         <div class="search">
           <input type="text" placeholder="Rechercher..." id="searchInput">
         </div>
-        <a href="presentation.html">Présentation</a>
-        <a href="#quick-start">Démarrage rapide</a>
+        <a href="presentation.html">PrÃ©sentation</a>
+        <a href="#quick-start">DÃ©marrage rapide</a>
         <a href="https://github.com" target="_blank">GitHub</a>
       </div>
     </nav>
@@ -138,13 +138,13 @@
       <h3>Introduction</h3>
       <ul>
         <li><a href="#overview" class="active">Vue d'ensemble</a></li>
-        <li><a href="#quick-start">Démarrage rapide</a></li>
+        <li><a href="#quick-start">DÃ©marrage rapide</a></li>
         <li><a href="#architecture">Architecture</a></li>
       </ul>
       
       <h3>Installation</h3>
       <ul>
-        <li><a href="#prerequisites">Prérequis</a></li>
+        <li><a href="#prerequisites">PrÃ©requis</a></li>
         <li><a href="#installation">Installation</a></li>
         <li><a href="#configuration">Configuration</a></li>
         <li><a href="#docker">Docker & Kubernetes</a></li>
@@ -160,11 +160,11 @@
         <li><a href="#n3-pipeline">Pipeline N3</a></li>
         <li><a href="#diagnostic-engine">Moteur Diagnostic N3</a></li>
         <li><a href="#chatbot">Chatbot</a></li>
-        <li><a href="#validation">Validation</a></li>
-        <li><a href="#classification-ml">Classification ML</a></li>
-      </ul>
-
-      <!-- interface section removed as requested -->
+          <li><a href="#validation">Validation</a></li>
+          <li><a href="#classification-ml">Classification ML</a></li>
+          <li><a href="#hierarchical-ml">Classifieur HiÃ©rarchique</a></li>
+          <li><a href="#fr-injection">Injection FRs Qdrant</a></li>
+        </ul>      <!-- interface section removed as requested -->
       
       <h3>API Reference</h3>
       <ul>
@@ -174,20 +174,21 @@
         <li><a href="#api-knowledge">Knowledge API</a></li>
         <li><a href="#api-n3">N3 Diagnostic API</a></li>
         <li><a href="#api-classification-ml">Classification ML API</a></li>
-      </ul>
+          <li><a href="#api-hierarchical-ml">Hierarchical ML API</a></li>
+        </ul>
       
-      <h3>Développement</h3>
+      <h3>DÃ©veloppement</h3>
       <ul>
-        <li><a href="#dev-setup">Setup développeur</a></li>
+        <li><a href="#dev-setup">Setup dÃ©veloppeur</a></li>
         <li><a href="#tests">Tests</a></li>
         <li><a href="#contrib">Contribuer</a></li>
       </ul>
       
-      <h3>Déploiement</h3>
+      <h3>DÃ©ploiement</h3>
       <ul>
         <li><a href="#production">Production</a></li>
         <li><a href="#monitoring">Monitoring</a></li>
-        <li><a href="#security">Sécurité</a></li>
+        <li><a href="#security">SÃ©curitÃ©</a></li>
       </ul>
     </aside>
     
@@ -196,46 +197,49 @@
       
       <!-- Overview -->
       <section id="overview">
-        <h1>Documentation AI Support Agent</h1>
-        <p>Bienvenue dans la documentation complète d'AI Support Agent, l'assistant intelligent pour diagnostiquer, analyser et résoudre les problèmes techniques en temps réel.</p>
+        <h1>Documentation OpsPilot AI <span style="font-size:1rem;background:var(--primary);color:white;padding:0.2rem 0.6rem;border-radius:8px;vertical-align:middle">v4.0</span></h1>
+        <p>Bienvenue dans la documentation complÃ¨te d'OpsPilot AI, l'assistant intelligent pour diagnostiquer, analyser et rÃ©soudre les problÃ¨mes techniques en temps rÃ©el. Branche active : <code>feature/multi-tenant-intelligence-platform</code>.</p>
         
         <div class="alert alert-info">
-          <div class="alert-title">📚 Version actuelle</div>
-          Cette documentation correspond à la version <strong>3.0.0</strong> d'AI Support Agent — incluant le pipeline N3 Knowledge Engineering, le moteur de diagnostic BRASIL et le module de <strong>Classification ML Hybride</strong> (FAISS + TF-IDF + keyword boost).
+          <div class="alert-title">ðŸ“š Version actuelle</div>
+          Cette documentation correspond Ã  la version <strong>4.0.0</strong> d'OpsPilot AI â€” incluant le pipeline N3 Knowledge Engineering, le moteur de diagnostic BRASIL, la <strong>Classification ML Hybride</strong> (FAISS + TF-IDF + keyword boost) et le nouveau <strong>Classifieur HiÃ©rarchique 2 niveaux</strong> (KNN L1 + LR L2 + Groq fallback). Branche : <code>feature/multi-tenant-intelligence-platform</code>.
         </div>
         
-        <h2>Qu'est-ce qu'AI Support Agent ?</h2>
-        <p>AI Support Agent est une plateforme complète qui combine l'intelligence artificielle, le traitement du langage naturel et l'analyse de code pour automatiser le support technique N3 de la plateforme BRASIL.</p>
+        <h2>Qu'est-ce qu'OpsPilot AI ?</h2>
+        <p>OpsPilot AI est une plateforme complÃ¨te qui combine l'intelligence artificielle, le traitement du langage naturel et l'analyse de code pour automatiser le support technique N3 de la plateforme BRASIL.</p>
         
-        <h3>Fonctionnalités principales</h3>
+        <h3>FonctionnalitÃ©s principales</h3>
         <ul>
           <li><strong>Collecte automatique</strong> : Ingestion de logs BRASIL (connectorCL, connectorCreationVlan, transactions, sollicitations), introspection DB, clonage Git</li>
-          <li><strong>Analyse intelligente</strong> : Workers asynchrones pour parser et enrichir les données avec taxonomie BRASIL</li>
-          <li><strong>Knowledge Graph N3</strong> : Pipeline complet FR→Cluster→Procédure→Qdrant avec trust scoring</li>
-          <li><strong>Moteur de Diagnostic N3</strong> : Détection d'exceptions BRASIL, retrieval de procédures, raisonnement structuré</li>
-          <li><strong>RAG Pipeline</strong> : Recherche sémantique sur <code>brasil_log_patterns</code> + <code>brasil_procedures</code> via Qdrant</li>
-          <li><strong>Classification ML Hybride</strong> : Classifier automatique de tickets avec FAISS (similarité sémantique), boost de mots-clés métier et TF-IDF — pipeline 9 étapes, colonne texte et max_features configurables depuis l'UI</li>
+          <li><strong>Analyse intelligente</strong> : Workers asynchrones pour parser et enrichir les donnÃ©es avec taxonomie BRASIL</li>
+          <li><strong>Knowledge Graph N3</strong> : Pipeline complet FRâ†’Clusterâ†’ProcÃ©dureâ†’Qdrant avec trust scoring</li>
+          <li><strong>Moteur de Diagnostic N3</strong> : DÃ©tection d'exceptions BRASIL, retrieval de procÃ©dures, raisonnement structurÃ©</li>
+          <li><strong>RAG Pipeline</strong> : Recherche sÃ©mantique sur <code>brasil_log_patterns</code> + <code>brasil_procedures</code> via Qdrant</li>
+          <li><strong>Classification ML Hybride</strong> : Classifier automatique de tickets avec FAISS (similaritÃ© sÃ©mantique), boost de mots-clÃ©s mÃ©tier et TF-IDF â€” pipeline 9 Ã©tapes, colonne texte et max_features configurables depuis l'UI</li>
+          <li><strong>Classifieur HiÃ©rarchique 2 niveaux</strong> : KNN L1 (domaine) + RÃ©gression Logistique L2 (cause prÃ©cise) + fallback Groq pour les cas ambigus â€” taxonomy BRASIL intÃ©grÃ©e</li>
+          <li><strong>Injection de FRs</strong> : 51 Fiches de RÃ©solution BRASIL indexÃ©es dans Qdrant (<code>brasil_frs</code>) avec trust scoring pour enrichir le chatbot</li>
           <li><strong>Correction interactive</strong> : Carte de correction avec contexte <code>user_sig</code>, <code>inc_solution</code>, seuil de confiance ajustable</li>
           <li><strong>Validation continue</strong> : Feedback loop avec experts humains et scoring de confiance</li>
-          <li><strong>Observabilité</strong> : Dashboards et métriques en temps réel</li>
+          <li><strong>ObservabilitÃ©</strong> : Dashboards et mÃ©triques en temps rÃ©el</li>
         </ul>
         
         <h3>Cas d'usage</h3>
         <ul>
-          <li>Diagnostic N3 automatique BRASIL (DslamClosed, UnknownMRT, BusinessRuleViolation…)</li>
+          <li>Diagnostic N3 automatique BRASIL (DslamClosed, UnknownMRT, BusinessRuleViolationâ€¦)</li>
           <li>Classification automatique de tickets d'incidents par cause (<code>inc_cause</code>) avec le classifieur hybride FAISS</li>
-          <li>Correction et révision manuelle des prédictions ML avec carte contextuelle (<code>user_sig</code>, <code>inc_solution</code>)</li>
+          <li>Classification hiÃ©rarchique 2 niveaux (L1 domaine + L2 cause) avec taxonomie BRASIL et fallback Groq</li>
+          <li>Correction et rÃ©vision manuelle des prÃ©dictions ML avec carte contextuelle (<code>user_sig</code>, <code>inc_solution</code>)</li>
           <li>Support technique niveau 1, 2 et 3</li>
-          <li>Analyse d'incidents et corrélation avec tickets Jira</li>
+          <li>Analyse d'incidents et corrÃ©lation avec tickets Jira</li>
           <li>Documentation automatique de code legacy</li>
-          <li>Onboarding de nouveaux développeurs N3</li>
+          <li>Onboarding de nouveaux dÃ©veloppeurs N3</li>
         </ul>
       </section>
       
       <!-- Quick Start -->
       <section id="quick-start">
-        <h2>⚡ Démarrage Rapide</h2>
-        <p>Lancez AI Support Agent en moins de 5 minutes avec Docker Compose.</p>
+        <h2>âš¡ DÃ©marrage Rapide</h2>
+        <p>Lancez OpsPilot AI en moins de 5 minutes avec Docker Compose.</p>
         
         <h3>1. Cloner le repository</h3>
         <pre><code>git clone https://github.com/votre-org/ai-support-agent.git
@@ -243,33 +247,33 @@ cd ai-support-agent</code></pre>
         
         <h3>2. Configurer les variables d'environnement</h3>
         <pre><code>cp .env.example .env
-# Éditer .env avec vos clés API</code></pre>
+# Ã‰diter .env avec vos clÃ©s API</code></pre>
         
         <h3>3. Lancer avec Docker Compose</h3>
         <pre><code>docker-compose up -d</code></pre>
         
         <div class="alert alert-success">
-          <div class="alert-title">✅ C'est prêt !</div>
+          <div class="alert-title">âœ… C'est prÃªt !</div>
           L'application est accessible sur <a href="http://localhost:3000">http://localhost:3000</a>
         </div>
         
-        <h3>4. Initialiser les données</h3>
+        <h3>4. Initialiser les donnÃ©es</h3>
         <pre><code>docker-compose exec backend python inject_sample_data.py</code></pre>
         
         <div class="section-nav">
-          <h4>Prochaines étapes</h4>
+          <h4>Prochaines Ã©tapes</h4>
           <ul>
-            <li><a href="#configuration">→ Configuration détaillée</a></li>
-            <li><a href="#collector">→ Utiliser le Collector</a></li>
-            <li><a href="#chatbot">→ Utiliser le Chatbot</a></li>
+            <li><a href="#configuration">â†’ Configuration dÃ©taillÃ©e</a></li>
+            <li><a href="#collector">â†’ Utiliser le Collector</a></li>
+            <li><a href="#chatbot">â†’ Utiliser le Chatbot</a></li>
           </ul>
         </div>
       </section>
       
       <!-- Architecture -->
       <section id="architecture">
-        <h2>🏗️ Architecture</h2>
-        <p>AI Support Agent suit une architecture microservices moderne et scalable.</p>
+        <h2>ðŸ—ï¸ Architecture</h2>
+        <p>OpsPilot AI suit une architecture microservices moderne et scalable.</p>
         
         <h3>Composants principaux</h3>
         
@@ -278,7 +282,7 @@ cd ai-support-agent</code></pre>
             <tr>
               <th>Composant</th>
               <th>Technologie</th>
-              <th>Rôle</th>
+              <th>RÃ´le</th>
             </tr>
           </thead>
           <tbody>
@@ -295,22 +299,22 @@ cd ai-support-agent</code></pre>
             <tr>
               <td><strong>Workers</strong></td>
               <td>Celery + Redis</td>
-              <td>Tâches asynchrones (parsing, ETL)</td>
+              <td>TÃ¢ches asynchrones (parsing, ETL)</td>
             </tr>
             <tr>
               <td><strong>PostgreSQL</strong></td>
               <td>Postgres 15</td>
-              <td>Métadonnées et données relationnelles</td>
+              <td>MÃ©tadonnÃ©es et donnÃ©es relationnelles</td>
             </tr>
             <tr>
               <td><strong>Neo4j</strong></td>
               <td>Neo4j 5</td>
-              <td>Knowledge Graph (relations)</td>
+              <td>Knowledge Graph (relations) â€” mode dÃ©gradÃ© si non disponible</td>
             </tr>
             <tr>
               <td><strong>Qdrant</strong></td>
               <td>Qdrant</td>
-              <td>Vector Store (embeddings)</td>
+              <td>Vector Store : <code>brasil_log_patterns</code>, <code>brasil_procedures</code>, <code>brasil_frs</code></td>
             </tr>
             <tr>
               <td><strong>Redis</strong></td>
@@ -320,34 +324,34 @@ cd ai-support-agent</code></pre>
           </tbody>
         </table>
         
-        <h3>Flux de données</h3>
+        <h3>Flux de donnÃ©es</h3>
         <ol>
-          <li><strong>Ingestion</strong> : Le Collector récupère les données (Git, logs, DB)</li>
-          <li><strong>Traitement</strong> : Les Workers analysent et enrichissent les données</li>
+          <li><strong>Ingestion</strong> : Le Collector rÃ©cupÃ¨re les donnÃ©es (Git, logs, DB)</li>
+          <li><strong>Traitement</strong> : Les Workers analysent et enrichissent les donnÃ©es</li>
           <li><strong>Indexation</strong> : Stockage dans Neo4j (graphe) et Qdrant (vectors)</li>
-          <li><strong>Requête</strong> : Le Chatbot utilise RAG pour générer des réponses</li>
-          <li><strong>Validation</strong> : Les experts valident et corrigent les réponses</li>
+          <li><strong>RequÃªte</strong> : Le Chatbot utilise RAG pour gÃ©nÃ©rer des rÃ©ponses</li>
+          <li><strong>Validation</strong> : Les experts valident et corrigent les rÃ©ponses</li>
         </ol>
       </section>
       
       <!-- Prerequisites -->
       <section id="prerequisites">
-        <h2>📋 Prérequis</h2>
+        <h2>ðŸ“‹ PrÃ©requis</h2>
         
         <h3>Logiciels requis</h3>
         <ul>
-          <li><strong>Docker</strong> ≥ 24.0 et Docker Compose ≥ 2.20</li>
-          <li><strong>Python</strong> ≥ 3.11 (pour développement local)</li>
-          <li><strong>Node.js</strong> ≥ 18 (pour frontend)</li>
-          <li><strong>Git</strong> ≥ 2.40</li>
+          <li><strong>Docker</strong> â‰¥ 24.0 et Docker Compose â‰¥ 2.20</li>
+          <li><strong>Python</strong> â‰¥ 3.11 (pour dÃ©veloppement local)</li>
+          <li><strong>Node.js</strong> â‰¥ 18 (pour frontend)</li>
+          <li><strong>Git</strong> â‰¥ 2.40</li>
         </ul>
         
-        <h3>Ressources système minimales</h3>
+        <h3>Ressources systÃ¨me minimales</h3>
         <table>
           <thead>
             <tr>
               <th>Ressource</th>
-              <th>Développement</th>
+              <th>DÃ©veloppement</th>
               <th>Production</th>
             </tr>
           </thead>
@@ -370,25 +374,25 @@ cd ai-support-agent</code></pre>
           </tbody>
         </table>
         
-        <h3>Clés API nécessaires</h3>
+        <h3>ClÃ©s API nÃ©cessaires</h3>
         <ul>
-          <li><span class="badge badge-primary">Groq API</span> pour l'inférence LLM</li>
+          <li><span class="badge badge-primary">Groq API</span> pour l'infÃ©rence LLM</li>
           <li><span class="badge badge-warning">Optionnel</span> OpenAI API pour embeddings (alternative gratuite disponible)</li>
         </ul>
       </section>
       
       <!-- Installation -->
       <section id="installation">
-        <h2>💿 Installation</h2>
+        <h2>ðŸ’¿ Installation</h2>
         
-        <h3>Installation via Docker (recommandée)</h3>
+        <h3>Installation via Docker (recommandÃ©e)</h3>
         <pre><code># 1. Cloner le repository
 git clone https://github.com/votre-org/ai-support-agent.git
 cd ai-support-agent
 
 # 2. Copier et configurer .env
 cp .env.example .env
-nano .env  # Éditer avec vos clés
+nano .env  # Ã‰diter avec vos clÃ©s
 
 # 3. Build des images
 docker-compose build
@@ -396,10 +400,10 @@ docker-compose build
 # 4. Lancement des services
 docker-compose up -d
 
-# 5. Vérifier les logs
+# 5. VÃ©rifier les logs
 docker-compose logs -f</code></pre>
         
-        <h3>Installation locale (développement)</h3>
+        <h3>Installation locale (dÃ©veloppement)</h3>
         
         <h4>Backend</h4>
         <pre><code>cd backend
@@ -418,17 +422,17 @@ npm run dev</code></pre>
 celery -A celery_app worker --loglevel=info</code></pre>
         
         <div class="alert alert-warning">
-          <div class="alert-title">⚠️ Base de données</div>
+          <div class="alert-title">âš ï¸ Base de donnÃ©es</div>
           N'oubliez pas de lancer PostgreSQL, Neo4j, Qdrant et Redis localement ou via Docker.
         </div>
       </section>
       
       <!-- Configuration -->
       <section id="configuration">
-        <h2>⚙️ Configuration</h2>
+        <h2>âš™ï¸ Configuration</h2>
         
         <h3>Variables d'environnement</h3>
-        <p>Créez un fichier <code>.env</code> à la racine du projet :</p>
+        <p>CrÃ©ez un fichier <code>.env</code> Ã  la racine du projet :</p>
         
         <pre><code># API Keys
 GROQ_API_KEY=gsk_xxx
@@ -462,23 +466,23 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 # Frontend
 VITE_API_URL=http://localhost:8000</code></pre>
         
-        <h3>Configuration avancée</h3>
+        <h3>Configuration avancÃ©e</h3>
         <p>Modifiez <code>backend/app/core/config.py</code> pour personnaliser :</p>
         <ul>
-          <li>Modèles LLM utilisés</li>
-          <li>Paramètres de chunking</li>
-          <li>Stratégies d'embedding</li>
-          <li>Seuils de similarité</li>
+          <li>ModÃ¨les LLM utilisÃ©s</li>
+          <li>ParamÃ¨tres de chunking</li>
+          <li>StratÃ©gies d'embedding</li>
+          <li>Seuils de similaritÃ©</li>
           <li>Rate limiting</li>
         </ul>
       </section>
       
       <!-- Docker -->
       <section id="docker">
-        <h2>🐳 Docker & Kubernetes</h2>
+        <h2>ðŸ³ Docker & Kubernetes</h2>
         
         <h3>Docker Compose</h3>
-        <p>Le fichier <code>docker-compose.yml</code> inclut tous les services nécessaires :</p>
+        <p>Le fichier <code>docker-compose.yml</code> inclut tous les services nÃ©cessaires :</p>
         
         <pre><code>services:
   frontend:
@@ -513,36 +517,36 @@ VITE_API_URL=http://localhost:8000</code></pre>
         <h3>Kubernetes</h3>
         <p>Les manifests Kubernetes sont disponibles dans <code>infrastructure/k8s/</code></p>
         
-        <pre><code># Déployer sur un cluster K8s
+        <pre><code># DÃ©ployer sur un cluster K8s
 kubectl apply -f infrastructure/k8s/
 
-# Vérifier les pods
+# VÃ©rifier les pods
 kubectl get pods
 
-# Port-forward pour accès local
+# Port-forward pour accÃ¨s local
 kubectl port-forward svc/backend 8000:8000</code></pre>
       </section>
       
       <!-- Collector -->
       <section id="collector">
-        <h2>📦 Module Collector</h2>
-        <p>Le Collector est responsable de l'ingestion des données depuis différentes sources.</p>
+        <h2>ðŸ“¦ Module Collector</h2>
+        <p>Le Collector est responsable de l'ingestion des donnÃ©es depuis diffÃ©rentes sources.</p>
         
-        <h3>Sources supportées</h3>
+        <h3>Sources supportÃ©es</h3>
         <ul>
           <li><strong>Git</strong> : Clone et analyse des repositories</li>
           <li><strong>Logs</strong> : Parsing de fichiers logs (text, JSON, structured)</li>
-          <li><strong>Base de données</strong> : Introspection de schémas SQL</li>
-          <li><strong>API</strong> : Découverte d'endpoints REST/GraphQL</li>
+          <li><strong>Base de donnÃ©es</strong> : Introspection de schÃ©mas SQL</li>
+          <li><strong>API</strong> : DÃ©couverte d'endpoints REST/GraphQL</li>
         </ul>
         
         <h3>Utilisation via UI</h3>
         <ol>
-          <li>Accéder à l'onglet "Collecte"</li>
-          <li>Sélectionner le type de source</li>
+          <li>AccÃ©der Ã  l'onglet "Collecte"</li>
+          <li>SÃ©lectionner le type de source</li>
           <li>Fournir les credentials/URL</li>
           <li>Lancer la collecte</li>
-          <li>Suivre la progression en temps réel</li>
+          <li>Suivre la progression en temps rÃ©el</li>
         </ol>
         
         <!-- UI collect reference removed as requested -->
@@ -563,7 +567,7 @@ kubectl port-forward svc/backend 8000:8000</code></pre>
     "token": "ghp_xxx"
   }
 }</code></pre>
-          <h4>Réponse</h4>
+          <h4>RÃ©ponse</h4>
           <pre><code>{
   "task_id": "abc-123",
   "status": "pending",
@@ -574,42 +578,42 @@ kubectl port-forward svc/backend 8000:8000</code></pre>
       
       <!-- Log Ingestion BRASIL -->
       <section id="log-ingestion">
-        <h2>📂 Log Ingestion BRASIL</h2>
-        <p>Le pipeline d'ingestion transforme les fichiers logs applicatifs BRASIL en événements structurés, prêts pour l'extraction de connaissances N3.</p>
+        <h2>ðŸ“‚ Log Ingestion BRASIL</h2>
+        <p>Le pipeline d'ingestion transforme les fichiers logs applicatifs BRASIL en Ã©vÃ©nements structurÃ©s, prÃªts pour l'extraction de connaissances N3.</p>
 
-        <h3>Formats supportés</h3>
+        <h3>Formats supportÃ©s</h3>
         <table>
-          <thead><tr><th>Stratégie</th><th>Fichiers cibles</th><th>Description</th></tr></thead>
+          <thead><tr><th>StratÃ©gie</th><th>Fichiers cibles</th><th>Description</th></tr></thead>
           <tbody>
-            <tr><td><code>brasil_error</code></td><td><code>errors_sample.log</code>, <code>connectorCL_*.log</code>, <code>connectorCreationVlan_*.log</code></td><td>Logs applicatifs Spring/BRASIL avec préfixe filepath — détecté automatiquement</td></tr>
+            <tr><td><code>brasil_error</code></td><td><code>errors_sample.log</code>, <code>connectorCL_*.log</code>, <code>connectorCreationVlan_*.log</code></td><td>Logs applicatifs Spring/BRASIL avec prÃ©fixe filepath â€” dÃ©tectÃ© automatiquement</td></tr>
             <tr><td><code>brasil_transaction</code></td><td><code>*transaction*.log</code></td><td>Transactions XML avec status KO</td></tr>
             <tr><td><code>brasil_solicitation</code></td><td><code>sollicitation*.log</code></td><td>Statistiques de performance SEBA/BRASIL (appels lents)</td></tr>
-            <tr><td><code>brasil_api</code></td><td>Logs JSON ou texte génériques</td><td>Format JSON ou texte libre</td></tr>
+            <tr><td><code>brasil_api</code></td><td>Logs JSON ou texte gÃ©nÃ©riques</td><td>Format JSON ou texte libre</td></tr>
             <tr><td><code>nginx</code></td><td><code>nginx*.log</code></td><td>Logs HTTP gateway (4xx/5xx)</td></tr>
             <tr><td><code>oracle</code></td><td>Logs Oracle DB</td><td>Erreurs ORA-*</td></tr>
-            <tr><td><code>generic</code></td><td>Tout autre fichier</td><td>Fallback générique</td></tr>
+            <tr><td><code>generic</code></td><td>Tout autre fichier</td><td>Fallback gÃ©nÃ©rique</td></tr>
           </tbody>
         </table>
 
         <div class="alert alert-info">
-          <div class="alert-title">🤖 Auto-détection</div>
-          Par défaut (<code>--strategy auto</code>), la stratégie est choisie automatiquement d'après le nom de fichier. Plus besoin de spécifier manuellement la stratégie.
+          <div class="alert-title">ðŸ¤– Auto-dÃ©tection</div>
+          Par dÃ©faut (<code>--strategy auto</code>), la stratÃ©gie est choisie automatiquement d'aprÃ¨s le nom de fichier. Plus besoin de spÃ©cifier manuellement la stratÃ©gie.
         </div>
 
         <h3>Classificateurs d'erreurs BRASIL</h3>
-        <p>Le parseur reconnaît automatiquement 30+ patterns d'erreurs :</p>
+        <p>Le parseur reconnaÃ®t automatiquement 30+ patterns d'erreurs :</p>
         <table>
-          <thead><tr><th>Code interne</th><th>Pattern détecté</th></tr></thead>
+          <thead><tr><th>Code interne</th><th>Pattern dÃ©tectÃ©</th></tr></thead>
           <tbody>
-            <tr><td><code>DSLAM_CLOSED</code></td><td>DSLAM/Card closed for production, fermé à la production</td></tr>
-            <tr><td><code>MRT_DUPLICATE</code></td><td>accès client existe déjà, MRTChemin déjà porté</td></tr>
+            <tr><td><code>DSLAM_CLOSED</code></td><td>DSLAM/Card closed for production, fermÃ© Ã  la production</td></tr>
+            <tr><td><code>MRT_DUPLICATE</code></td><td>accÃ¨s client existe dÃ©jÃ , MRTChemin dÃ©jÃ  portÃ©</td></tr>
             <tr><td><code>UNKNOWN_MRT</code></td><td>Macro Ressource Technique inconnu</td></tr>
             <tr><td><code>MRT_NOT_FOUND</code></td><td>MRT Access DSLAM ne correspond pas</td></tr>
             <tr><td><code>BIZ_RULE</code></td><td>BusinessRuleException, BusinessRuleViolationException</td></tr>
             <tr><td><code>DB_DEADLOCK</code></td><td>deadlock detected, LockAcquisitionException, transaction aborted</td></tr>
-            <tr><td><code>DUPLICATE_RESOURCE</code></td><td>Vlan déjà existant, EPC déjà utilisé</td></tr>
+            <tr><td><code>DUPLICATE_RESOURCE</code></td><td>Vlan dÃ©jÃ  existant, EPC dÃ©jÃ  utilisÃ©</td></tr>
             <tr><td><code>TRANSACTION_KO</code></td><td>rapportTransaction status KO</td></tr>
-            <tr><td><code>ACCESS_LOCKED</code></td><td>accès en cours de modification, dossier en cours</td></tr>
+            <tr><td><code>ACCESS_LOCKED</code></td><td>accÃ¨s en cours de modification, dossier en cours</td></tr>
             <tr><td><code>PORT_NOT_FOUND</code></td><td>No port found, Aucune broche disponible</td></tr>
           </tbody>
         </table>
@@ -617,18 +621,18 @@ kubectl port-forward svc/backend 8000:8000</code></pre>
         <h3>Utilisation</h3>
         <div class="command">python data_pipeline/log_ingester.py --log-dir data_pipeline/input</div>
         <div class="command">python data_pipeline/log_ingester.py --log-file path/to/error.log --strategy brasil_error</div>
-        <p>Les fichiers à ingérer doivent être placés dans <code>data_pipeline/input/</code>. La sortie est écrite dans <code>data_pipeline/output/log_events.json</code>.</p>
+        <p>Les fichiers Ã  ingÃ©rer doivent Ãªtre placÃ©s dans <code>data_pipeline/input/</code>. La sortie est Ã©crite dans <code>data_pipeline/output/log_events.json</code>.</p>
       </section>
 
       <!-- N3 Pipeline -->
       <section id="n3-pipeline">
-        <h2>🔬 Pipeline N3 Knowledge Engineering</h2>
-        <p>Le pipeline N3 transforme les événements de logs en procédures de diagnostic structurées et les indexe dans Qdrant pour retrieval sémantique.</p>
+        <h2>ðŸ”¬ Pipeline N3 Knowledge Engineering</h2>
+        <p>Le pipeline N3 transforme les Ã©vÃ©nements de logs en procÃ©dures de diagnostic structurÃ©es et les indexe dans Qdrant pour retrieval sÃ©mantique.</p>
 
         <h3>Architecture du pipeline</h3>
         <ol>
           <li><strong>Log Knowledge Extractor</strong> (<code>log_knowledge_extractor.py</code>) : Mine les templates d'erreurs, calcule un trust score composite, injecte les records du catalogue BRASIL</li>
-          <li><strong>Procedure Generator</strong> (<code>procedure_generator.py</code>) : Croise les clusters de tickets avec les log knowledge records pour générer des procédures N3 numérotées (<code>PROC-BRASIL-GEN-XXXX</code>)</li>
+          <li><strong>Procedure Generator</strong> (<code>procedure_generator.py</code>) : Croise les clusters de tickets avec les log knowledge records pour gÃ©nÃ©rer des procÃ©dures N3 numÃ©rotÃ©es (<code>PROC-BRASIL-GEN-XXXX</code>)</li>
           <li><strong>Knowledge Indexer</strong> (<code>knowledge_indexer.py</code>) : Vectorise et indexe dans deux collections Qdrant : <code>brasil_log_patterns</code> et <code>brasil_procedures</code></li>
         </ol>
 
@@ -638,45 +642,45 @@ kubectl port-forward svc/backend 8000:8000</code></pre>
         <div class="command">python data_pipeline/run_knowledge_pipeline.py --step kb_index</div>
         <div class="command">python data_pipeline/run_knowledge_pipeline.py --step n3</div>
 
-        <h3>Artefacts générés</h3>
+        <h3>Artefacts gÃ©nÃ©rÃ©s</h3>
         <table>
           <thead><tr><th>Fichier</th><th>Contenu</th></tr></thead>
           <tbody>
-            <tr><td><code>output/log_events.json</code></td><td>Événements bruts extraits des logs (classifiés)</td></tr>
+            <tr><td><code>output/log_events.json</code></td><td>Ã‰vÃ©nements bruts extraits des logs (classifiÃ©s)</td></tr>
             <tr><td><code>output/log_knowledge.json</code></td><td>40 knowledge records avec trust scores</td></tr>
-            <tr><td><code>output/procedures.json</code></td><td>27 procédures N3 numérotées</td></tr>
-            <tr><td>Qdrant: <code>brasil_log_patterns</code></td><td>12 log patterns indexés (trust ≥ 0.35)</td></tr>
-            <tr><td>Qdrant: <code>brasil_procedures</code></td><td>27 procédures indexées</td></tr>
+            <tr><td><code>output/procedures.json</code></td><td>27 procÃ©dures N3 numÃ©rotÃ©es</td></tr>
+            <tr><td>Qdrant: <code>brasil_log_patterns</code></td><td>12 log patterns indexÃ©s (trust â‰¥ 0.35)</td></tr>
+            <tr><td>Qdrant: <code>brasil_procedures</code></td><td>27 procÃ©dures indexÃ©es</td></tr>
           </tbody>
         </table>
 
         <h3>Formule de Trust Score</h3>
-        <pre><code>trust = 0.35 × S_source   # catalog_validated
-      + 0.25 × S_freq     # fréquence normalisée
-      + 0.30 × S_valid    # corrélation tickets/FRs
-      + 0.10 × S_recency  # fraîcheur</code></pre>
+        <pre><code>trust = 0.35 Ã— S_source   # catalog_validated
+      + 0.25 Ã— S_freq     # frÃ©quence normalisÃ©e
+      + 0.30 Ã— S_valid    # corrÃ©lation tickets/FRs
+      + 0.10 Ã— S_recency  # fraÃ®cheur</code></pre>
 
         <div class="alert alert-warning">
-          <div class="alert-title">⚠️ Embeddings</div>
-          Le modèle <code>paraphrase-multilingual-MiniLM-L12-v2</code> (SentenceTransformer, dim=384) peut échouer si le projet est dans un dossier OneDrive (DLL reparse point). Déplacez <code>.venv</code> hors OneDrive pour activer les embeddings sémantiques complets. En fallback, TF-IDF est utilisé automatiquement.
+          <div class="alert-title">âš ï¸ Embeddings</div>
+          Le modÃ¨le <code>paraphrase-multilingual-MiniLM-L12-v2</code> (SentenceTransformer, dim=384) peut Ã©chouer si le projet est dans un dossier OneDrive (DLL reparse point). DÃ©placez <code>.venv</code> hors OneDrive pour activer les embeddings sÃ©mantiques complets. En fallback, TF-IDF est utilisÃ© automatiquement.
         </div>
       </section>
 
       <!-- Diagnostic Engine N3 -->
       <section id="diagnostic-engine">
-        <h2>🧠 Moteur de Diagnostic N3</h2>
-        <p>Le <code>DiagnosticEngine</code> analyse chaque message utilisateur pour détecter des exceptions BRASIL connues, retriever la procédure N3 correspondante et construire un contexte structuré pour le LLM.</p>
+        <h2>ðŸ§  Moteur de Diagnostic N3</h2>
+        <p>Le <code>DiagnosticEngine</code> analyse chaque message utilisateur pour dÃ©tecter des exceptions BRASIL connues, retriever la procÃ©dure N3 correspondante et construire un contexte structurÃ© pour le LLM.</p>
 
         <h3>Catalogue inline (toujours disponible)</h3>
-        <p>5 procédures complètes intégrées directement dans le code, fonctionnelles sans Qdrant :</p>
+        <p>5 procÃ©dures complÃ¨tes intÃ©grÃ©es directement dans le code, fonctionnelles sans Qdrant :</p>
         <table>
-          <thead><tr><th>Exception</th><th>Procédure inline</th></tr></thead>
+          <thead><tr><th>Exception</th><th>ProcÃ©dure inline</th></tr></thead>
           <tbody>
-            <tr><td><code>DslamClosedForProductionException</code></td><td>Vérif DSLAM, port ouverture, re-provisioning</td></tr>
-            <tr><td><code>UnknownMRTIdException</code></td><td>Vérif MRT dans ADELIA, cohérence BRASIL/SEBA</td></tr>
-            <tr><td><code>BusinessRuleViolationException</code></td><td>Analyse règle métier, code erreur 1300</td></tr>
-            <tr><td><code>ConnectorUnavailableException</code></td><td>Vérif connecteur CL/VLAN, SEBA/ORCHESTRA</td></tr>
-            <tr><td><code>DslamUnreachableException</code></td><td>Ping DSLAM, supervision réseau, escalade</td></tr>
+            <tr><td><code>DslamClosedForProductionException</code></td><td>VÃ©rif DSLAM, port ouverture, re-provisioning</td></tr>
+            <tr><td><code>UnknownMRTIdException</code></td><td>VÃ©rif MRT dans ADELIA, cohÃ©rence BRASIL/SEBA</td></tr>
+            <tr><td><code>BusinessRuleViolationException</code></td><td>Analyse rÃ¨gle mÃ©tier, code erreur 1300</td></tr>
+            <tr><td><code>ConnectorUnavailableException</code></td><td>VÃ©rif connecteur CL/VLAN, SEBA/ORCHESTRA</td></tr>
+            <tr><td><code>DslamUnreachableException</code></td><td>Ping DSLAM, supervision rÃ©seau, escalade</td></tr>
           </tbody>
         </table>
 
@@ -684,34 +688,34 @@ kubectl port-forward svc/backend 8000:8000</code></pre>
         <table>
           <thead><tr><th>Niveau</th><th>Seuil trust</th><th>Comportement LLM</th></tr></thead>
           <tbody>
-            <tr><td><span class="badge badge-success">HIGH</span></td><td>≥ 0.75</td><td>Suit la procédure avec confiance élevée</td></tr>
-            <tr><td><span class="badge badge-warning">MEDIUM</span></td><td>0.50–0.75</td><td>Applique la procédure avec mise en garde</td></tr>
-            <tr><td><span class="badge badge-primary">LOW</span></td><td>0.35–0.50</td><td>Indique explicitement l'incertitude</td></tr>
+            <tr><td><span class="badge badge-success">HIGH</span></td><td>â‰¥ 0.75</td><td>Suit la procÃ©dure avec confiance Ã©levÃ©e</td></tr>
+            <tr><td><span class="badge badge-warning">MEDIUM</span></td><td>0.50â€“0.75</td><td>Applique la procÃ©dure avec mise en garde</td></tr>
+            <tr><td><span class="badge badge-primary">LOW</span></td><td>0.35â€“0.50</td><td>Indique explicitement l'incertitude</td></tr>
             <tr><td>INSUFFICIENT</td><td>&lt; 0.35</td><td>Refuse et demande escalade N3</td></tr>
           </tbody>
         </table>
 
-        <h3>Intégration chatbot</h3>
-        <p>Le moteur est injecté à l'étape <strong>2f</strong> du pipeline chatbot, avant la construction du contexte LLM. La réponse <code>ChatResponse</code> inclut deux nouveaux champs :</p>
+        <h3>IntÃ©gration chatbot</h3>
+        <p>Le moteur est injectÃ© Ã  l'Ã©tape <strong>2f</strong> du pipeline chatbot, avant la construction du contexte LLM. La rÃ©ponse <code>ChatResponse</code> inclut deux nouveaux champs :</p>
         <pre><code>{
   "response": "...",
   "procedure_id": "PROC-BRASIL-GEN-0006",
   "exceptions_detected": ["DslamClosedForProductionException"]
 }</code></pre>
       </section>
-        <h2>⚙️ Workers</h2>
-        <p>Les workers Celery traitent les tâches asynchrones en arrière-plan.</p>
+        <h2>âš™ï¸ Workers</h2>
+        <p>Les workers Celery traitent les tÃ¢ches asynchrones en arriÃ¨re-plan.</p>
         
         <h3>Types de workers</h3>
         <ul>
-          <li><strong>code_analyzer</strong> : Parsing AST, extraction de métadonnées</li>
+          <li><strong>code_analyzer</strong> : Parsing AST, extraction de mÃ©tadonnÃ©es</li>
           <li><strong>log_analyzer</strong> : Parsing et enrichissement de logs</li>
-          <li><strong>db_analyzer</strong> : Analyse de schémas et relations</li>
+          <li><strong>db_analyzer</strong> : Analyse de schÃ©mas et relations</li>
           <li><strong>doc_analyzer</strong> : Extraction de documentation</li>
         </ul>
         
         <h3>Monitoring des workers</h3>
-        <pre><code># Vérifier les workers actifs
+        <pre><code># VÃ©rifier les workers actifs
 celery -A celery_app inspect active
 
 # Statistiques
@@ -721,24 +725,24 @@ celery -A celery_app inspect stats
 celery -A celery_app flower</code></pre>
         
         <div class="alert alert-info">
-          <div class="alert-title">💡 Scalabilité</div>
-          Vous pouvez lancer plusieurs instances de workers pour augmenter le débit :
+          <div class="alert-title">ðŸ’¡ ScalabilitÃ©</div>
+          Vous pouvez lancer plusieurs instances de workers pour augmenter le dÃ©bit :
           <code>celery -A celery_app worker --concurrency=8</code>
         </div>
       </section>
       
       <!-- Knowledge Graph -->
       <section id="knowledge">
-        <h2>🧠 Knowledge Graph</h2>
-        <p>Le Knowledge Graph stocke les relations entre entités dans Neo4j.</p>
+        <h2>ðŸ§  Knowledge Graph</h2>
+        <p>Le Knowledge Graph stocke les relations entre entitÃ©s dans Neo4j.</p>
         
-        <h3>Types de nœuds</h3>
+        <h3>Types de nÅ“uds</h3>
         <table>
           <thead>
             <tr>
               <th>Type</th>
               <th>Description</th>
-              <th>Propriétés</th>
+              <th>PropriÃ©tÃ©s</th>
             </tr>
           </thead>
           <tbody>
@@ -749,7 +753,7 @@ celery -A celery_app flower</code></pre>
             </tr>
             <tr>
               <td><code>Function</code></td>
-              <td>Fonction ou méthode</td>
+              <td>Fonction ou mÃ©thode</td>
               <td>name, signature, docstring</td>
             </tr>
             <tr>
@@ -772,35 +776,35 @@ celery -A celery_app flower</code></pre>
         
         <h3>Types de relations</h3>
         <ul>
-          <li><code>CONTAINS</code> : File → Function/Class</li>
-          <li><code>CALLS</code> : Function → Function</li>
-          <li><code>INHERITS</code> : Class → Class</li>
-          <li><code>USES</code> : Endpoint → Table</li>
-          <li><code>REFERENCES</code> : Function → Table</li>
+          <li><code>CONTAINS</code> : File â†’ Function/Class</li>
+          <li><code>CALLS</code> : Function â†’ Function</li>
+          <li><code>INHERITS</code> : Class â†’ Class</li>
+          <li><code>USES</code> : Endpoint â†’ Table</li>
+          <li><code>REFERENCES</code> : Function â†’ Table</li>
         </ul>
         
-        <h3>Requêtes Cypher</h3>
-        <pre><code>// Trouver toutes les fonctions appelées par une fonction
+        <h3>RequÃªtes Cypher</h3>
+        <pre><code>// Trouver toutes les fonctions appelÃ©es par une fonction
 MATCH (f:Function {name: "process_data"})-[:CALLS]->(called)
 RETURN called.name
 
-// Trouver les tables utilisées par un endpoint
+// Trouver les tables utilisÃ©es par un endpoint
 MATCH (e:Endpoint {path: "/api/users"})-[:USES]->(t:Table)
 RETURN t.name</code></pre>
       </section>
       
       <!-- Chatbot -->
       <section id="chatbot">
-        <h2>💬 Chatbot</h2>
-        <p>Le chatbot utilise un pipeline RAG pour fournir des réponses contextualisées.</p>
+        <h2>ðŸ’¬ Chatbot</h2>
+        <p>Le chatbot utilise un pipeline RAG pour fournir des rÃ©ponses contextualisÃ©es.</p>
         
         <h3>Pipeline RAG</h3>
         <ol>
           <li><strong>Embedding</strong> : La question est convertie en vecteur</li>
-          <li><strong>Recherche sémantique</strong> : Top-K documents pertinents via Qdrant</li>
-          <li><strong>Re-ranking</strong> : Score de pertinence affiné</li>
-          <li><strong>Construction du prompt</strong> : Template avec contexte injecté</li>
-          <li><strong>Génération</strong> : LLM génère la réponse</li>
+          <li><strong>Recherche sÃ©mantique</strong> : Top-K documents pertinents via Qdrant</li>
+          <li><strong>Re-ranking</strong> : Score de pertinence affinÃ©</li>
+          <li><strong>Construction du prompt</strong> : Template avec contexte injectÃ©</li>
+          <li><strong>GÃ©nÃ©ration</strong> : LLM gÃ©nÃ¨re la rÃ©ponse</li>
           <li><strong>Post-processing</strong> : Formatage et extraction d'actions</li>
         </ol>
         
@@ -813,7 +817,7 @@ RETURN t.name</code></pre>
           <p>Envoie une question au chatbot</p>
           <h4>Body</h4>
           <pre><code>{
-  "query": "Comment résoudre l'erreur 'connection timeout' ?",
+  "query": "Comment rÃ©soudre l'erreur 'connection timeout' ?",
   "context": {
     "project_id": "proj-123",
     "user_id": "user-456"
@@ -823,15 +827,15 @@ RETURN t.name</code></pre>
     "temperature": 0.7
   }
 }</code></pre>
-          <h4>Réponse</h4>
+          <h4>RÃ©ponse</h4>
           <pre><code>{
-  "response": "L'erreur 'connection timeout' peut être causée par...",
+  "response": "L'erreur 'connection timeout' peut Ãªtre causÃ©e par...",
   "sources": [
     {"id": "doc-1", "title": "Guide de troubleshooting", "score": 0.92},
-    {"id": "doc-2", "title": "Configuration réseau", "score": 0.87}
+    {"id": "doc-2", "title": "Configuration rÃ©seau", "score": 0.87}
   ],
   "suggested_actions": [
-    "Vérifier la configuration du firewall",
+    "VÃ©rifier la configuration du firewall",
     "Augmenter le timeout dans app.config"
   ]
 }</code></pre>
@@ -840,111 +844,200 @@ RETURN t.name</code></pre>
         <h3>Personnalisation</h3>
         <p>Modifiez <code>backend/app/services/chatbot/chatbot_service.py</code> pour :</p>
         <ul>
-          <li>Changer le modèle LLM</li>
-          <li>Ajuster les prompts système</li>
-          <li>Modifier la stratégie de re-ranking</li>
+          <li>Changer le modÃ¨le LLM</li>
+          <li>Ajuster les prompts systÃ¨me</li>
+          <li>Modifier la stratÃ©gie de re-ranking</li>
           <li>Ajouter des post-processors custom</li>
         </ul>
       </section>
       
       <!-- Validation -->
       <section id="validation">
-        <h2>✅ Validation</h2>
-        <p>Le module de validation permet aux experts de reviewer et corriger les réponses du chatbot.</p>
+        <h2>âœ… Validation</h2>
+        <p>Le module de validation permet aux experts de reviewer et corriger les rÃ©ponses du chatbot.</p>
         
         <h3>Workflow de validation</h3>
         <ol>
-          <li>Le chatbot génère une réponse</li>
-          <li>La réponse est marquée "En attente de validation"</li>
-          <li>Un expert review la réponse</li>
+          <li>Le chatbot gÃ©nÃ¨re une rÃ©ponse</li>
+          <li>La rÃ©ponse est marquÃ©e "En attente de validation"</li>
+          <li>Un expert review la rÃ©ponse</li>
           <li>L'expert peut : Valider / Corriger / Rejeter</li>
-          <li>Les corrections sont persistées et utilisées pour fine-tuning</li>
+          <li>Les corrections sont persistÃ©es et utilisÃ©es pour fine-tuning</li>
         </ol>
         
-        <h3>Métriques de qualité</h3>
+        <h3>MÃ©triques de qualitÃ©</h3>
         <ul>
-          <li><strong>Taux de validation</strong> : % de réponses validées sans correction</li>
-          <li><strong>Score BLEU</strong> : Similarité avec réponses de référence</li>
-          <li><strong>Temps de réponse</strong> : Latence moyenne P50/P95/P99</li>
-          <li><strong>Satisfaction utilisateur</strong> : 👍 / 👎</li>
+          <li><strong>Taux de validation</strong> : % de rÃ©ponses validÃ©es sans correction</li>
+          <li><strong>Score BLEU</strong> : SimilaritÃ© avec rÃ©ponses de rÃ©fÃ©rence</li>
+          <li><strong>Temps de rÃ©ponse</strong> : Latence moyenne P50/P95/P99</li>
+          <li><strong>Satisfaction utilisateur</strong> : ðŸ‘ / ðŸ‘Ž</li>
         </ul>
       </section>
       
       <!-- Classification ML -->
       <section id="classification-ml">
-        <h2>🤖 Classification ML Hybride</h2>
-        <p>Le module Classification ML permet d'entraîner un classifieur automatique sur vos tickets d'incidents et de prédire la cause de nouveaux tickets en temps réel. Il combine <strong>FAISS</strong> (similarité sémantique), <strong>TF-IDF avec boost de mots-clés métier</strong> et un pipeline 9 étapes pour maximiser la précision.</p>
+        <h2>ðŸ¤– Classification ML Hybride</h2>
+        <p>Le module Classification ML permet d'entraÃ®ner un classifieur automatique sur vos tickets d'incidents et de prÃ©dire la cause de nouveaux tickets en temps rÃ©el. Il combine <strong>FAISS</strong> (similaritÃ© sÃ©mantique), <strong>TF-IDF avec boost de mots-clÃ©s mÃ©tier</strong> et un pipeline 9 Ã©tapes pour maximiser la prÃ©cision.</p>
 
-        <h3>Pipeline hybride (9 étapes)</h3>
+        <h3>Pipeline hybride (9 Ã©tapes)</h3>
         <ol>
-          <li><strong>Upload</strong> : Téléversement du CSV de tickets (jusqu'à 50 000 lignes)</li>
-          <li><strong>Prepare</strong> : Normalisation, déduplication, nettoyage des valeurs vides</li>
-          <li><strong>Train</strong> : Entraînement TF-IDF + FAISS sur la colonne texte choisie, avec boost de mots-clés métier BRASIL</li>
-          <li><strong>Predict</strong> : Prédiction par similarité FAISS (cosinus) + score TF-IDF combiné</li>
-          <li><strong>Threshold</strong> : Filtrage des prédictions sous le seuil de confiance configuré</li>
-          <li><strong>Correction interactive</strong> : Révision manuelle des prédictions incertaines</li>
-          <li><strong>Export</strong> : Export CSV avec prédictions et scores de confiance</li>
-          <li><strong>Feedback loop</strong> : Les corrections enrichissent le jeu d'entraînement</li>
-          <li><strong>Re-train</strong> : Re-entraînement incrémental avec les corrections accumulées</li>
+          <li><strong>Upload</strong> : TÃ©lÃ©versement du CSV de tickets (jusqu'Ã  50 000 lignes)</li>
+          <li><strong>Prepare</strong> : Normalisation, dÃ©duplication, nettoyage des valeurs vides</li>
+          <li><strong>Train</strong> : EntraÃ®nement TF-IDF + FAISS sur la colonne texte choisie, avec boost de mots-clÃ©s mÃ©tier BRASIL</li>
+          <li><strong>Predict</strong> : PrÃ©diction par similaritÃ© FAISS (cosinus) + score TF-IDF combinÃ©</li>
+          <li><strong>Threshold</strong> : Filtrage des prÃ©dictions sous le seuil de confiance configurÃ©</li>
+          <li><strong>Correction interactive</strong> : RÃ©vision manuelle des prÃ©dictions incertaines</li>
+          <li><strong>Export</strong> : Export CSV avec prÃ©dictions et scores de confiance</li>
+          <li><strong>Feedback loop</strong> : Les corrections enrichissent le jeu d'entraÃ®nement</li>
+          <li><strong>Re-train</strong> : Re-entraÃ®nement incrÃ©mental avec les corrections accumulÃ©es</li>
         </ol>
 
-        <h3>Paramètres d'entraînement (UI)</h3>
-        <p>Depuis l'onglet <strong>Entraînement</strong> du module Classification ML, trois paramètres sont configurables :</p>
+        <h3>ParamÃ¨tres d'entraÃ®nement (UI)</h3>
+        <p>Depuis l'onglet <strong>EntraÃ®nement</strong> du module Classification ML, trois paramÃ¨tres sont configurables :</p>
         <table>
-          <thead><tr><th>Paramètre</th><th>Valeur par défaut</th><th>Description</th></tr></thead>
+          <thead><tr><th>ParamÃ¨tre</th><th>Valeur par dÃ©faut</th><th>Description</th></tr></thead>
           <tbody>
-            <tr><td><strong>Colonne à prédire (label)</strong></td><td><code>cause</code></td><td>Colonne du CSV contenant les étiquettes de classification (ex: <code>inc_cause</code>, <code>cause_canonique</code>)</td></tr>
-            <tr><td><strong>Colonne texte source</strong></td><td>Auto-détection</td><td>Colonne utilisée pour extraire le texte d'entraînement. Si vide, la priorité est : <code>text_ml_postmortem</code> → <code>texte_complet</code> → <code>user_sig</code> → <code>inc_solution</code> → <code>inc_resume</code> → <code>description</code></td></tr>
-            <tr><td><strong>Max Features (TF-IDF)</strong></td><td>5 000</td><td>Taille du vocabulaire TF-IDF. Plage : 1 000 – 20 000. Guidé par des hints dynamiques : ⚡ Rapide (≤2 000), ✅ Recommandé &lt;500 tickets (≤7 000), 🎯 Optimal grands datasets (&gt;7 000)</td></tr>
+            <tr><td><strong>Colonne Ã  prÃ©dire (label)</strong></td><td><code>cause</code></td><td>Colonne du CSV contenant les Ã©tiquettes de classification (ex: <code>inc_cause</code>, <code>cause_canonique</code>)</td></tr>
+            <tr><td><strong>Colonne texte source</strong></td><td>Auto-dÃ©tection</td><td>Colonne utilisÃ©e pour extraire le texte d'entraÃ®nement. Si vide, la prioritÃ© est : <code>text_ml_postmortem</code> â†’ <code>texte_complet</code> â†’ <code>user_sig</code> â†’ <code>inc_solution</code> â†’ <code>inc_resume</code> â†’ <code>description</code></td></tr>
+            <tr><td><strong>Max Features (TF-IDF)</strong></td><td>5 000</td><td>Taille du vocabulaire TF-IDF. Plage : 1 000 â€“ 20 000. GuidÃ© par des hints dynamiques : âš¡ Rapide (â‰¤2 000), âœ… RecommandÃ© &lt;500 tickets (â‰¤7 000), ðŸŽ¯ Optimal grands datasets (&gt;7 000)</td></tr>
           </tbody>
         </table>
 
         <div class="alert alert-info">
-          <div class="alert-title">💡 Recommandation pour BRASIL (222 tickets)</div>
-          Choisir <code>user_sig</code> comme colonne texte source + <code>inc_cause</code> comme colonne label + Max Features à <strong>3 000–5 000</strong> (hint : ✅ Recommandé pour &lt;500 tickets).
+          <div class="alert-title">ðŸ’¡ Recommandation pour BRASIL (222 tickets)</div>
+          Choisir <code>user_sig</code> comme colonne texte source + <code>inc_cause</code> comme colonne label + Max Features Ã  <strong>3 000â€“5 000</strong> (hint : âœ… RecommandÃ© pour &lt;500 tickets).
         </div>
 
         <h3>Classifieur hybride FAISS</h3>
-        <p>Le classifieur combine deux approches complémentaires :</p>
+        <p>Le classifieur combine deux approches complÃ©mentaires :</p>
         <table>
-          <thead><tr><th>Approche</th><th>Modèle</th><th>Rôle</th></tr></thead>
+          <thead><tr><th>Approche</th><th>ModÃ¨le</th><th>RÃ´le</th></tr></thead>
           <tbody>
-            <tr><td><strong>Sémantique</strong></td><td>FAISS + <code>paraphrase-multilingual-MiniLM-L12-v2</code> (dim=384)</td><td>Similarité cosinus sur embeddings multilingues — capture le sens même avec des variations orthographiques</td></tr>
-            <tr><td><strong>Lexical</strong></td><td>TF-IDF (sklearn)</td><td>Poids des termes dans le vocabulaire — rapide et robuste sur petits datasets</td></tr>
-            <tr><td><strong>Keyword boost</strong></td><td>Dictionnaire métier BRASIL</td><td>Surpoids des termes critiques (<code>DSLAM</code>, <code>MRT</code>, <code>vlan</code>, <code>débit</code>…) pour orienter la classification</td></tr>
+            <tr><td><strong>SÃ©mantique</strong></td><td>FAISS + <code>paraphrase-multilingual-MiniLM-L12-v2</code> (dim=384)</td><td>SimilaritÃ© cosinus sur embeddings multilingues â€” capture le sens mÃªme avec des variations orthographiques</td></tr>
+            <tr><td><strong>Lexical</strong></td><td>TF-IDF (sklearn)</td><td>Poids des termes dans le vocabulaire â€” rapide et robuste sur petits datasets</td></tr>
+            <tr><td><strong>Keyword boost</strong></td><td>Dictionnaire mÃ©tier BRASIL</td><td>Surpoids des termes critiques (<code>DSLAM</code>, <code>MRT</code>, <code>vlan</code>, <code>dÃ©bit</code>â€¦) pour orienter la classification</td></tr>
           </tbody>
         </table>
 
         <h3>Carte de correction</h3>
-        <p>Pour chaque prédiction sous le seuil de confiance, une carte de correction s'affiche avec :</p>
+        <p>Pour chaque prÃ©diction sous le seuil de confiance, une carte de correction s'affiche avec :</p>
         <ul>
-          <li><strong><code>user_sig</code></strong> : Signature utilisateur / résumé du ticket (colonne principale affichée)</li>
-          <li><strong><code>inc_solution</code></strong> : Solution apportée à l'incident — contexte clé pour la correction</li>
-          <li><strong>Prédiction actuelle</strong> avec score de confiance et badge coloré (vert/orange/rouge)</li>
-          <li><strong>Sélecteur de classe</strong> : Toutes les classes disponibles pour corriger la prédiction</li>
+          <li><strong><code>user_sig</code></strong> : Signature utilisateur / rÃ©sumÃ© du ticket (colonne principale affichÃ©e)</li>
+          <li><strong><code>inc_solution</code></strong> : Solution apportÃ©e Ã  l'incident â€” contexte clÃ© pour la correction</li>
+          <li><strong>PrÃ©diction actuelle</strong> avec score de confiance et badge colorÃ© (vert/orange/rouge)</li>
+          <li><strong>SÃ©lecteur de classe</strong> : Toutes les classes disponibles pour corriger la prÃ©diction</li>
         </ul>
 
-        <h3>Métriques de qualité</h3>
+        <h3>MÃ©triques de qualitÃ©</h3>
         <table>
-          <thead><tr><th>Métrique</th><th>Description</th></tr></thead>
+          <thead><tr><th>MÃ©trique</th><th>Description</th></tr></thead>
           <tbody>
-            <tr><td><strong>Coverage</strong></td><td>% de tickets prédits au-dessus du seuil de confiance. 7.7% à seuil=0.5 sur 222 tickets BRASIL (21 classes granulaires)</td></tr>
-            <tr><td><strong>Accepted</strong></td><td>Nombre de prédictions acceptées sans correction</td></tr>
-            <tr><td><strong>Training count</strong></td><td>Nombre d'exemples d'entraînement par classe</td></tr>
-            <tr><td><strong>Threshold</strong></td><td>Seuil de confiance minimum (0.0 – 1.0, défaut : 0.5)</td></tr>
+            <tr><td><strong>Coverage</strong></td><td>% de tickets prÃ©dits au-dessus du seuil de confiance. 7.7% Ã  seuil=0.5 sur 222 tickets BRASIL (21 classes granulaires)</td></tr>
+            <tr><td><strong>Accepted</strong></td><td>Nombre de prÃ©dictions acceptÃ©es sans correction</td></tr>
+            <tr><td><strong>Training count</strong></td><td>Nombre d'exemples d'entraÃ®nement par classe</td></tr>
+            <tr><td><strong>Threshold</strong></td><td>Seuil de confiance minimum (0.0 â€“ 1.0, dÃ©faut : 0.5)</td></tr>
           </tbody>
         </table>
 
         <div class="alert alert-warning">
-          <div class="alert-title">⚠️ Coverage faible ?</div>
-          Avec 21 classes et 222 tickets (~10 exemples/classe), la coverage est naturellement basse. Pour améliorer : baisser le seuil à 0.3, augmenter les données d'entraînement, ou regrouper les classes similaires.
+          <div class="alert-title">âš ï¸ Coverage faible ?</div>
+          Avec 21 classes et 222 tickets (~10 exemples/classe), la coverage est naturellement basse. Pour amÃ©liorer : baisser le seuil Ã  0.3, augmenter les donnÃ©es d'entraÃ®nement, ou regrouper les classes similaires.
+        </div>
+      </section>
+
+      <!-- Hierarchical ML Classifier -->
+      <section id="hierarchical-ml">
+        <h2>ðŸ—ï¸ Classifieur HiÃ©rarchique 2 Niveaux</h2>
+        <p>Le module <strong>Hierarchical ML</strong> classifie les tickets selon une <strong>taxonomie Ã  2 niveaux</strong> inspirÃ©e des standards ITSM : une catÃ©gorie <strong>L1</strong> (domaine fonctionnel) et une sous-catÃ©gorie <strong>L2</strong> (cause prÃ©cise). Il combine KNN, RÃ©gression Logistique et un fallback LLM Groq pour les cas ambigus.</p>
+
+        <div class="alert alert-info">
+          <div class="alert-title">ðŸ†• NouveautÃ© v4.0</div>
+          Le classifieur hiÃ©rarchique est disponible sur le endpoint <code>/api/v1/hierarchical-ml/</code>. Il partage la session d'upload avec le module Classification ML classique â€” un seul CSV suffit.
+        </div>
+
+        <h3>Architecture du classifieur</h3>
+        <table>
+          <thead><tr><th>Niveau</th><th>ModÃ¨le</th><th>RÃ´le</th></tr></thead>
+          <tbody>
+            <tr><td><strong>L1 (Domaine)</strong></td><td>KNN (k=5) sur embeddings MiniLM-L12-v2</td><td>Classificateur rapide de haut niveau â€” ex : INFRASTRUCTURE, APPLICATION, RÃ‰SEAU</td></tr>
+            <tr><td><strong>L2 (Cause)</strong></td><td>RÃ©gression Logistique (sklearn) par domaine L1</td><td>Un modÃ¨le L2 par catÃ©gorie L1 â€” ex : DSLAM_CLOSED, MRT_NOT_FOUND sous INFRASTRUCTURE</td></tr>
+            <tr><td><strong>Fallback LLM</strong></td><td>Groq API (llama-3.1-8b)</td><td>ActivÃ© si la confiance L1 < seuil ou L2 indÃ©terminÃ© â€” fournit rationale explicable</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Taxonomie BRASIL</h3>
+        <p>La taxonomie interne comprend les niveaux L1 suivants, mappÃ©s automatiquement depuis <code>inc_cause</code> :</p>
+        <table>
+          <thead><tr><th>L1 (Domaine)</th><th>Exemples L2</th></tr></thead>
+          <tbody>
+            <tr><td><code>INFRASTRUCTURE</code></td><td>DSLAM_CLOSED, MRT_NOT_FOUND, PORT_NOT_FOUND, DSLAM_UNREACHABLE</td></tr>
+            <tr><td><code>CONFIGURATION</code></td><td>MRT_DUPLICATE, DUPLICATE_RESOURCE, BIZ_RULE, ACCESS_LOCKED</td></tr>
+            <tr><td><code>TRANSACTION</code></td><td>TRANSACTION_KO, DB_DEADLOCK, UNKNOWN_MRT</td></tr>
+            <tr><td><code>INCONNU</code></td><td>Tickets sans pattern reconnu â€” routÃ©s au LLM Groq</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Niveaux de confiance</h3>
+        <table>
+          <thead><tr><th>Tier</th><th>Condition</th><th>Comportement</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-success">HIGH</span></td><td>L1 â‰¥ 0.70 &amp; L2 â‰¥ 0.60</td><td>PrÃ©diction automatique sans revue</td></tr>
+            <tr><td><span class="badge badge-warning">MEDIUM</span></td><td>L1 â‰¥ 0.50 ou L2 â‰¥ 0.40</td><td>Revue recommandÃ©e</td></tr>
+            <tr><td><span class="badge badge-primary">LOW</span></td><td>En dessous des seuils</td><td>Fallback LLM Groq + flag <code>needs_review=true</code></td></tr>
+          </tbody>
+        </table>
+
+        <h3>Flux d'entraÃ®nement</h3>
+        <ol>
+          <li><strong>Upload CSV</strong> via <code>POST /hierarchical-ml/upload</code> (partage la session avec classification-ml)</li>
+          <li><strong>Train</strong> via <code>POST /hierarchical-ml/train</code> â€” auto-dÃ©tection de la colonne texte BRASIL et du label</li>
+          <li><strong>Optionnel</strong> : passer <code>is_pre_mapped=true</code> avec <code>l1_col</code> et <code>l2_col</code> si le CSV contient dÃ©jÃ  la taxonomie 2 niveaux</li>
+          <li><strong>Predict single</strong> : <code>POST /hierarchical-ml/predict-single</code> â€” avec rationale LLM optionnel</li>
+          <li><strong>Predict batch</strong> : <code>POST /hierarchical-ml/predict</code> â€” liste de textes, LLM dÃ©sactivÃ© par dÃ©faut</li>
+          <li><strong>Predict CSV</strong> : <code>POST /hierarchical-ml/predict-csv</code> â€” retourne un CSV enrichi avec <code>level_1</code>, <code>level_2</code>, <code>confidence_tier</code></li>
+        </ol>
+
+        <h3>Construction du texte BRASIL</h3>
+        <p>Si aucune colonne texte n'est spÃ©cifiÃ©e, le classifieur combine automatiquement :</p>
+        <ol>
+          <li>Si <code>user_sig</code> + <code>inc_solution</code> prÃ©sents â†’ <code>prepare_text(user_sig, inc_solution)</code> (inc_solution pondÃ©rÃ© Ã—2)</li>
+          <li>Si une seule prÃ©sente â†’ utilisÃ©e seule (normalisÃ©e)</li>
+          <li>Fallback : concatÃ©nation de <code>inc_resume</code>, <code>inc_cause</code>, <code>inc_commentaire</code>, <code>text_ml_postmortem</code></li>
+        </ol>
+      </section>
+
+      <!-- FR Injection -->
+      <section id="fr-injection">
+        <h2>ðŸ“‹ Injection FRs dans Qdrant</h2>
+        <p>Le systÃ¨me d'injection de <strong>Fiches de RÃ©solution (FRs)</strong> enrichit le knowledge graph Qdrant avec 51 fiches structurÃ©es issues du corpus BRASIL. Ces FRs permettent au chatbot de fournir des rÃ©ponses prÃ©cises basÃ©es sur des rÃ©solutions validÃ©es par les experts N3.</p>
+
+        <h3>Collection Qdrant : <code>brasil_frs</code></h3>
+        <table>
+          <thead><tr><th>Champ</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>fr_id</code></td><td>Identifiant unique (FR-BRASIL-XXXX)</td></tr>
+            <tr><td><code>titre</code></td><td>Titre de la fiche de rÃ©solution</td></tr>
+            <tr><td><code>probleme</code></td><td>Description du problÃ¨me couvert</td></tr>
+            <tr><td><code>solution</code></td><td>Solution Ã©tape par Ã©tape</td></tr>
+            <tr><td><code>exceptions</code></td><td>Exceptions BRASIL associÃ©es</td></tr>
+            <tr><td><code>trust_score</code></td><td>Score de confiance composite (0.0â€“1.0)</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Lancer l'injection</h3>
+        <div class="command">python backend/inject_brasil_knowledge.py</div>
+        <p>Le script indexe les 51 FRs dans la collection <code>brasil_frs</code> avec embeddings MiniLM-L12-v2. En cas d'indisponibilitÃ© du modÃ¨le, un fallback TF-IDF est utilisÃ© automatiquement.</p>
+
+        <div class="alert alert-success">
+          <div class="alert-title">âœ… RÃ©sultat</div>
+          51 Fiches de RÃ©solution BRASIL indexÃ©es. Le chatbot peut dÃ©sormais retriever des procÃ©dures validÃ©es avant de consulter Groq.
         </div>
       </section>
 
       <!-- API Auth -->
       <section id="api-auth">
-        <h2>🔐 Authentification API</h2>
-        <p>Toutes les routes API (sauf <code>/health</code>) nécessitent une authentification JWT.</p>
+        <h2>ðŸ” Authentification API</h2>
+        <p>Toutes les routes API (sauf <code>/health</code>) nÃ©cessitent une authentification JWT.</p>
         
         <h3>Obtenir un token</h3>
         <div class="endpoint">
@@ -956,7 +1049,7 @@ RETURN t.name</code></pre>
   "username": "admin",
   "password": "password"
 }</code></pre>
-          <h4>Réponse</h4>
+          <h4>RÃ©ponse</h4>
           <pre><code>{
   "access_token": "eyJhbGciOiJIUzI1NiIs...",
   "token_type": "bearer",
@@ -965,20 +1058,20 @@ RETURN t.name</code></pre>
         </div>
         
         <h3>Utiliser le token</h3>
-        <p>Incluez le token dans le header <code>Authorization</code> de toutes vos requêtes :</p>
+        <p>Incluez le token dans le header <code>Authorization</code> de toutes vos requÃªtes :</p>
         <pre><code>Authorization: Bearer eyJhbGciOiJIUzI1NiIs...</code></pre>
       </section>
       
       <!-- API Collector -->
       <section id="api-collector">
-        <h2>📦 Collector API</h2>
+        <h2>ðŸ“¦ Collector API</h2>
         
         <div class="endpoint">
           <div class="endpoint-header">
             <span class="method method-get">GET</span>
             <span class="endpoint-path">/api/v1/collector/status/:task_id</span>
           </div>
-          <p>Récupère le statut d'une tâche de collection</p>
+          <p>RÃ©cupÃ¨re le statut d'une tÃ¢che de collection</p>
         </div>
         
         <div class="endpoint">
@@ -986,7 +1079,7 @@ RETURN t.name</code></pre>
             <span class="method method-post">POST</span>
             <span class="endpoint-path">/api/v1/collector/logs</span>
           </div>
-          <p>Ingère des fichiers logs</p>
+          <p>IngÃ¨re des fichiers logs</p>
         </div>
         
         <div class="endpoint">
@@ -994,13 +1087,13 @@ RETURN t.name</code></pre>
             <span class="method method-post">POST</span>
             <span class="endpoint-path">/api/v1/collector/database</span>
           </div>
-          <p>Introspection d'une base de données</p>
+          <p>Introspection d'une base de donnÃ©es</p>
         </div>
       </section>
       
       <!-- API Chat -->
       <section id="api-chat">
-        <h2>💬 Chat API</h2>
+        <h2>ðŸ’¬ Chat API</h2>
         
         <div class="endpoint">
           <div class="endpoint-header">
@@ -1015,7 +1108,7 @@ RETURN t.name</code></pre>
             <span class="method method-get">GET</span>
             <span class="endpoint-path">/api/v1/chat/history</span>
           </div>
-          <p>Récupère l'historique des conversations</p>
+          <p>RÃ©cupÃ¨re l'historique des conversations</p>
         </div>
         
         <div class="endpoint">
@@ -1023,25 +1116,25 @@ RETURN t.name</code></pre>
             <span class="method method-post">POST</span>
             <span class="endpoint-path">/api/v1/chat/feedback</span>
           </div>
-          <p>Envoie un feedback (👍/👎) sur une réponse</p>
+          <p>Envoie un feedback (ðŸ‘/ðŸ‘Ž) sur une rÃ©ponse</p>
         </div>
       </section>
       
       <!-- API Knowledge -->
       <section id="api-knowledge">
-        <h2>🧠 Knowledge API</h2>
+        <h2>ðŸ§  Knowledge API</h2>
         
         <div class="endpoint">
           <div class="endpoint-header">
             <span class="method method-get">GET</span>
             <span class="endpoint-path">/api/v1/knowledge/search</span>
           </div>
-          <p>Recherche sémantique dans le knowledge graph</p>
+          <p>Recherche sÃ©mantique dans le knowledge graph</p>
           <h4>Query params</h4>
           <ul>
-            <li><code>q</code> : Requête de recherche</li>
-            <li><code>top_k</code> : Nombre de résultats (défaut: 10)</li>
-            <li><code>threshold</code> : Seuil de similarité (défaut: 0.7)</li>
+            <li><code>q</code> : RequÃªte de recherche</li>
+            <li><code>top_k</code> : Nombre de rÃ©sultats (dÃ©faut: 10)</li>
+            <li><code>threshold</code> : Seuil de similaritÃ© (dÃ©faut: 0.7)</li>
           </ul>
         </div>
         
@@ -1050,20 +1143,20 @@ RETURN t.name</code></pre>
             <span class="method method-get">GET</span>
             <span class="endpoint-path">/api/v1/knowledge/graph/:node_id</span>
           </div>
-          <p>Récupère un nœud et ses relations</p>
+          <p>RÃ©cupÃ¨re un nÅ“ud et ses relations</p>
         </div>
       </section>
       
       <!-- N3 API -->
       <section id="api-n3">
-        <h2>🔬 N3 Diagnostic API</h2>
+        <h2>ðŸ”¬ N3 Diagnostic API</h2>
 
         <div class="endpoint">
           <div class="endpoint-header">
             <span class="method method-get">GET</span>
             <span class="endpoint-path">/api/v1/intelligence/pipeline-status</span>
           </div>
-          <p>Statut du pipeline N3 — artefacts générés, taille des collections Qdrant</p>
+          <p>Statut du pipeline N3 â€” artefacts gÃ©nÃ©rÃ©s, taille des collections Qdrant</p>
         </div>
 
         <div class="endpoint">
@@ -1071,13 +1164,13 @@ RETURN t.name</code></pre>
             <span class="method method-post">POST</span>
             <span class="endpoint-path">/api/v1/intelligence/analyze-ticket</span>
           </div>
-          <p>Analyse un ticket et retourne la procédure N3 correspondante</p>
+          <p>Analyse un ticket et retourne la procÃ©dure N3 correspondante</p>
           <h4>Body</h4>
           <pre><code>{
-  "query": "DSLAM DSCAH114 fermé à la production",
+  "query": "DSLAM DSCAH114 fermÃ© Ã  la production",
   "app_id": "connectorCL"
 }</code></pre>
-          <h4>Réponse</h4>
+          <h4>RÃ©ponse</h4>
           <pre><code>{
   "procedure_id": "PROC-BRASIL-GEN-0006",
   "confidence": "HIGH",
@@ -1093,23 +1186,23 @@ RETURN t.name</code></pre>
             <span class="method method-post">POST</span>
             <span class="endpoint-path">/api/v1/chat/message</span>
           </div>
-          <p>Chat avec diagnostic N3 intégré — retourne <code>procedure_id</code> et <code>exceptions_detected</code> en plus de la réponse LLM</p>
+          <p>Chat avec diagnostic N3 intÃ©grÃ© â€” retourne <code>procedure_id</code> et <code>exceptions_detected</code> en plus de la rÃ©ponse LLM</p>
         </div>
       </section>
 
       <!-- API Classification ML -->
       <section id="api-classification-ml">
-        <h2>🤖 Classification ML API</h2>
+        <h2>ðŸ¤– Classification ML API</h2>
 
         <div class="endpoint">
           <div class="endpoint-header">
             <span class="method method-post">POST</span>
             <span class="endpoint-path">/api/v1/classification-ml/upload</span>
           </div>
-          <p>Upload d'un fichier CSV de tickets pour démarrer une session de classification</p>
+          <p>Upload d'un fichier CSV de tickets pour dÃ©marrer une session de classification</p>
           <h4>Body (multipart/form-data)</h4>
           <pre><code>file: tickets.csv  (champ fichier)</code></pre>
-          <h4>Réponse</h4>
+          <h4>RÃ©ponse</h4>
           <pre><code>{
   "session_id": "4204e7cc-48b2-431b-9327-837b1ca31c2c",
   "rows": 222,
@@ -1122,7 +1215,7 @@ RETURN t.name</code></pre>
             <span class="method method-post">POST</span>
             <span class="endpoint-path">/api/v1/classification-ml/prepare</span>
           </div>
-          <p>Normalise et prépare les données de la session courante</p>
+          <p>Normalise et prÃ©pare les donnÃ©es de la session courante</p>
         </div>
 
         <div class="endpoint">
@@ -1130,7 +1223,7 @@ RETURN t.name</code></pre>
             <span class="method method-post">POST</span>
             <span class="endpoint-path">/api/v1/classification-ml/train</span>
           </div>
-          <p>Entraîne le classifieur hybride FAISS + TF-IDF sur la session courante</p>
+          <p>EntraÃ®ne le classifieur hybride FAISS + TF-IDF sur la session courante</p>
           <h4>Body</h4>
           <pre><code>{
   "label_col": "inc_cause",
@@ -1139,7 +1232,7 @@ RETURN t.name</code></pre>
   "use_cause_hint": false,
   "session_id": "4204e7cc-..."
 }</code></pre>
-          <h4>Réponse</h4>
+          <h4>RÃ©ponse</h4>
           <pre><code>{
   "classes": 21,
   "training_count": 2,
@@ -1153,12 +1246,12 @@ RETURN t.name</code></pre>
             <span class="method method-post">POST</span>
             <span class="endpoint-path">/api/v1/classification-ml/predict-session</span>
           </div>
-          <p>Lance la prédiction sur tous les tickets de la session courante</p>
+          <p>Lance la prÃ©diction sur tous les tickets de la session courante</p>
           <h4>Body</h4>
           <pre><code>{
   "threshold": 0.5
 }</code></pre>
-          <h4>Réponse</h4>
+          <h4>RÃ©ponse</h4>
           <pre><code>{
   "predictions": [...],
   "accepted": 17,
@@ -1172,7 +1265,7 @@ RETURN t.name</code></pre>
             <span class="method method-post">POST</span>
             <span class="endpoint-path">/api/v1/classification-ml/correct</span>
           </div>
-          <p>Soumet une correction manuelle pour une prédiction</p>
+          <p>Soumet une correction manuelle pour une prÃ©diction</p>
           <h4>Body</h4>
           <pre><code>{
   "ticket_id": "INC-0042",
@@ -1187,15 +1280,132 @@ RETURN t.name</code></pre>
             <span class="method method-get">GET</span>
             <span class="endpoint-path">/api/v1/classification-ml/status</span>
           </div>
-          <p>Statut du modèle courant — classes entraînées, date, colonne texte utilisée</p>
+          <p>Statut du modÃ¨le courant â€” classes entraÃ®nÃ©es, date, colonne texte utilisÃ©e</p>
+        </div>
+      </section>
+
+      <!-- API Hierarchical ML -->
+      <section id="api-hierarchical-ml">
+        <h2>ðŸ—ï¸ Hierarchical ML API</h2>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/hierarchical-ml/upload</span>
+          </div>
+          <p>Upload d'un CSV de tickets â€” partage la session avec <code>/classification-ml/upload</code></p>
+          <h4>Body (multipart/form-data)</h4>
+          <pre><code>file: tickets.csv</code></pre>
+          <h4>RÃ©ponse</h4>
+          <pre><code>{
+  "session_id": "4204e7cc-48b2-431b-9327-837b1ca31c2c",
+  "rows": 222,
+  "columns": ["inc_cause", "user_sig", "inc_solution", ...]
+}</code></pre>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/hierarchical-ml/train</span>
+          </div>
+          <p>EntraÃ®ne le classifieur hiÃ©rarchique KNN L1 + LR L2</p>
+          <h4>Body</h4>
+          <pre><code>{
+  "session_id": "4204e7cc-...",
+  "text_col": "user_sig",
+  "label_col": "inc_cause",
+  "is_pre_mapped": false
+}</code></pre>
+          <h4>RÃ©ponse</h4>
+          <pre><code>{
+  "status": "trained",
+  "n_samples": 210,
+  "l1_categories": ["INFRASTRUCTURE", "CONFIGURATION", "TRANSACTION"],
+  "l1_distribution": {"INFRASTRUCTURE": 80, "CONFIGURATION": 70, "TRANSACTION": 60},
+  "l2_stats": {"INFRASTRUCTURE": {"model": "LogisticRegression", "n_samples": 80}},
+  "trained_at": "2026-04-14T10:23:36",
+  "message": "Hierarchical model trained on 210 tickets. 3 L1 categories, 3 L2 models."
+}</code></pre>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/hierarchical-ml/predict-single</span>
+          </div>
+          <p>PrÃ©diction L1 + L2 pour un ticket unique</p>
+          <h4>Body</h4>
+          <pre><code>{
+  "text": "DSLAM DSCAH114 fermÃ© Ã  la production â€” accÃ¨s client bloquÃ©",
+  "use_llm": true
+}</code></pre>
+          <h4>RÃ©ponse</h4>
+          <pre><code>{
+  "level_1": "INFRASTRUCTURE",
+  "level_2": "DSLAM_CLOSED",
+  "level_1_confidence": 0.88,
+  "level_2_confidence": 0.76,
+  "confidence_tier": "HIGH",
+  "l2_source": "LogisticRegression",
+  "llm_used": false,
+  "llm_rationale": null,
+  "nearest_neighbors": [{"text": "...", "label": "INFRASTRUCTURE", "score": 0.92}],
+  "needs_review": false
+}</code></pre>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/hierarchical-ml/predict</span>
+          </div>
+          <p>PrÃ©diction L1 + L2 en batch pour une liste de textes</p>
+          <h4>Body</h4>
+          <pre><code>{
+  "texts": ["ticket 1...", "ticket 2..."],
+  "use_llm": false
+}</code></pre>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/hierarchical-ml/predict-csv</span>
+          </div>
+          <p>Upload d'un CSV â€” retourne un CSV enrichi avec <code>level_1</code>, <code>level_2</code>, <code>confidence_tier</code>, <code>needs_review</code></p>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/v1/hierarchical-ml/taxonomy</span>
+          </div>
+          <p>Retourne la taxonomie complÃ¨te 2 niveaux (catÃ©gories L1 + descriptions L2)</p>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/v1/hierarchical-ml/label-mapping</span>
+          </div>
+          <p>Retourne le mapping complet ancien label â†’ nouvelle hiÃ©rarchie (ex: <code>DSLAM_CLOSED</code> â†’ <code>{"level_1": "INFRASTRUCTURE", "level_2": "DSLAM_CLOSED"}</code>)</p>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/v1/hierarchical-ml/model-info</span>
+          </div>
+          <p>Model card â€” stats d'entraÃ®nement, seuils, distribution par catÃ©gorie</p>
         </div>
       </section>
 
       <!-- Dev Setup -->
       <section id="dev-setup">
-        <h2>👨‍💻 Setup Développeur</h2>
+        <h2>ðŸ‘¨â€ðŸ’» Setup DÃ©veloppeur</h2>
         
-        <h3>Prérequis</h3>
+        <h3>PrÃ©requis</h3>
         <ul>
           <li>Python 3.11+</li>
           <li>Node.js 18+</li>
@@ -1241,9 +1451,9 @@ npm run dev</code></pre>
     db/          # Sessions et models SQLAlchemy
     models/      # Models Pydantic
     schemas/     # Validation schemas
-    services/    # Logique métier
+    services/    # Logique mÃ©tier
     utils/       # Helpers
-  tests/         # Tests unitaires et intégration
+  tests/         # Tests unitaires et intÃ©gration
   
 frontend/
   src/
@@ -1255,7 +1465,7 @@ frontend/
       
       <!-- Tests -->
       <section id="tests">
-        <h2>🧪 Tests</h2>
+        <h2>ðŸ§ª Tests</h2>
         
         <h3>Backend</h3>
         <pre><code># Tests unitaires
@@ -1264,7 +1474,7 @@ pytest
 # Avec coverage
 pytest --cov=app --cov-report=html
 
-# Tests d'intégration
+# Tests d'intÃ©gration
 pytest -m integration
 
 # Tests E2E
@@ -1277,7 +1487,7 @@ npm test
 # Tests E2E avec Playwright
 npm run test:e2e</code></pre>
         
-        <h3>Qualité du code</h3>
+        <h3>QualitÃ© du code</h3>
         <pre><code># Linting backend
 black .
 ruff check .
@@ -1288,71 +1498,71 @@ npm run lint</code></pre>
       
       <!-- Contrib -->
       <section id="contrib">
-        <h2>🤝 Contribuer</h2>
+        <h2>ðŸ¤ Contribuer</h2>
         
         <h3>Workflow de contribution</h3>
         <ol>
           <li>Fork le repository</li>
-          <li>Créer une branche feature : <code>git checkout -b feature/ma-feature</code></li>
+          <li>CrÃ©er une branche feature : <code>git checkout -b feature/ma-feature</code></li>
           <li>Commit vos changements : <code>git commit -m "Add: ma feature"</code></li>
           <li>Push : <code>git push origin feature/ma-feature</code></li>
-          <li>Créer une Pull Request</li>
+          <li>CrÃ©er une Pull Request</li>
         </ol>
         
         <h3>Conventions</h3>
         <ul>
           <li><strong>Commits</strong> : Utilisez <a href="https://www.conventionalcommits.org/">Conventional Commits</a></li>
           <li><strong>Code style</strong> : Suivez PEP8 (Python) et ESLint (TypeScript)</li>
-          <li><strong>Tests</strong> : Ajoutez des tests pour toute nouvelle fonctionnalité</li>
-          <li><strong>Documentation</strong> : Mettez à jour la doc si nécessaire</li>
+          <li><strong>Tests</strong> : Ajoutez des tests pour toute nouvelle fonctionnalitÃ©</li>
+          <li><strong>Documentation</strong> : Mettez Ã  jour la doc si nÃ©cessaire</li>
         </ul>
       </section>
       
       <!-- Production -->
       <section id="production">
-        <h2>🚀 Déploiement Production</h2>
+        <h2>ðŸš€ DÃ©ploiement Production</h2>
         
-        <h3>Checklist pré-déploiement</h3>
+        <h3>Checklist prÃ©-dÃ©ploiement</h3>
         <ul>
-          <li>✅ Variables d'environnement configurées</li>
-          <li>✅ Secrets stockés dans un vault (HashiCorp Vault, AWS Secrets Manager)</li>
-          <li>✅ Base de données migrée</li>
-          <li>✅ SSL/TLS configuré</li>
-          <li>✅ CORS configuré correctement</li>
-          <li>✅ Rate limiting activé</li>
-          <li>✅ Logs centralisés (ELK, Datadog)</li>
-          <li>✅ Monitoring configuré (Prometheus, Grafana)</li>
+          <li>âœ… Variables d'environnement configurÃ©es</li>
+          <li>âœ… Secrets stockÃ©s dans un vault (HashiCorp Vault, AWS Secrets Manager)</li>
+          <li>âœ… Base de donnÃ©es migrÃ©e</li>
+          <li>âœ… SSL/TLS configurÃ©</li>
+          <li>âœ… CORS configurÃ© correctement</li>
+          <li>âœ… Rate limiting activÃ©</li>
+          <li>âœ… Logs centralisÃ©s (ELK, Datadog)</li>
+          <li>âœ… Monitoring configurÃ© (Prometheus, Grafana)</li>
         </ul>
         
         <h3>Docker Compose Production</h3>
         <pre><code>docker-compose -f docker-compose.prod.yml up -d</code></pre>
         
         <h3>Kubernetes</h3>
-        <pre><code># Déployer
+        <pre><code># DÃ©ployer
 kubectl apply -f infrastructure/k8s/production/
 
-# Vérifier
+# VÃ©rifier
 kubectl get pods -n ai-support-agent
 kubectl logs -f deployment/backend -n ai-support-agent</code></pre>
       </section>
       
       <!-- Monitoring -->
       <section id="monitoring">
-        <h2>📊 Monitoring</h2>
+        <h2>ðŸ“Š Monitoring</h2>
         
-        <h3>Métriques clés</h3>
+        <h3>MÃ©triques clÃ©s</h3>
         <ul>
           <li><strong>API</strong> : Latence P50/P95/P99, taux d'erreur, throughput</li>
-          <li><strong>Workers</strong> : Queue depth, tâches/sec, erreurs</li>
-          <li><strong>Base de données</strong> : Connexions actives, query time, cache hit rate</li>
-          <li><strong>LLM</strong> : Tokens/sec, coût, latence</li>
+          <li><strong>Workers</strong> : Queue depth, tÃ¢ches/sec, erreurs</li>
+          <li><strong>Base de donnÃ©es</strong> : Connexions actives, query time, cache hit rate</li>
+          <li><strong>LLM</strong> : Tokens/sec, coÃ»t, latence</li>
         </ul>
         
         <h3>Stack Prometheus + Grafana</h3>
         <pre><code># Lancer Prometheus + Grafana
 docker-compose -f docker-compose.monitoring.yml up -d
 
-# Accéder à Grafana
+# AccÃ©der Ã  Grafana
 open http://localhost:3001</code></pre>
         
         <h3>Alertes</h3>
@@ -1367,33 +1577,33 @@ open http://localhost:3001</code></pre>
       
       <!-- Security -->
       <section id="security">
-        <h2>🔒 Sécurité</h2>
+        <h2>ðŸ”’ SÃ©curitÃ©</h2>
         
-        <h3>Best practices implémentées</h3>
+        <h3>Best practices implÃ©mentÃ©es</h3>
         <ul>
-          <li>✅ Authentification JWT avec refresh tokens</li>
-          <li>✅ HTTPS obligatoire en production</li>
-          <li>✅ Rate limiting (100 req/min par IP)</li>
-          <li>✅ Validation stricte des inputs (Pydantic)</li>
-          <li>✅ Sanitization des requêtes SQL (parameterized queries)</li>
-          <li>✅ CORS configuré par whitelist</li>
-          <li>✅ Headers de sécurité (CSP, X-Frame-Options, etc.)</li>
-          <li>✅ Secrets stockés dans des vaults</li>
+          <li>âœ… Authentification JWT avec refresh tokens</li>
+          <li>âœ… HTTPS obligatoire en production</li>
+          <li>âœ… Rate limiting (100 req/min par IP)</li>
+          <li>âœ… Validation stricte des inputs (Pydantic)</li>
+          <li>âœ… Sanitization des requÃªtes SQL (parameterized queries)</li>
+          <li>âœ… CORS configurÃ© par whitelist</li>
+          <li>âœ… Headers de sÃ©curitÃ© (CSP, X-Frame-Options, etc.)</li>
+          <li>âœ… Secrets stockÃ©s dans des vaults</li>
         </ul>
         
-        <h3>Audit de sécurité</h3>
-        <pre><code># Scanner les dépendances Python
+        <h3>Audit de sÃ©curitÃ©</h3>
+        <pre><code># Scanner les dÃ©pendances Python
 pip-audit
 
-# Scanner les dépendances NPM
+# Scanner les dÃ©pendances NPM
 npm audit
 
 # Scan de l'image Docker
 trivy image ai-support-agent:latest</code></pre>
         
         <div class="alert alert-danger">
-          <div class="alert-title">⚠️ Important</div>
-          Ne commitez JAMAIS de secrets dans le repository. Utilisez <code>.env</code> et ajoutez-le à <code>.gitignore</code>.
+          <div class="alert-title">âš ï¸ Important</div>
+          Ne commitez JAMAIS de secrets dans le repository. Utilisez <code>.env</code> et ajoutez-le Ã  <code>.gitignore</code>.
         </div>
       </section>
       
@@ -1401,7 +1611,7 @@ trivy image ai-support-agent:latest</code></pre>
   </div>
   
   <!-- Back to top button -->
-  <div class="back-top" id="backTop">↑</div>
+  <div class="back-top" id="backTop">â†‘</div>
   
   <script>
     // Sidebar active link
@@ -1459,3 +1669,4 @@ trivy image ai-support-agent:latest</code></pre>
   </script>
 </body>
 </html>
+

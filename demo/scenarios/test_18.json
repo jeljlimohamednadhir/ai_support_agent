@@ -1,0 +1,39 @@
+{
+  "id": "TEST_18",
+  "tier": "GOLDEN",
+  "category": "root_cause_analysis",
+  "question": "Pourquoi cette suppression est bloquée ?",
+  "expected_root_cause": "Explication WHY/WHICH/WHERE/WHAT NEXT",
+  "expected_workflow": "deletion_blocking_analysis",
+  "expected_evidence": [
+    "WHY",
+    "WHICH",
+    "WHERE",
+    "WHAT NEXT"
+  ],
+  "expected_code_reference": "ManageDslamBusinessImpl.deleteDslam()",
+  "expected_sources": [
+    "LIVE_DB",
+    "CODE",
+    "FR"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "WHY",
+      "WHICH",
+      "WHERE",
+      "WHAT NEXT"
+    ],
+    "forbidden_patterns": [
+      "réponse générique"
+    ]
+  }
+}

@@ -3,14 +3,26 @@ version: '3.8'
 # ================================================
 # AI Support Agent - Configuration Podman/Docker
 # ================================================
-# RECOMMANDÉ: Utiliser Podman (rootless, plus sécurisé)
-#
-# Lancement avec Podman:
-#   Windows:  .\podman.ps1 up -Detached
-#   Linux:    podman-compose up -d
-#
-# Alternative Docker (si installé):
-#   docker-compose up -d
+# Utilisation avec Podman (WSL)
+# 1) Depuis WSL, placez-vous dans ce répertoire :
+#      cd /mnt/c/Users/n.jeljli/OneDrive\ -\ orange.com/Bureau/ai-support-agent
+# 2) Vérifiez Podman :
+#      podman --version
+# 3) Méthodes pour démarrer les services :
+#    - Recommandé (Podman v4+):
+#        podman compose up -d
+#    - Alternative (podman-compose) :
+#        podman-compose up -d
+#    - Si les pods/containers existent déjà :
+#        podman pod start --all
+#        ou
+#        podman start --all
+# 4) Vérification :
+#      podman ps
+#      podman pod ps -a
+# Remarques :
+#  - Si vous utilisez Podman Desktop/Remote, démarrez la machine Podman si nécessaire.
+#  - Sur WSL, utilisez localhost:PORT depuis Windows pour accéder aux services mappés.
 # ================================================
 
 services:

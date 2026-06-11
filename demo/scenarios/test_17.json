@@ -1,0 +1,32 @@
+{
+  "id": "TEST_17",
+  "tier": "GOLDEN",
+  "category": "jira_analysis",
+  "question": "Quels tickets Jira similaires existent ?",
+  "expected_root_cause": "Recherche similaire Jira dépendante du retour backend",
+  "expected_workflow": "jira_similarity_search",
+  "expected_evidence": [
+    "tickets similaires"
+  ],
+  "expected_code_reference": "",
+  "expected_sources": [
+    "INCIDENT",
+    "JIRA"
+  ],
+  "expected_response_contract": {
+    "mandatory_sections": [
+      "Diagnostic",
+      "Evidence",
+      "Workflow",
+      "Source Code",
+      "Action",
+      "Provenance"
+    ],
+    "required_mentions": [
+      "Aucun ticket similaire trouvé"
+    ],
+    "forbidden_patterns": [
+      "ticket inventé"
+    ]
+  }
+}
